@@ -1,7 +1,11 @@
 [package]
 name = "p5"
+description = "A tui client for Pulumi"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+homepage = "https://github/rfhold/p5"
+repository = "https://github/rfhold/p5"
 
 [dependencies]
 bollard = "0.18.1"
