@@ -1126,7 +1126,7 @@ fn update(model: &mut Model, msg: Message, terminal: &mut DefaultTerminal) -> Op
             Some(stack) => match model.main_tab_selected {
                 Some(Pane::Resources) => {
                     if let Some(index) = model.resources.resource_list.state.selected() {
-                        let resource = model.resources.resource_list.items[index].name.clone();
+                        let resource = model.resources.resource_list.items[index].urn.clone();
                         model.delete_confirmation = Some((stack.clone(), Some(resource)));
                     }
                 }
