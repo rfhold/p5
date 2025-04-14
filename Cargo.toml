@@ -8,9 +8,11 @@ homepage = "https://github/rfhold/p5"
 repository = "https://github/rfhold/p5"
 
 [dependencies]
+async-trait = "0.1.88"
+chrono = { version = "0.4.40", features = ["serde"] }
 clap = { version = "4.5.32", features = ["derive", "env"] }
 color-eyre = "0.6.3"
-crossterm = "0.28.1"
+crossterm = { version = "0.28.1", features = ["event-stream", "serde", "events"] }
 directories = "6.0.0"
 glob = "0.3.2"
 lazy_static = "1.5.0"
@@ -19,6 +21,8 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 strum = { version = "0.27.1", features = ["derive"] }
+tokio = { version = "1.44.1", features = ["sync", "tracing", "process", "rt-multi-thread", "macros", "time"] }
+tokio-stream = { version = "0.1.17", features = ["signal"] }
 tracing = "0.1.41"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
