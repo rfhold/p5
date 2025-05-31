@@ -1,0 +1,178 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/replacement/test",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-27T10:01:30.858089-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:/8/N/onltic=:v1:bcCrK1PE37/h/vyL:8twUx6ApTlocn9CybYstNbqB97UPiA=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:test::replacement::pulumi:pulumi:Stack::replacement-test",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "outputs": {
+                        "constant": 2
+                    },
+                    "created": "2025-05-27T14:00:42.906892Z",
+                    "modified": "2025-05-27T14:00:42.906892Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:test::replacement::pulumi:providers:pulumi::default",
+                    "custom": true,
+                    "id": "a218a55a-26bf-4499-8a77-26ee0636e1c9",
+                    "type": "pulumi:providers:pulumi",
+                    "created": "2025-05-27T14:00:43.042836Z",
+                    "modified": "2025-05-27T14:00:43.042836Z"
+                },
+                {
+                    "urn": "urn:pulumi:test::replacement::pulumi:pulumi:StackReference::organization/replacement/test",
+                    "custom": true,
+                    "id": "organization/replacement/test",
+                    "type": "pulumi:pulumi:StackReference",
+                    "inputs": {
+                        "name": "organization/replacement/test"
+                    },
+                    "outputs": {
+                        "name": "organization/replacement/test",
+                        "outputs": {
+                            "constant": 1
+                        },
+                        "secretOutputNames": []
+                    },
+                    "parent": "urn:pulumi:test::replacement::pulumi:pulumi:Stack::replacement-test",
+                    "external": true,
+                    "provider": "urn:pulumi:test::replacement::pulumi:providers:pulumi::default::a218a55a-26bf-4499-8a77-26ee0636e1c9",
+                    "modified": "2025-05-27T14:01:30.80432Z",
+                    "sourcePosition": "project:///index.ts#6,26"
+                },
+                {
+                    "urn": "urn:pulumi:test::replacement::pulumi:providers:random::default_4_18_2",
+                    "custom": true,
+                    "id": "5145f651-5b9d-4193-885a-7b8c09f6865f",
+                    "type": "pulumi:providers:random",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "4.18.2"
+                    },
+                    "outputs": {
+                        "version": "4.18.2"
+                    },
+                    "created": "2025-05-27T14:00:43.071245Z",
+                    "modified": "2025-05-27T14:00:43.071245Z"
+                },
+                {
+                    "urn": "urn:pulumi:test::replacement::random:index/randomId:RandomId::id-0",
+                    "custom": true,
+                    "id": "_XbTVzKXIQs",
+                    "type": "random:index/randomId:RandomId",
+                    "inputs": {
+                        "byteLength": 8,
+                        "keepers": {
+                            "constant": 2
+                        }
+                    },
+                    "outputs": {
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "map": {}
+                                    },
+                                    "prefix": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:b7sapx2hj1IuGXqa:QiyHW77czFPT1CVX94WlhxlzY4ZU8iftCH4xyGysfjw6m+jJxMdnBA=="
+                                    }
+                                }
+                            }
+                        },
+                        "b64Std": "/XbTVzKXIQs=",
+                        "b64Url": "_XbTVzKXIQs",
+                        "byteLength": 8,
+                        "dec": "18264017710312005899",
+                        "hex": "fd76d3573297210b",
+                        "id": "_XbTVzKXIQs",
+                        "keepers": {
+                            "constant": "2"
+                        }
+                    },
+                    "parent": "urn:pulumi:test::replacement::pulumi:pulumi:Stack::replacement-test",
+                    "dependencies": [
+                        "urn:pulumi:test::replacement::pulumi:pulumi:StackReference::organization/replacement/test"
+                    ],
+                    "provider": "urn:pulumi:test::replacement::pulumi:providers:random::default_4_18_2::5145f651-5b9d-4193-885a-7b8c09f6865f",
+                    "propertyDependencies": {
+                        "byteLength": [],
+                        "keepers": [
+                            "urn:pulumi:test::replacement::pulumi:pulumi:StackReference::organization/replacement/test"
+                        ]
+                    },
+                    "created": "2025-05-27T14:01:30.836819Z",
+                    "modified": "2025-05-27T14:01:30.836819Z",
+                    "sourcePosition": "project:///index.ts#17,15"
+                },
+                {
+                    "urn": "urn:pulumi:test::replacement::random:index/randomId:RandomId::id-1",
+                    "custom": true,
+                    "id": "BNERuDZjG98",
+                    "type": "random:index/randomId:RandomId",
+                    "inputs": {
+                        "byteLength": 8,
+                        "keepers": {
+                            "constant": 2
+                        }
+                    },
+                    "outputs": {
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "map": {}
+                                    },
+                                    "prefix": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:D1pjA+7TJl1A0gY4:ezNuR1EO+yapRFhvUWAWPmPizq2i2EG9ASUYBeQE/t1Kc0exBsi7EA=="
+                                    }
+                                }
+                            }
+                        },
+                        "b64Std": "BNERuDZjG98=",
+                        "b64Url": "BNERuDZjG98",
+                        "byteLength": 8,
+                        "dec": "347078129168358367",
+                        "hex": "04d111b836631bdf",
+                        "id": "BNERuDZjG98",
+                        "keepers": {
+                            "constant": "2"
+                        }
+                    },
+                    "parent": "urn:pulumi:test::replacement::pulumi:pulumi:Stack::replacement-test",
+                    "dependencies": [
+                        "urn:pulumi:test::replacement::random:index/randomId:RandomId::id-0",
+                        "urn:pulumi:test::replacement::pulumi:pulumi:StackReference::organization/replacement/test"
+                    ],
+                    "provider": "urn:pulumi:test::replacement::pulumi:providers:random::default_4_18_2::5145f651-5b9d-4193-885a-7b8c09f6865f",
+                    "propertyDependencies": {
+                        "byteLength": [],
+                        "keepers": [
+                            "urn:pulumi:test::replacement::pulumi:pulumi:StackReference::organization/replacement/test"
+                        ]
+                    },
+                    "created": "2025-05-27T14:01:30.843484Z",
+                    "modified": "2025-05-27T14:01:30.843484Z",
+                    "sourcePosition": "project:///index.ts#17,15"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

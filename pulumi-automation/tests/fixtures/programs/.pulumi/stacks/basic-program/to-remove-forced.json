@@ -1,0 +1,81 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/basic-program/to-remove-forced",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-29T14:00:38.887937-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:dU8pbUknueM=:v1:fuwxD/Z1RJUfsZKW:IwHGxQqK5fKyVYHnM6OdGBaog2t5rg=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:to-remove-forced::basic-program::pulumi:pulumi:Stack::basic-program-to-remove-forced",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "created": "2025-05-29T18:00:38.715053Z",
+                    "modified": "2025-05-29T18:00:38.715053Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:to-remove-forced::basic-program::pulumi:providers:random::default_4_18_2",
+                    "custom": true,
+                    "id": "29dbd599-76f4-4828-b432-4ad75a29aa4f",
+                    "type": "pulumi:providers:random",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "4.18.2"
+                    },
+                    "outputs": {
+                        "version": "4.18.2"
+                    },
+                    "created": "2025-05-29T18:00:38.874033Z",
+                    "modified": "2025-05-29T18:00:38.874033Z"
+                },
+                {
+                    "urn": "urn:pulumi:to-remove-forced::basic-program::random:index/randomPet:RandomPet::first",
+                    "custom": true,
+                    "id": "relaxed-killdeer",
+                    "type": "random:index/randomPet:RandomPet",
+                    "inputs": {
+                        "separator": "-"
+                    },
+                    "outputs": {
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:f2LYmlK8KowrvjDd:EchCdfELPpkaKskSOQShSdA19dwoVwat/biOdIQ1FbAMmAys6MAAQA=="
+                                    },
+                                    "prefix": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:owQiJLceGI+IFUzW:zrKjuOpENeSBgZUL7avKD3ZYQYitKW0nqpHGyFWVFFYzHh5rTdnMYw=="
+                                    }
+                                }
+                            }
+                        },
+                        "id": "relaxed-killdeer",
+                        "length": 2,
+                        "separator": "-"
+                    },
+                    "parent": "urn:pulumi:to-remove-forced::basic-program::pulumi:pulumi:Stack::basic-program-to-remove-forced",
+                    "provider": "urn:pulumi:to-remove-forced::basic-program::pulumi:providers:random::default_4_18_2::29dbd599-76f4-4828-b432-4ad75a29aa4f",
+                    "propertyDependencies": {
+                        "separator": []
+                    },
+                    "created": "2025-05-29T18:00:38.877469Z",
+                    "modified": "2025-05-29T18:00:38.877469Z",
+                    "sourcePosition": "project:///index.ts#4,1"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

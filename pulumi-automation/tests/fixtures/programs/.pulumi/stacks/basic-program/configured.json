@@ -1,0 +1,94 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/basic-program/configured",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-29T11:25:45.563294-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:0wc+WqWMEgQ=:v1:xrEGWfLlXTCMI6OT:bkYAVMqfAl9f2R7lRpZmKPRRZSiHJQ=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:configured::basic-program::pulumi:pulumi:Stack::basic-program-configured",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "outputs": {
+                        "json": {
+                            "array": [
+                                "one",
+                                "two"
+                            ],
+                            "key": "value"
+                        },
+                        "secret": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:3RmUvXFldDlfLsXh:LsrEmcTzWSLTTMzzTEfVInArAre6OtliYK3mfF8F"
+                        }
+                    },
+                    "created": "2025-05-29T15:21:31.130509Z",
+                    "modified": "2025-05-29T15:21:31.130509Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:configured::basic-program::pulumi:providers:random::default_4_18_2",
+                    "custom": true,
+                    "id": "d6bba421-6173-4932-9da3-28a821b938b2",
+                    "type": "pulumi:providers:random",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "4.18.2"
+                    },
+                    "outputs": {
+                        "version": "4.18.2"
+                    },
+                    "created": "2025-05-29T15:21:31.285187Z",
+                    "modified": "2025-05-29T15:21:31.285187Z"
+                },
+                {
+                    "urn": "urn:pulumi:configured::basic-program::random:index/randomPet:RandomPet::first",
+                    "custom": true,
+                    "id": "desired-dove",
+                    "type": "random:index/randomPet:RandomPet",
+                    "inputs": {
+                        "separator": "-"
+                    },
+                    "outputs": {
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:6sen+pGpxbHdkbCT:F+Y65DgKPPluxM7zRB/hIOjjfvMo8lkVcN6i79vADV6JZpXVGnpnxQ=="
+                                    },
+                                    "prefix": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:9WwHZN2Ylmo0LMlH:agvJlgRcZIqYk+ZCTO2aqF+dGi5G6LidMBRD/mnbn290ytOqE4RG3A=="
+                                    }
+                                }
+                            }
+                        },
+                        "id": "desired-dove",
+                        "length": 2,
+                        "separator": "-"
+                    },
+                    "parent": "urn:pulumi:configured::basic-program::pulumi:pulumi:Stack::basic-program-configured",
+                    "provider": "urn:pulumi:configured::basic-program::pulumi:providers:random::default_4_18_2::d6bba421-6173-4932-9da3-28a821b938b2",
+                    "propertyDependencies": {
+                        "separator": []
+                    },
+                    "created": "2025-05-29T15:21:31.289204Z",
+                    "modified": "2025-05-29T15:21:31.289204Z",
+                    "sourcePosition": "project:///index.ts#4,1"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

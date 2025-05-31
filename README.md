@@ -2,56 +2,54 @@
 
 Pulumi was too long
 
-A TUI application to help you manage your Pulumi stacks. It detects `Pulumi.yaml` files 2 levels deep from the current directory and allows you to perform operations on them.
+A TUI application to help you manage your Pulumi stacks.
 
 ## Features
 
-- [x] List Programs
-- [x] Select Program
-- [x] List Stacks
-- [x] Select Stack
-- [ ] Show Stack Config
-- [x] Show Stack Outputs
-- [ ] Show Stack History
-- [x] Preview Stack
-- [ ] Update Stack
-- [ ] Destroy Stack
-- [ ] Refresh Stack
-- [ ] Delete Stack
-- [ ] Export Stack
-- [ ] Import Stack
-- [ ] New Stack
-- [ ] Rename Stack
-- [ ] Change Stack Secrets Provider
-- [ ] Move Stack
-- [ ] Stack Graph
-- [ ] List Resources
-- [ ] Show Resource State
-- [ ] Rename Resource
-- [ ] Import Resource
-- [ ] Move Resource
-- [ ] Select Resource(s)
-- [ ] Preview Resource(s)
-- [ ] Delete Resource(s)
-- [ ] Refresh Resource(s)
-- [ ] Destroy Resource(s)
-- [ ] Update Resource(s)
-- [ ] Resource Graph
-- [ ] Automatic Help Menu
+- [ ] Contexts
+- [ ] Command prompt
+- [ ] Help
+- [ ] Select program
+- [ ] Select stack
+- [ ] Show stack information
+    - [ ] Show stack outputs
+    - [ ] Show stack settings
+- [ ] Show stack resources
+    - [ ] Show state json
+    - [ ] Edit state json
+        - [ ] Edit resource json
+- [ ] Preview stack changes
+    - [ ] Operation type colors
+    - [ ] Detailed Diff
+    - [ ] Special iconography
+        - [ ] Protected resources
+    - [ ] Component resources
+- [ ] Update stack
+- [ ] Destroy stack
+- [ ] Refresh stack
+- [ ] Include and Exclude resources
+- [ ] Import resources
+- [ ] Remove resources
+- [ ] List programs
+    - [ ] Select program
+    - [ ] Create program
+- [ ] List stacks
+    - [ ] Select stack
+    - [ ] Create stack
+    - [ ] Rename stack
+    - [ ] Delete stack
+    - [ ] Copy stack
+- [ ] Self host config
+    - [ ] Backend Url
+    - [ ] Env
+        - [ ] Authentication hook
+        - [ ] Static
+        - [ ] Secret Manager
+- [ ] Edit Pulumi config
+    - [ ] Edit stack config
+    - [ ] Edit program config
+- [ ] Show stack history
 
-### Brainstorm Features
-
-- [ ] Docker Pulumi Exection Mode
-- [ ] Parralel Program/Stack Operations
-- [ ] Auto Import
-- [ ] Workflows
-- [ ] External Links
-- [ ] Backend configuration per Program and/or Stack
-- [ ] Authentication Command hook configurable 
-
-## State
-
-WIP, usable but needs polishing. The State machine that handles events, actions, and rendering needs to be refactored. 
 
 ## Installation
 

@@ -1,0 +1,30 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/basic-program/fresh",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-27T09:50:42.864644-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:CudcJOXQBvk=:v1:ZrfImn/JKXu/vrCh:XG/jw1LCORD5EGUpv8Vx8VwdvSAO/A=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:fresh::basic-program::pulumi:pulumi:Stack::basic-program-fresh",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "created": "2025-05-27T13:50:42.843732Z",
+                    "modified": "2025-05-27T13:50:42.843732Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

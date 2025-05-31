@@ -1,0 +1,13 @@
+encryptionsalt: v1:0wc+WqWMEgQ=:v1:xrEGWfLlXTCMI6OT:bkYAVMqfAl9f2R7lRpZmKPRRZSiHJQ==
+config:
+  other:configuration-setting: example
+  debug:to-remove: true
+  debug:bool: true
+  debug:foo: "bar"
+  debug:json:
+    key: value
+    array:
+      - one
+      - two
+  debug:secret:
+    secure: v1:Q0Twq0rPn7bB/m1q:YRgNuBcli77K/Vvr5ZuwZ1Tpc+xwgq21aB+Y5w==

@@ -1,0 +1,15 @@
+[package]
+name = "pui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A tui framework for P5"
+
+[dependencies]
+ratatui.workspace = true
+tokio.workspace = true
+crossterm.workspace = true
+color-eyre.workspace = true
+async-trait.workspace = true

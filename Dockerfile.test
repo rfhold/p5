@@ -1,0 +1,32 @@
+ARG PULUMI_VERSION=3.171.0
+ARG PULUMI_IMAGE_SUFFIX=""
+
+FROM cr.holdenitdown.net/docker/pulumi/pulumi${PULUMI_IMAGE_SUFFIX}:${PULUMI_VERSION}
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+		apt-get install -y --no-install-recommends \
+		build-essential \
+		curl && \
+		rm -rf /var/lib/apt/lists/*
+
+ARG RUST_VERSION=1.86.0
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain ${RUST_VERSION}
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+ENV PULUMI_HOME=/root/.pulumi
+RUN mkdir -p ${PULUMI_HOME} && chmod 777 ${PULUMI_HOME}
+
+WORKDIR /app
+
+RUN mkdir -p src pui/src pulumi-automation/src && \
+		touch src/main.rs pui/src/lib.rs pulumi-automation/src/lib.rs
+
+COPY ./Cargo.toml ./Cargo.lock ./
+COPY ./pui/Cargo.toml ./pui/
+COPY ./pulumi-automation/Cargo.toml ./pulumi-automation/
+
+RUN cargo fetch --locked
+
+COPY . .
+
+ENTRYPOINT [ "cargo", "test", "--workspace", "--test"]

@@ -1,0 +1,81 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/basic-program/case-1",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-31T12:00:54.207789-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:WqLj/NbX4A4=:v1:nO8E8bjk6KR0txDg:JUPubG4x+HQAKDF7rNzcmu4Oo/dTvA=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:case-1::basic-program::pulumi:pulumi:Stack::basic-program-case-1",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "created": "2025-05-31T16:00:54.023791Z",
+                    "modified": "2025-05-31T16:00:54.023791Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:case-1::basic-program::pulumi:providers:random::default_4_18_2",
+                    "custom": true,
+                    "id": "7bb9f1c0-b52c-4fe4-beab-72841aa1452e",
+                    "type": "pulumi:providers:random",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "4.18.2"
+                    },
+                    "outputs": {
+                        "version": "4.18.2"
+                    },
+                    "created": "2025-05-31T16:00:54.191956Z",
+                    "modified": "2025-05-31T16:00:54.191956Z"
+                },
+                {
+                    "urn": "urn:pulumi:case-1::basic-program::random:index/randomPet:RandomPet::first",
+                    "custom": true,
+                    "id": "growing-dinosaur",
+                    "type": "random:index/randomPet:RandomPet",
+                    "inputs": {
+                        "separator": "-"
+                    },
+                    "outputs": {
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:FUIOg6GEC62OlUvC:2lkuGpOgdk+YGQ61wSuHrl8RLX6Y6qdQYHz7ifmmQSv85auClfziCw=="
+                                    },
+                                    "prefix": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:jc0tdKxi6fvS3Blk:a2ijKuHbELA6TZqXMvGB1kzX+hfTDemSBhn7pcmUs2oM7+xy5+qH8g=="
+                                    }
+                                }
+                            }
+                        },
+                        "id": "growing-dinosaur",
+                        "length": 2,
+                        "separator": "-"
+                    },
+                    "parent": "urn:pulumi:case-1::basic-program::pulumi:pulumi:Stack::basic-program-case-1",
+                    "provider": "urn:pulumi:case-1::basic-program::pulumi:providers:random::default_4_18_2::7bb9f1c0-b52c-4fe4-beab-72841aa1452e",
+                    "propertyDependencies": {
+                        "separator": []
+                    },
+                    "created": "2025-05-31T16:00:54.196911Z",
+                    "modified": "2025-05-31T16:00:54.196911Z",
+                    "sourcePosition": "project:///index.ts#4,1"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

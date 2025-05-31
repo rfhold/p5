@@ -1,0 +1,120 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/refresh/case-2",
+        "latest": {
+            "manifest": {
+                "time": "2025-05-31T12:48:37.971778-04:00",
+                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
+                "version": "v3.167.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:fwIropFPX1A=:v1:q8b+lLaqIZ1PlQUx:l+f2kSdkPebii5cw0mIt4MrbvsWkPA=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:case-2::refresh::pulumi:pulumi:Stack::refresh-case-2",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "created": "2025-05-31T16:48:37.781022Z",
+                    "modified": "2025-05-31T16:48:37.781022Z",
+                    "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:case-2::refresh::pulumi:providers:local::default_0_1_6",
+                    "custom": true,
+                    "id": "7fbeed76-ddc4-4e05-9422-34e6dcc396ce",
+                    "type": "pulumi:providers:local",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "0.1.6"
+                    },
+                    "outputs": {
+                        "version": "0.1.6"
+                    },
+                    "created": "2025-05-31T16:48:37.952281Z",
+                    "modified": "2025-05-31T16:48:37.952281Z"
+                },
+                {
+                    "urn": "urn:pulumi:case-2::refresh::local:index/file:File::file",
+                    "custom": true,
+                    "id": "91b7b0b1e27bfbf7bc646946f35fa972c47c2d32",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "This is a test file",
+                        "filename": "./files/case-2.txt"
+                    },
+                    "outputs": {
+                        "content": "This is a test file",
+                        "contentBase64sha256": "4tD+FYWmPsYAnIAW/43aixdxmmN0BaTiPA/4EzkUgkk=",
+                        "contentBase64sha512": "v+e5n7l7oySa8IzEPZv9ObIMby6XAQtZKEBtGVi0cB0vBTGH2lIsTIeN0FZ+eT2e1xBJBc2N89H2+6yeIMitkQ==",
+                        "contentMd5": "0b26e313ed4a7ca6904b0e9369e5b957",
+                        "contentSha1": "91b7b0b1e27bfbf7bc646946f35fa972c47c2d32",
+                        "contentSha256": "e2d0fe1585a63ec6009c8016ff8dda8b17719a637405a4e23c0ff81339148249",
+                        "contentSha512": "bfe7b99fb97ba3249af08cc43d9bfd39b20c6f2e97010b5928406d1958b4701d2f053187da522c4c878dd0567e793d9ed7104905cd8df3d1f6fbac9e20c8ad91",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/case-2.txt",
+                        "id": "91b7b0b1e27bfbf7bc646946f35fa972c47c2d32"
+                    },
+                    "parent": "urn:pulumi:case-2::refresh::pulumi:pulumi:Stack::refresh-case-2",
+                    "provider": "urn:pulumi:case-2::refresh::pulumi:providers:local::default_0_1_6::7fbeed76-ddc4-4e05-9422-34e6dcc396ce",
+                    "propertyDependencies": {
+                        "content": [],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-05-31T16:48:37.955918Z",
+                    "modified": "2025-05-31T16:48:37.955918Z",
+                    "sourcePosition": "project:///index.ts#5,14"
+                },
+                {
+                    "urn": "urn:pulumi:case-2::refresh::local:index/file:File::file-overwrite",
+                    "custom": true,
+                    "id": "98fd0ecaa4f4a2f7f9f78fea39927804d1b314c6",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "This is an overwritten test file",
+                        "filename": "./files/case-2.txt"
+                    },
+                    "outputs": {
+                        "content": "This is an overwritten test file",
+                        "contentBase64sha256": "k1VIuCm9ElvMbOSNiOyUipRHVOA2lCxUXekLz7T81vk=",
+                        "contentBase64sha512": "BI7BTXKDINzNp6O75inpbyOO6PojdIcRmV0+/l4xeMfPPIHDFNhPnFko4C2w/yfGPF1oM6Jfktiktj7Rq/CTmg==",
+                        "contentMd5": "a0a1c25469cf9b2b3f608118f3ce6292",
+                        "contentSha1": "98fd0ecaa4f4a2f7f9f78fea39927804d1b314c6",
+                        "contentSha256": "935548b829bd125bcc6ce48d88ec948a944754e036942c545de90bcfb4fcd6f9",
+                        "contentSha512": "048ec14d728320dccda7a3bbe629e96f238ee8fa23748711995d3efe5e3178c7cf3c81c314d84f9c5928e02db0ff27c63c5d6833a25f92d8a4b63ed1abf0939a",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/case-2.txt",
+                        "id": "98fd0ecaa4f4a2f7f9f78fea39927804d1b314c6"
+                    },
+                    "parent": "urn:pulumi:case-2::refresh::pulumi:pulumi:Stack::refresh-case-2",
+                    "dependencies": [
+                        "urn:pulumi:case-2::refresh::local:index/file:File::file"
+                    ],
+                    "provider": "urn:pulumi:case-2::refresh::pulumi:providers:local::default_0_1_6::7fbeed76-ddc4-4e05-9422-34e6dcc396ce",
+                    "propertyDependencies": {
+                        "content": [],
+                        "filename": [
+                            "urn:pulumi:case-2::refresh::local:index/file:File::file"
+                        ]
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-05-31T16:48:37.961602Z",
+                    "modified": "2025-05-31T16:48:37.961602Z",
+                    "sourcePosition": "project:///index.ts#10,1"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

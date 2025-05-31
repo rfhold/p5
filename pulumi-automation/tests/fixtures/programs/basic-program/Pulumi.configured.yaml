@@ -1,0 +1,13 @@
+encryptionsalt: v1:0wc+WqWMEgQ=:v1:xrEGWfLlXTCMI6OT:bkYAVMqfAl9f2R7lRpZmKPRRZSiHJQ==
+config:
+  other:configuration-setting: example
+  basic-program:to-remove: true
+  basic-program:bool: true
+  basic-program:foo: "bar"
+  basic-program:json:
+    key: value
+    array:
+      - one
+      - two
+  basic-program:secret:
+    secure: v1:Q0Twq0rPn7bB/m1q:YRgNuBcli77K/Vvr5ZuwZ1Tpc+xwgq21aB+Y5w==
