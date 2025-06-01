@@ -1357,17 +1357,14 @@ checksum = "26995317201fa17f3656c36716aed4a7c81743a9634ac4c99c0eeda495db0cec"
 name = "p5"
 version = "0.3.1"
 dependencies = [
- "color-eyre",
- "console-subscriber",
+ "async-trait",
+ "crossterm 0.29.0",
  "pui",
  "pulumi-automation",
- "ratatui 0.29.0",
  "tokio",
  "tokio-console",
  "tokio-util",
  "tracing",
- "tracing-error",
- "tracing-subscriber",
 ]
 
 [[package]]

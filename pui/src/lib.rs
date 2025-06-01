@@ -1,9 +1,14 @@
-mod controller;
+pub mod controller;
+
+pub type Result<T> = color_eyre::Result<T>;
 
 use ratatui::crossterm::ExecutableCommand;
 use tracing_subscriber::prelude::*;
 
-pub async fn run() -> color_eyre::Result<()> {
+pub async fn run<H>(handler: H, state: H::State) -> color_eyre::Result<()>
+where
+    H: controller::Handler + Send + Sync + Clone + 'static,
+{
     install_tracing();
     install_panic_hook()?;
 
@@ -11,7 +16,7 @@ pub async fn run() -> color_eyre::Result<()> {
 
     let terminal = init_terminal()?;
 
-    let controller = controller::Controller::new(cancel_token.clone());
+    let controller = controller::Controller::new(handler, state, cancel_token.clone());
 
     tokio::select! {
         _ = controller.run(terminal) => {
