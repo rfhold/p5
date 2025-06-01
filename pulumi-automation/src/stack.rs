@@ -73,6 +73,7 @@ pub struct StackChangeSummary {
     pub extra_values: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone)]
 pub struct PulumiProcessListener {
     pub preview_tx: Option<Sender<StackChangeSummary>>,
     pub event_tx: Sender<EngineEvent>,

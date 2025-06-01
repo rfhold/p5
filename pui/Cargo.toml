@@ -10,6 +10,13 @@ description = "A tui framework for P5"
 [dependencies]
 ratatui.workspace = true
 tokio.workspace = true
-crossterm.workspace = true
 color-eyre.workspace = true
 async-trait.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-error.workspace = true
+console-subscriber = "0.4.1"
+tokio-util.workspace = true
+crossterm.workspace = true
+tokio-stream.workspace = true
+

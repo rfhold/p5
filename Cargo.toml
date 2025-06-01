@@ -11,6 +11,14 @@ authors.workspace = true
 [dependencies]
 pulumi-automation = { path = "./pulumi-automation" }
 pui = { path = "./pui" }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-error.workspace = true
+console-subscriber = "0.4.1"
+tokio-util.workspace = true
+tokio.workspace = true
+color-eyre.workspace = true
+ratatui.workspace = true
 
 [workspace]
 resolver = "3"
@@ -20,7 +28,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Robert Holden <rfhold@rholden.dev>"]
@@ -28,22 +36,21 @@ homepage = "https://github.com/rfhold/p5"
 repository = "https://github.com/rfhold/p5"
 
 [workspace.dependencies]
-# General
 async-trait = "0.1.88"
-chrono = { version = "0.4.40", features = ["serde"] }
-lazy_static = "1.5.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
-tokio = { version = "1.44.1", features = ["sync", "tracing", "process", "rt-multi-thread", "macros", "time", "io-util"] }
+tokio = { version = "1.44.1", features = ["sync", "tracing", "process", "rt-multi-thread", "macros", "time", "io-util", "signal"] }
 tokio-stream = { version = "0.1.17", features = ["signal"] }
 tracing = "0.1.41"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 strum = { version = "0.27.1", features = ["derive"] }
-
-# TUI
+tokio-util = { version = "0.7.15", features = ["io", "io-util", "time", "rt"] }
 color-eyre = "0.6.3"
-crossterm = { version = "0.28.1", features = ["event-stream", "serde", "events"] }
-ratatui = "0.29.0"
+ratatui = { version = "0.29.0", features = ["crossterm"] }
+crossterm = { version = "0.29.0", features = ["event-stream"] }
+
+[dev-dependencies]
+tokio-console = "0.1.13"
 

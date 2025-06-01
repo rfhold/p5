@@ -15,5 +15,6 @@ serde_yaml.workspace = true
 strum.workspace = true
 async-trait.workspace = true
 tempfile = "3.20.0"
-tokio-util = { version = "0.7.15", features = ["io", "io-util"] }
+tokio-util.workspace = true
+tracing.workspace = true
 

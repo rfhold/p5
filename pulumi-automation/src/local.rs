@@ -7,6 +7,7 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
     sync::mpsc::Sender,
 };
+use tracing::instrument;
 
 use crate::{stack::Stack, workspace::Workspace};
 
@@ -20,6 +21,12 @@ impl LocalWorkspace {
         Self { cwd }
     }
 
+    #[instrument(
+        skip(self),
+        fields(
+            cwd = %self.cwd,
+        ),
+    )]
     fn run_command_sync(
         &self,
         args: Vec<&str>,
@@ -68,6 +75,13 @@ impl LocalWorkspace {
         Ok((output, stderr, code))
     }
 
+    #[instrument(
+        name = "run_command_async",
+        skip(self),
+        fields(
+            cwd = %self.cwd,
+        ),
+    )]
     async fn run_command_piped<E>(
         &self,
         args: Vec<&str>,
@@ -197,6 +211,7 @@ impl LocalWorkspace {
 impl Workspace for LocalWorkspace {
     type Stack = LocalStack;
 
+    #[instrument(skip(self))]
     fn whoami(&self) -> crate::Result<crate::workspace::Whoami> {
         let (stdout, stderr, code) = self
             .run_command_sync_output(vec!["whoami", "--json"])
@@ -207,6 +222,7 @@ impl Workspace for LocalWorkspace {
         return Ok(stdout);
     }
 
+    #[instrument(skip(self))]
     fn create_stack(
         &self,
         name: &str,
@@ -234,6 +250,7 @@ impl Workspace for LocalWorkspace {
         });
     }
 
+    #[instrument(skip(self))]
     fn select_stack(&self, name: &str) -> crate::Result<Self::Stack> {
         let (stdout, stderr, code) = self
             .run_command_sync(vec!["stack", "select", name])
@@ -247,6 +264,7 @@ impl Workspace for LocalWorkspace {
         });
     }
 
+    #[instrument(skip(self))]
     fn select_or_create_stack(
         &self,
         name: &str,
@@ -264,6 +282,7 @@ impl Workspace for LocalWorkspace {
         })
     }
 
+    #[instrument(skip(self))]
     fn remove_stack(
         &self,
         stack_name: &str,
@@ -287,6 +306,7 @@ impl Workspace for LocalWorkspace {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     fn list_stacks(
         &self,
         options: Option<crate::workspace::StackListOptions>,
@@ -308,6 +328,7 @@ impl Workspace for LocalWorkspace {
         Ok(stdout)
     }
 
+    #[instrument(skip(self))]
     fn export_stack(&self, stack_name: &str) -> crate::Result<crate::workspace::Deployment> {
         let args = vec!["stack", "export", "--stack", stack_name];
         let (stdout, stderr, code) = self
@@ -319,6 +340,7 @@ impl Workspace for LocalWorkspace {
         return Ok(stdout);
     }
 
+    #[instrument(skip(self))]
     fn import_stack(
         &self,
         stack_name: &str,
@@ -351,6 +373,7 @@ impl Workspace for LocalWorkspace {
         return Ok(());
     }
 
+    #[instrument(skip(self))]
     fn stack_outputs(&self, stack_name: &str) -> crate::Result<crate::workspace::OutputMap> {
         let args = vec![
             "stack",
@@ -369,6 +392,7 @@ impl Workspace for LocalWorkspace {
         return Ok(stdout);
     }
 
+    #[instrument(skip(self))]
     fn get_config(
         &self,
         stack_name: &str,
@@ -390,6 +414,7 @@ impl Workspace for LocalWorkspace {
         return Ok(stdout);
     }
 
+    #[instrument(skip(self))]
     fn set_config(
         &self,
         stack_name: &str,
@@ -419,6 +444,7 @@ impl Workspace for LocalWorkspace {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     fn remove_config(&self, stack_name: &str, key: &str, path: bool) -> crate::Result<()> {
         let mut args = vec!["config", "rm", key, "--stack", stack_name];
         if path {
@@ -441,6 +467,7 @@ pub struct LocalStack {
 
 #[async_trait::async_trait]
 impl Stack for LocalStack {
+    #[instrument(skip(self))]
     fn preview(
         &self,
         options: crate::stack::StackPreviewOptions,
@@ -539,6 +566,7 @@ impl Stack for LocalStack {
         Ok(summary)
     }
 
+    #[instrument(skip(self))]
     async fn up(
         &self,
         options: crate::stack::StackUpOptions,
@@ -646,6 +674,7 @@ impl Stack for LocalStack {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     async fn refresh(
         &self,
         options: crate::stack::StackRefreshOptions,
@@ -716,6 +745,7 @@ impl Stack for LocalStack {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     async fn destroy(
         &self,
         options: crate::stack::StackDestroyOptions,
