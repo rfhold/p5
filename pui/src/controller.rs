@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crossterm::event::{Event, EventStream};
+use ratatui::widgets::StatefulWidget;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 use tokio_util::task::TaskTracker;
@@ -60,8 +61,15 @@ impl<H: Handler> Controller<H> {
         }
     }
 
-    #[tracing::instrument(skip(self, _terminal))]
-    pub async fn run(self, _terminal: ratatui::DefaultTerminal) -> color_eyre::Result<()> {
+    #[tracing::instrument(skip(self, terminal, widget))]
+    pub async fn run<W>(
+        self,
+        mut terminal: ratatui::DefaultTerminal,
+        widget: W,
+    ) -> color_eyre::Result<()>
+    where
+        W: StatefulWidget<State = H::State> + Send + Sync + Clone + 'static,
+    {
         let mut key_events = EventStream::new();
 
         let (key_event_tx, mut key_event_rx) = tokio::sync::mpsc::channel::<Event>(100);
@@ -105,19 +113,31 @@ impl<H: Handler> Controller<H> {
             }
         });
 
-        let action_cancel_token = self.cancel_token.clone();
-        tokio::select! {
-            _ = self.cancel_token.cancelled() => {
-                tracing::info!("Cancellation token triggered, shutting down...");
-            },
-            action = action_rx.recv() => {
-                if let Some(action) = action {
-                    let mut state = self.state.lock().await;
-                    if let Err(e) = action.handle_action(&mut state, &task_tx, &action_tx, &action_cancel_token) {
-                        tracing::error!("Error handling action: {}", e);
+        let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1000 / 60));
+
+        loop {
+            tokio::select! {
+                action = action_rx.recv() => {
+                    if let Some(action) = action {
+                        let mut state = self.state.lock().await;
+                        if let Err(e) = action.handle_action(&mut state, &task_tx, &action_tx, &self.cancel_token) {
+                            tracing::error!("Error handling action: {}", e);
+                        }
+                    } else {
+                        tracing::debug!("Action channel closed, exiting controller run");
+                        break;
                     }
                 }
-            },
+                _ = ticker.tick() => {
+                    let mut state = self.state.lock().await;
+                    if let Err(e) = terminal.draw(|f| {
+                       f.render_stateful_widget(widget.clone(), f.area() , &mut state);
+                    }) {
+                        tracing::error!("Error rendering terminal: {}", e);
+                        break;
+                    }
+                }
+            }
         }
 
         tracker.close();

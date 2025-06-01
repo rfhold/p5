@@ -1361,6 +1361,7 @@ dependencies = [
  "crossterm 0.29.0",
  "pui",
  "pulumi-automation",
+ "ratatui 0.29.0",
  "tokio",
  "tokio-console",
  "tokio-util",

@@ -16,6 +16,7 @@ crossterm.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
 tokio-util.workspace = true
+ratatui.workspace = true
 
 [workspace]
 resolver = "3"
