@@ -27,9 +27,7 @@ pub enum AppAction {
 }
 
 #[derive(Clone)]
-pub enum AppTask {
-    // Define any tasks needed for your application here
-}
+pub enum AppTask {}
 
 impl Handler for AppHandler {
     type State = AppState;
@@ -109,11 +107,9 @@ impl StatefulWidget for App {
         buf: &mut ratatui::prelude::Buffer,
         state: &mut Self::State,
     ) {
-        // Render your application UI here
-        // For example, you can draw a simple text widget
         let text = "Press Ctrl-C to exit";
         let paragraph = ratatui::widgets::Paragraph::new(text)
-            .block(ratatui::widgets::Block::default().title("App"))
+            .block(ratatui::widgets::Block::default().title("P5"))
             .alignment(ratatui::layout::Alignment::Center);
 
         paragraph.render(area, buf);

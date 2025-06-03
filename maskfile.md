@@ -1,5 +1,10 @@
 # P5 Tasks
 
+## tools
+~~~sh
+go install github.com/charmbracelet/vhs@latest
+~~~
+
 ## build
 
 ~~~sh
@@ -24,7 +29,7 @@ cargo fmt --all
 
 ### build
 ~~~sh
-docker build . -f Dockerfile.test -t p5:tests
+docker build . -f Dockerfile -t p5:tests --target test
 ~~~
 
 ### unit
@@ -38,12 +43,25 @@ cargo test --workspace --lib --bins
 ~~~sh
 set -e
 mask test build
-docker run --rm -v "$(pwd)/target:/app/target" p5:tests "*integration"
+docker run --rm p5:tests "*integration"
 ~~~
 
 ### debug
 ~~~sh
 set -e
 mask test build
-docker run -it --rm -v "$(pwd)/target:/app/target" p5:tests "debug"
+docker run -it --rm p5:tests "debug"
+~~~
+
+## vhs
+
+### build
+~~~sh
+docker build . -f Dockerfile -t p5:vhs --target vhs
+~~~
+
+### run
+~~~sh
+mask vhs build
+docker run -it --rm -v "$PWD/tapes/output:/app/tapes/output" p5:vhs
 ~~~
