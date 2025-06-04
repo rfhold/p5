@@ -17,6 +17,9 @@ async-trait.workspace = true
 tracing.workspace = true
 tokio-util.workspace = true
 ratatui.workspace = true
+tui-input = { version = "0.12.1", features = ["crossterm"], default-features = false }
+chrono.workspace = true
+serde_json.workspace = true
 
 [workspace]
 resolver = "3"
@@ -26,7 +29,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Robert Holden <rfhold@rholden.dev>"]
@@ -47,6 +50,7 @@ tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 ratatui = { version = "0.29.0", features = ["crossterm"] }
 crossterm = { version = "0.29.0", features = ["event-stream"] }
+chrono = "0.4.41"
 color-eyre = "0.6.3"
 
 [dev-dependencies]
