@@ -61,12 +61,18 @@ Require pulumi
 Require p5
 
 Set Shell "bash"
-Set Padding 10
-Set FontSize 28
+Set Padding 5
+Set FontSize 24
 Set Width 1200
 Set Height 600
 
-Type "p5" Sleep 200ms  Enter
+Type "p5" Sleep 800ms  Enter
 
-Sleep 5s
+Type ":workspace ./demo" Sleep 800ms Enter
+
+Sleep 1s
+
+Type ":stack dev" Sleep 600ms Enter
+
+Sleep 3500ms
 

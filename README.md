@@ -4,15 +4,26 @@ Pulumi was too long
 
 A TUI application to help you manage your Pulumi stacks.
 
+
+## Installation
+
+```bash
+cargo install p5
+```
+
+## Demo
+
+![Demo usage of p5](tapes/output/demo.gif)
+
 ## Features
 
-- [ ] Contexts
-- [ ] Command prompt
+- [x] Contexts
+- [x] Command prompt
 - [ ] Help
-- [ ] Select program
-- [ ] Select stack
+- [x] Select workspace
+- [x] Select stack
 - [ ] Show stack information
-    - [ ] Show stack outputs
+    - [x] Show stack outputs
     - [ ] Show stack settings
 - [ ] Show stack resources
     - [ ] Show state json
@@ -49,16 +60,19 @@ A TUI application to help you manage your Pulumi stacks.
     - [ ] Edit stack config
     - [ ] Edit program config
 - [ ] Show stack history
-
-
-## Installation
-
-```bash
-cargo install p5
-```
+- [ ] Event log
+    - [ ] Show event log
+    - [ ] Filter event log
 
 ## Motivation
 
 Pulumi is a great tool, but the CLI is not very user friendly. I wanted to create a TUI application that would make it easier to manage Pulumi stacks and programs.
 I also wanted to get a better grasp of async rust and TUI development, so this is a great opportunity to do both. With p5 I should be able to rapidly iterate over
 IaC changes while also assisting in complicated sate manipulation.
+
+## Debt
+
+- [ ] pulumi-automation error handling and async cleanup
+    - [ ] error stream for operations
+- [ ] tracing
+- [ ] otel

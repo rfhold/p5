@@ -77,6 +77,9 @@ COPY . .
 
 WORKDIR /app/tapes
 
+ENV PULUMI_CONFIG_PASSPHRASE_FILE="/app/tapes/passphrase.txt"
+ENV PULUMI_BACKEND_URL="file:///app/tapes"
+
 ENV VHS_NO_SANDBOX=true
 
 ENTRYPOINT [ "/bin/bash", "-c", "vhs demo.tape" ]
