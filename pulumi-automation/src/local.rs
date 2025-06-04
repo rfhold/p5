@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::collections::HashMap;
 use std::io::Write;
 use std::process::Stdio;
@@ -30,8 +32,6 @@ impl LocalWorkspace {
         args: Vec<&str>,
     ) -> Result<(Vec<u8>, Vec<u8>, Option<i32>), super::PulumiError> {
         let env_vars: HashMap<String, String> = HashMap::new();
-
-        println!("Running command: pulumi {:?}", args);
 
         let output = std::process::Command::new("pulumi")
             .args(args)
@@ -89,8 +89,6 @@ impl LocalWorkspace {
         E: serde::de::DeserializeOwned + Send + 'static,
     {
         let env_vars: HashMap<String, String> = HashMap::new();
-
-        println!("Running command: pulumi {:?}", args);
 
         let mut child = tokio::process::Command::new("pulumi")
             .args(args)

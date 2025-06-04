@@ -7,12 +7,13 @@ use tokio_stream::StreamExt;
 use tokio_util::task::TaskTracker;
 
 pub trait Handler: Send + Sync + Clone + 'static {
-    type State: Send + Sync + Clone + 'static;
+    type State: Send + Sync + 'static;
     type Action: Action<State = Self::State, Task = Self::Task>;
     type Task: Task<Action = Self::Action>;
 
     fn handle_event(
         &self,
+        state: &mut Self::State,
         event: Event,
         action_tx: &tokio::sync::mpsc::Sender<Self::Action>,
     ) -> color_eyre::Result<()>;
@@ -92,9 +93,14 @@ impl<H: Handler> Controller<H> {
         });
 
         let event_action_tx = action_tx.clone();
+        let event_state = self.state.clone();
         tracker.spawn(async move {
             while let Some(event) = key_event_rx.recv().await {
-                if let Err(e) = self.handler.handle_event(event, &event_action_tx) {
+                let mut state = event_state.lock().await;
+                if let Err(e) = self
+                    .handler
+                    .handle_event(&mut state, event, &event_action_tx)
+                {
                     tracing::error!("Error handling event: {}", e);
                 }
             }
@@ -199,6 +205,7 @@ mod tests {
 
         fn handle_event(
             &self,
+            _state: &mut Self::State,
             event: Event,
             action_tx: &tokio::sync::mpsc::Sender<Self::Action>,
         ) -> color_eyre::Result<()> {

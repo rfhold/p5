@@ -59,8 +59,7 @@ fn install_panic_hook() -> color_eyre::Result<()> {
 }
 
 fn install_tracing() {
-    tracing_subscriber::registry()
-        .with(console_subscriber::spawn())
+    let registry = tracing_subscriber::registry()
         .with(tracing_error::ErrorLayer::default())
         .with(tracing_subscriber::EnvFilter::from_default_env())
         .with(
@@ -71,6 +70,7 @@ fn install_tracing() {
                 .with_line_number(true)
                 .with_target(false)
                 .compact(),
-        )
-        .init();
+        );
+
+    registry.init();
 }
