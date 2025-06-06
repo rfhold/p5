@@ -62,17 +62,27 @@ Require p5
 
 Set Shell "bash"
 Set Padding 5
-Set FontSize 24
+Set FontSize 20
 Set Width 1200
 Set Height 600
+
+Set PlaybackSpeed 2.0
 
 Type "p5" Sleep 800ms  Enter
 
 Type ":workspace ./demo" Sleep 800ms Enter
 
-Sleep 1s
+Sleep 500ms
 
 Type ":stack dev" Sleep 600ms Enter
+
+Sleep 500ms
+
+Type ":outputs" Sleep 600ms Enter
+
+Sleep 1s
+
+Type ":resources" Sleep 600ms Enter
 
 Sleep 3500ms
 

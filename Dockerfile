@@ -30,7 +30,9 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./pui/Cargo.toml ./pui/
 COPY ./pulumi-automation/Cargo.toml ./pulumi-automation/
 
-RUN cargo fetch --locked
+RUN --mount=type=cache,target=/usr/local/cargo/git/db \
+    --mount=type=cache,target=/usr/local/cargo/registry/ \
+		cargo fetch --locked
 
 COPY . .
 
@@ -48,13 +50,18 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./pui/Cargo.toml ./pui/
 COPY ./pulumi-automation/Cargo.toml ./pulumi-automation/
 
-RUN cargo fetch --locked
+RUN --mount=type=cache,target=/usr/local/cargo/git/db \
+    --mount=type=cache,target=/usr/local/cargo/registry/ \
+		cargo fetch --locked
 
 COPY src ./src
 COPY pui/src ./pui/src
 COPY pulumi-automation/src ./pulumi-automation/src
 
-RUN cargo build --release --bin p5
+RUN --mount=type=cache,target=/app/target/ \
+    --mount=type=cache,target=/usr/local/cargo/git/db \
+    --mount=type=cache,target=/usr/local/cargo/registry/ \
+		cargo build --release --bin p5 && cp target/release/p5 /app/p5
 
 FROM pulumi AS vhs
 
@@ -71,7 +78,7 @@ COPY --from=tsl0922/ttyd:alpine /usr/bin/ttyd /usr/bin/ttyd
 
 WORKDIR /app
 
-COPY --from=build /app/target/release/p5 /usr/bin/p5
+COPY --from=build /app/p5 /usr/bin/p5
 
 COPY . .
 

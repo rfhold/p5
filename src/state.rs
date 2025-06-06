@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pulumi_automation::{
     local::{LocalStack, LocalWorkspace},
-    workspace::OutputMap,
+    workspace::{Deployment, OutputMap, StackSettings},
 };
 use tui_input::Input;
 
@@ -19,6 +19,19 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn background_context(&self) -> AppContext {
+        if let Some(context) = self.context_stack.last() {
+            if let AppContext::CommandPrompt = context {
+                if self.context_stack.len() > 1 {
+                    return self.context_stack[self.context_stack.len() - 2].clone();
+                }
+                return AppContext::Default;
+            }
+            return context.clone();
+        }
+        AppContext::Default
+    }
+
     pub fn current_context(&self) -> AppContext {
         self.context_stack.last().cloned().unwrap_or_default()
     }
@@ -33,22 +46,22 @@ impl AppState {
         &Loadable::NotLoaded
     }
 
-    pub fn stack_state(&self) -> &Loadable<StackOutputs> {
+    pub fn stack_state(&self) -> Option<&StackOutputs> {
         if let Some(state) = self.selected_workspace.as_ref() {
             if let Some(outputs) = self.workspaces.get(&state.workspace_path) {
                 if let Some(stack_name) = state.selected_stack.as_ref() {
                     if let Some(stack_outputs) = outputs.stacks.get(&stack_name.stack_name) {
-                        return stack_outputs;
+                        return Some(stack_outputs);
                     }
                 }
             }
         }
 
-        &Loadable::NotLoaded
+        None
     }
 
     pub fn stack(&self) -> &Loadable<LocalStack> {
-        if let Loadable::Loaded(stack_outputs) = self.stack_state() {
+        if let Some(stack_outputs) = self.stack_state() {
             return &stack_outputs.stack;
         }
 
@@ -56,8 +69,24 @@ impl AppState {
     }
 
     pub fn stack_outputs(&self) -> &Loadable<OutputMap> {
-        if let Loadable::Loaded(stack_outputs) = self.stack_state() {
+        if let Some(stack_outputs) = self.stack_state() {
             return &stack_outputs.outputs;
+        }
+
+        &Loadable::NotLoaded
+    }
+
+    pub fn stack_config(&self) -> &Loadable<StackSettings> {
+        if let Some(stack_outputs) = self.stack_state() {
+            return &stack_outputs.config;
+        }
+
+        &Loadable::NotLoaded
+    }
+
+    pub fn stack_state_data(&self) -> &Loadable<Deployment> {
+        if let Some(stack_outputs) = self.stack_state() {
+            return &stack_outputs.state;
         }
 
         &Loadable::NotLoaded
@@ -76,13 +105,15 @@ pub enum Loadable<T> {
 pub struct WorkspaceOutputs {
     pub workspace: Loadable<LocalWorkspace>,
     /// stack names to their outputs
-    pub stacks: HashMap<String, Loadable<StackOutputs>>,
+    pub stacks: HashMap<String, StackOutputs>,
 }
 
 #[derive(Default)]
 pub struct StackOutputs {
     pub stack: Loadable<LocalStack>,
     pub outputs: Loadable<OutputMap>,
+    pub config: Loadable<StackSettings>,
+    pub state: Loadable<Deployment>,
 }
 
 #[derive(Default, Debug)]
@@ -101,4 +132,13 @@ pub enum AppContext {
     #[default]
     Default,
     CommandPrompt,
+    Stack(StackContext),
+}
+
+#[derive(Clone, Default, Debug)]
+pub enum StackContext {
+    Outputs,
+    #[default]
+    Config,
+    Resources,
 }

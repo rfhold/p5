@@ -19,14 +19,12 @@ cargo install p5
 
 - [x] Contexts
 - [x] Command prompt
-- [ ] Help
 - [x] Select workspace
 - [x] Select stack
-- [ ] Show stack information
+- [x] Show stack information
     - [x] Show stack outputs
-    - [ ] Show stack settings
-- [ ] Show stack resources
-    - [ ] Show state json
+    - [x] Show stack settings
+- [x] Show stack resources
     - [ ] Edit state json
         - [ ] Edit resource json
 - [ ] Preview stack changes
@@ -59,6 +57,10 @@ cargo install p5
 - [ ] Edit Pulumi config
     - [ ] Edit stack config
     - [ ] Edit program config
+- [ ] Navigation
+- [ ] Context Command Palette
+	- [ ] Keybinds
+- [ ] Help
 - [ ] Show stack history
 - [ ] Event log
     - [ ] Show event log

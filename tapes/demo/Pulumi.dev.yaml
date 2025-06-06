@@ -1,1 +1,3 @@
 encryptionsalt: v1:NErsf3qfUak=:v1:13gl/hb3xTTNxAHc:HBN7ppzZBhVFDVBW7VJHJtqbsZ1ksA==
+config:
+  demo:version: "1.0.0"

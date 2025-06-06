@@ -1,4 +1,7 @@
-use pulumi_automation::{local::LocalWorkspace, workspace::Workspace};
+use pulumi_automation::{
+    local::{LocalStack, LocalWorkspace},
+    workspace::Workspace,
+};
 use tokio::sync::mpsc;
 
 use crate::actions::{AppAction, WorkspaceAction};
@@ -9,13 +12,16 @@ use super::AppTask;
 pub enum WorkspaceTask {
     SelectWorkspace(String),
     SelectStack(LocalWorkspace, String),
+    GetStackOutputs(LocalWorkspace, LocalStack),
+    GetStackConfig(LocalWorkspace, LocalStack),
+    GetStackState(LocalWorkspace, LocalStack),
 }
 
 impl WorkspaceTask {
-    #[tracing::instrument(skip(self, _task_tx, action_tx))]
+    #[tracing::instrument(skip(self, task_tx, action_tx))]
     pub async fn run(
         &mut self,
-        _task_tx: &mpsc::Sender<AppTask>,
+        task_tx: &mpsc::Sender<AppTask>,
         action_tx: &mpsc::Sender<AppAction>,
     ) -> crate::Result<()> {
         match self {
@@ -36,7 +42,15 @@ impl WorkspaceTask {
                     stack.clone(),
                 )))?;
 
-                if let Ok(outputs) = workspace.stack_outputs(stack_name.as_str()) {
+                task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackConfig(
+                    workspace.clone(),
+                    stack.clone(),
+                )))?;
+
+                Ok(())
+            }
+            WorkspaceTask::GetStackOutputs(workspace, stack) => {
+                if let Ok(outputs) = workspace.stack_outputs(stack.name.as_str()) {
                     action_tx.try_send(AppAction::WorkspaceAction(
                         WorkspaceAction::PersistStackOutputs(
                             workspace.clone(),
@@ -45,7 +59,33 @@ impl WorkspaceTask {
                         ),
                     ))?;
                 } else {
-                    tracing::error!("Failed to get stack outputs for stack: {}", stack_name);
+                    tracing::error!("Failed to get stack outputs for stack: {}", stack.name);
+                }
+
+                Ok(())
+            }
+            WorkspaceTask::GetStackConfig(workspace, stack) => {
+                if let Ok(config) = workspace.get_stack_config(stack.name.as_str()) {
+                    action_tx.try_send(AppAction::WorkspaceAction(
+                        WorkspaceAction::PersistStackConfig(
+                            workspace.clone(),
+                            stack.clone(),
+                            config,
+                        ),
+                    ))?;
+                } else {
+                    tracing::error!("Failed to get stack config for stack: {}", stack.name);
+                }
+
+                Ok(())
+            }
+            WorkspaceTask::GetStackState(workspace, stack) => {
+                if let Ok(state) = workspace.export_stack(stack.name.as_str()) {
+                    action_tx.try_send(AppAction::WorkspaceAction(
+                        WorkspaceAction::PersistStackState(workspace.clone(), stack.clone(), state),
+                    ))?;
+                } else {
+                    tracing::error!("Failed to get stack state for stack: {}", stack.name);
                 }
 
                 Ok(())

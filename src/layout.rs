@@ -4,7 +4,10 @@ use ratatui::{
     widgets::{Clear, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::{AppContext, AppState, widgets::OperationView};
+use crate::{
+    AppContext, AppState,
+    widgets::{SplashScreen, StackLayout},
+};
 
 #[derive(Clone, Default)]
 pub struct AppLayout {}
@@ -18,9 +21,23 @@ impl StatefulWidget for AppLayout {
         buf: &mut ratatui::prelude::Buffer,
         state: &mut Self::State,
     ) {
-        OperationView::default().render(area, buf, state);
+        let current_context = state.current_context();
+        let background_context = state.background_context();
+        match &background_context {
+            AppContext::Default => {
+                SplashScreen::new(
+                    "P5".to_string(),
+                    "Press ':' to open the command prompt. Ctrl+C to exit.".to_string(),
+                )
+                .render(area, buf);
+            }
+            AppContext::Stack(stack_context) => {
+                StackLayout::new(stack_context.clone()).render(area, buf, state);
+            }
+            AppContext::CommandPrompt => {}
+        }
 
-        if let AppContext::CommandPrompt = state.current_context() {
+        if let AppContext::CommandPrompt = current_context {
             let popup_area = popup_area(area, 40, 3, Flex::Center, Flex::Center);
             let command_prompt = Paragraph::new(state.command_prompt.value())
                 .block(

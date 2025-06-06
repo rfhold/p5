@@ -1,7 +1,7 @@
 use pui::controller::Action;
 use pulumi_automation::{
     local::{LocalStack, LocalWorkspace},
-    workspace::OutputMap,
+    workspace::{Deployment, OutputMap, StackSettings},
 };
 use tokio::sync::mpsc;
 
@@ -28,6 +28,11 @@ pub enum WorkspaceAction {
     SelectStack(LocalWorkspace, String),
     PersistStack(LocalWorkspace, LocalStack),
     PersistStackOutputs(LocalWorkspace, LocalStack, OutputMap),
+    PersistStackConfig(LocalWorkspace, LocalStack, StackSettings),
+    PersistStackState(LocalWorkspace, LocalStack, Deployment),
+    LoadStackState(LocalWorkspace, LocalStack),
+    LoadStackOutputs(LocalWorkspace, LocalStack),
+    LoadStackConfig(LocalWorkspace, LocalStack),
 }
 
 impl Action for AppAction {
@@ -50,6 +55,46 @@ impl Action for AppAction {
             AppAction::PushContext(context) => {
                 // TODO: Handle clearing duplicate contexts or managing context stack size
                 state.context_stack.push(context.clone());
+
+                match context {
+                    AppContext::Stack(stack_context) => {
+                        let workspace = state.workspace();
+                        let stack = state.stack();
+
+                        if let (Loadable::Loaded(workspace), Loadable::Loaded(stack)) =
+                            (workspace, stack)
+                        {
+                            match stack_context {
+                                crate::state::StackContext::Outputs => {
+                                    action_tx.try_send(AppAction::WorkspaceAction(
+                                        WorkspaceAction::LoadStackOutputs(
+                                            workspace.clone(),
+                                            stack.clone(),
+                                        ),
+                                    ))?;
+                                }
+                                crate::state::StackContext::Config => {
+                                    action_tx.try_send(AppAction::WorkspaceAction(
+                                        WorkspaceAction::LoadStackConfig(
+                                            workspace.clone(),
+                                            stack.clone(),
+                                        ),
+                                    ))?;
+                                }
+                                crate::state::StackContext::Resources => {
+                                    action_tx.try_send(AppAction::WorkspaceAction(
+                                        WorkspaceAction::LoadStackState(
+                                            workspace.clone(),
+                                            stack.clone(),
+                                        ),
+                                    ))?;
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+
                 Ok(())
             }
             AppAction::PopContext => {
@@ -61,10 +106,15 @@ impl Action for AppAction {
                 Ok(())
             }
             AppAction::SubmitCommand(input) => {
-                action_tx.try_send(crate::command::parse_command_to_action(input, state)?)?;
+                if let Some(action) = crate::command::parse_command_to_action(input, state)? {
+                    action_tx.try_send(action)?;
+                }
                 state.command_prompt.reset();
                 if let AppContext::CommandPrompt = state.current_context() {
-                    action_tx.try_send(AppAction::PopContext)?;
+                    if state.context_stack.len() > 1 {
+                        // If we are in the command prompt context, pop it to return to the previous context
+                        state.context_stack.pop();
+                    }
                 }
                 Ok(())
             }
@@ -74,108 +124,229 @@ impl Action for AppAction {
                         workspace_path: cwd.clone(),
                         selected_stack: None,
                     });
+                    state.workspaces.entry(cwd.clone()).or_insert_with(|| {
+                        crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loading,
+                            stacks: Default::default(),
+                        }
+                    });
                     task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::SelectWorkspace(
                         cwd.clone(),
                     )))?;
                     Ok(())
                 }
                 WorkspaceAction::PersistWorkspace(workspace) => {
-                    state.selected_workspace = Some(WorkspaceState {
-                        workspace_path: workspace.cwd.clone(),
-                        selected_stack: None,
-                    });
-                    state.workspaces.insert(
-                        workspace.cwd.clone(),
-                        crate::state::WorkspaceOutputs {
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .and_modify(|w| {
+                            if let Loadable::Loading = w.workspace {
+                                *w = crate::state::WorkspaceOutputs {
+                                    workspace: Loadable::Loaded(workspace.clone()),
+                                    stacks: Default::default(),
+                                };
+                            }
+                        })
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
                             workspace: Loadable::Loaded(workspace.clone()),
                             stacks: Default::default(),
-                        },
-                    );
+                        });
                     Ok(())
                 }
                 WorkspaceAction::SelectStack(workspace, name) => {
-                    if state.selected_workspace.is_none()
-                        || state.selected_workspace.as_ref().unwrap().workspace_path
-                            != workspace.cwd
-                    {
-                        state.selected_workspace = Some(WorkspaceState {
+                    state
+                        .selected_workspace
+                        .get_or_insert_with(|| WorkspaceState {
                             workspace_path: workspace.cwd.clone(),
                             selected_stack: None,
-                        });
-                    }
-                    state.selected_workspace.as_mut().unwrap().selected_stack = Some(StackState {
+                        })
+                        .selected_stack = Some(StackState {
                         stack_name: name.clone(),
                     });
                     state
                         .workspaces
                         .entry(workspace.cwd.clone())
-                        .or_default()
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
                         .stacks
-                        .insert(name.clone(), Loadable::Loading);
+                        .entry(name.clone())
+                        .and_modify(|s| {
+                            s.stack = Loadable::Loading;
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loading,
+                            config: Loadable::Loading,
+                            outputs: Default::default(),
+                            state: Default::default(),
+                        });
                     task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::SelectStack(
                         workspace.clone(),
                         name.clone(),
                     )))?;
+                    action_tx.try_send(AppAction::PushContext(AppContext::Stack(
+                        Default::default(),
+                    )))?;
                     Ok(())
                 }
                 WorkspaceAction::PersistStack(workspace, stack) => {
-                    if state.selected_workspace.is_none()
-                        || state.selected_workspace.as_ref().unwrap().workspace_path
-                            != workspace.cwd
-                    {
-                        state.selected_workspace = Some(WorkspaceState {
-                            workspace_path: workspace.cwd.clone(),
-                            selected_stack: None,
-                        });
-                    }
-                    state.selected_workspace.as_mut().unwrap().selected_stack = Some(StackState {
-                        stack_name: stack.name.clone(),
-                    });
                     state
                         .workspaces
                         .entry(workspace.cwd.clone())
-                        .or_default()
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
                         .stacks
-                        .insert(
-                            stack.name.clone(),
-                            Loadable::Loaded(StackOutputs {
-                                stack: Loadable::Loaded(stack.clone()),
-                                outputs: Loadable::Loading,
-                            }),
-                        );
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.stack = Loadable::Loaded(stack.clone());
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Loadable::Loading,
+                            outputs: Default::default(),
+                            state: Default::default(),
+                        });
                     Ok(())
                 }
                 WorkspaceAction::PersistStackOutputs(workspace, stack, outputs) => {
-                    if state.selected_workspace.is_none()
-                        || state.selected_workspace.as_ref().unwrap().workspace_path
-                            != workspace.cwd
-                    {
-                        state.selected_workspace = Some(WorkspaceState {
-                            workspace_path: workspace.cwd.clone(),
-                            selected_stack: None,
-                        });
-                    }
-                    if let Some(stack_state) = state
-                        .selected_workspace
-                        .as_mut()
-                        .unwrap()
-                        .selected_stack
-                        .as_mut()
-                    {
-                        stack_state.stack_name = stack.name.clone();
-                    }
                     state
                         .workspaces
                         .entry(workspace.cwd.clone())
-                        .or_default()
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
                         .stacks
-                        .insert(
-                            stack.name.clone(),
-                            Loadable::Loaded(StackOutputs {
-                                stack: Loadable::Loaded(stack.clone()),
-                                outputs: Loadable::Loaded(outputs.clone()),
-                            }),
-                        );
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.outputs = Loadable::Loaded(outputs.clone());
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            outputs: Loadable::Loaded(outputs.clone()),
+                            config: Default::default(),
+                            state: Default::default(),
+                        });
+                    Ok(())
+                }
+                WorkspaceAction::PersistStackConfig(workspace, stack, config) => {
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.config = Loadable::Loaded(config.clone());
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Loadable::Loaded(config.clone()),
+                            outputs: Default::default(),
+                            state: Default::default(),
+                        });
+                    Ok(())
+                }
+                WorkspaceAction::PersistStackState(workspace, stack, stack_state) => {
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.state = Loadable::Loaded(stack_state.clone());
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Default::default(),
+                            outputs: Default::default(),
+                            state: Loadable::Loaded(stack_state.clone()),
+                        });
+                    Ok(())
+                }
+                WorkspaceAction::LoadStackState(workspace, stack) => {
+                    task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackState(
+                        workspace.clone(),
+                        stack.clone(),
+                    )))?;
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.state = Loadable::Loading;
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Default::default(),
+                            outputs: Default::default(),
+                            state: Loadable::Loading,
+                        });
+                    Ok(())
+                }
+                WorkspaceAction::LoadStackOutputs(workspace, stack) => {
+                    task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackOutputs(
+                        workspace.clone(),
+                        stack.clone(),
+                    )))?;
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.outputs = Loadable::Loading;
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Default::default(),
+                            outputs: Loadable::Loading,
+                            state: Default::default(),
+                        });
+                    Ok(())
+                }
+                WorkspaceAction::LoadStackConfig(workspace, stack) => {
+                    task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackConfig(
+                        workspace.clone(),
+                        stack.clone(),
+                    )))?;
+                    state
+                        .workspaces
+                        .entry(workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(stack.name.clone())
+                        .and_modify(|s| {
+                            s.config = Loadable::Loading;
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(stack.clone()),
+                            config: Loadable::Loading,
+                            outputs: Default::default(),
+                            state: Default::default(),
+                        });
                     Ok(())
                 }
             },

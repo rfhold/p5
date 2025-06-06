@@ -62,6 +62,7 @@ docker build . -f Dockerfile -t p5:vhs --target vhs
 
 ### run
 ~~~sh
+set -e
 mask vhs build
 docker run -it --rm -v "$PWD/tapes/output:/app/tapes/output" p5:vhs
 ~~~

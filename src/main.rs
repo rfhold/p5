@@ -18,7 +18,10 @@ pub(crate) type Result<T> = pui::Result<T>;
 #[tokio::main]
 async fn main() -> Result<()> {
     let handler = AppHandler;
-    let state = AppState::default();
+    let state = AppState {
+        context_stack: vec![AppContext::Default],
+        ..Default::default()
+    };
 
     pui::run(handler, state, layout::AppLayout::default()).await
 }
