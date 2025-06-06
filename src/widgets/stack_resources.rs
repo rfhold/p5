@@ -29,7 +29,7 @@ impl StatefulWidget for StackResources {
                     .deployment
                     .resources
                     .iter()
-                    .map(|resource| ResourceListItem::new(resource).into())
+                    .map(|resource| ResourceListItem::from(resource).into())
                     .collect();
 
                 Widget::render(List::new(items).block(block), area, buf);
