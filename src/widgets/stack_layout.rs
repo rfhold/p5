@@ -6,7 +6,8 @@ use ratatui::{
 use crate::state::{AppState, Loadable, StackContext};
 
 use super::{
-    stack_config::StackConfig, stack_outputs::StackOutputs, stack_resources::StackResources,
+    stack_config::StackConfig, stack_outputs::StackOutputs, stack_preview::StackPreview,
+    stack_resources::StackResources,
 };
 
 pub struct StackLayout {
@@ -62,6 +63,7 @@ impl StatefulWidget for StackLayout {
             StackContext::Outputs => StackOutputs::default().render(layout[1], buf, state),
             StackContext::Config => StackConfig::default().render(layout[1], buf, state),
             StackContext::Resources => StackResources::default().render(layout[1], buf, state),
+            StackContext::Preview => StackPreview::default().render(layout[1], buf, state),
         }
     }
 }
