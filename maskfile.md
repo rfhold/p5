@@ -13,6 +13,7 @@ cargo build --release --bin p5
 
 ## publish
 ~~~sh
+cargo publish --package pulumi-automation
 cargo publish
 ~~~
 
