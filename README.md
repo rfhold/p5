@@ -1,4 +1,4 @@
-# p5
+# P5
 
 Pulumi was too long
 
@@ -27,8 +27,8 @@ cargo install p5
 - [x] Show stack resources
     - [ ] Edit state json
         - [ ] Edit resource json
-- [ ] Preview stack changes
-    - [ ] Operation type colors
+- [x] Preview stack changes
+    - [x] Operation type colors
     - [ ] Detailed Diff
     - [ ] Special iconography
         - [ ] Protected resources
