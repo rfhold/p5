@@ -35,17 +35,18 @@ impl WorkspaceTask {
                 Ok(())
             }
             WorkspaceTask::SelectStack(workspace, stack_name) => {
-                let stack = workspace.select_stack(stack_name.as_str()).unwrap();
+                if let Ok(stack) = workspace.select_stack(stack_name.as_str()) {
+                    action_tx.try_send(AppAction::WorkspaceAction(
+                        WorkspaceAction::PersistStack(workspace.clone(), stack.clone()),
+                    ))?;
 
-                action_tx.try_send(AppAction::WorkspaceAction(WorkspaceAction::PersistStack(
-                    workspace.clone(),
-                    stack.clone(),
-                )))?;
-
-                task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackConfig(
-                    workspace.clone(),
-                    stack.clone(),
-                )))?;
+                    task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::GetStackConfig(
+                        workspace.clone(),
+                        stack.clone(),
+                    )))?;
+                } else {
+                    tracing::error!("Failed to select stack: {}", stack_name);
+                }
 
                 Ok(())
             }
