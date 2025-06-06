@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use pulumi_automation::{
     local::{LocalStack, LocalWorkspace},
+    stack::StackChangeSummary,
     workspace::{Deployment, OutputMap, StackSettings},
 };
 use tui_input::Input;
@@ -91,6 +92,14 @@ impl AppState {
 
         &Loadable::NotLoaded
     }
+
+    pub fn stack_preview(&self) -> &Loadable<StackChangeSummary> {
+        if let Some(stack_outputs) = self.stack_state() {
+            return &stack_outputs.preview.change_summary;
+        }
+
+        &Loadable::NotLoaded
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -114,6 +123,7 @@ pub struct StackOutputs {
     pub outputs: Loadable<OutputMap>,
     pub config: Loadable<StackSettings>,
     pub state: Loadable<Deployment>,
+    pub preview: OperationProgress,
 }
 
 #[derive(Default, Debug)]
@@ -141,4 +151,11 @@ pub enum StackContext {
     #[default]
     Config,
     Resources,
+    Preview,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct OperationProgress {
+    // loaded before executing for user review
+    pub change_summary: Loadable<StackChangeSummary>,
 }

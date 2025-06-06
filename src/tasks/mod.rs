@@ -9,6 +9,7 @@ pub mod workspace;
 #[derive(Clone)]
 pub enum AppTask {
     WorkspaceTask(workspace::WorkspaceTask),
+    StackTask(stack::StackTask),
 }
 
 #[async_trait::async_trait]
@@ -23,6 +24,7 @@ impl Task for AppTask {
     ) -> crate::Result<()> {
         match self {
             AppTask::WorkspaceTask(task) => task.run(task_tx, action_tx).await,
+            AppTask::StackTask(task) => task.run(task_tx, action_tx).await,
         }
     }
 }
