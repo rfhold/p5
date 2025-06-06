@@ -1,4 +1,4 @@
-use pui::controller::Task;
+use p5::controller::Task;
 use tokio::sync::mpsc;
 
 use crate::actions::AppAction;

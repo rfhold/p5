@@ -1,10 +1,5 @@
-
-
 ## Layout
-The repository is split into three sections.
-
-### PUI
-Home base for generic tui framework components, basic async orchestration, startup and shutdown, ect.
+The repository is split into two sections.
 
 ### Pulumi Automation
 A rust analogue to [Pulumi Automation API](https://www.pulumi.com/docs/iac/using-pulumi/automation-api/)

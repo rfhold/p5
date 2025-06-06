@@ -22,12 +22,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
 
-RUN mkdir -p src pui/src pulumi-automation/src pulumee/src && \
-		touch src/main.rs pui/src/lib.rs pulumi-automation/src/lib.rs
+RUN mkdir -p src pulumi-automation/src && \
+		touch src/main.rs pulumi-automation/src/lib.rs
 
 COPY ./.cargo/config.toml ./.cargo/config.toml
 COPY ./Cargo.toml ./Cargo.lock ./
-COPY ./pui/Cargo.toml ./pui/
 COPY ./pulumi-automation/Cargo.toml ./pulumi-automation/
 
 RUN --mount=type=cache,target=/usr/local/cargo/git/db \
@@ -42,12 +41,11 @@ FROM rust:1.86.0 AS build
 
 WORKDIR /app
 
-RUN mkdir -p src pui/src pulumi-automation/src pulumee/src && \
-		touch src/main.rs pui/src/lib.rs pulumi-automation/src/lib.rs
+RUN mkdir -p src pulumi-automation/src && \
+		touch src/main.rs pulumi-automation/src/lib.rs
 
 COPY ./.cargo/config.toml ./.cargo/config.toml
 COPY ./Cargo.toml ./Cargo.lock ./
-COPY ./pui/Cargo.toml ./pui/
 COPY ./pulumi-automation/Cargo.toml ./pulumi-automation/
 
 RUN --mount=type=cache,target=/usr/local/cargo/git/db \
@@ -55,7 +53,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/git/db \
 		cargo fetch --locked
 
 COPY src ./src
-COPY pui/src ./pui/src
 COPY pulumi-automation/src ./pulumi-automation/src
 
 RUN --mount=type=cache,target=/app/target/ \

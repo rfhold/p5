@@ -11,6 +11,11 @@ go install github.com/charmbracelet/vhs@latest
 cargo build --release --bin p5
 ~~~
 
+## publish
+~~~sh
+cargo publish
+~~~
+
 ## check
 
 ~~~sh

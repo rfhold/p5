@@ -1,6 +1,6 @@
 use actions::AppAction;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
-use pui::controller::Handler;
+use p5::controller::Handler;
 use state::{AppContext, AppState};
 use tasks::AppTask;
 use tokio::sync::mpsc;
@@ -13,7 +13,7 @@ mod state;
 mod tasks;
 mod widgets;
 
-pub(crate) type Result<T> = pui::Result<T>;
+pub(crate) type Result<T> = p5::Result<T>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
 
-    pui::run(handler, state, layout::AppLayout::default()).await
+    p5::run(handler, state, layout::AppLayout::default()).await
 }
 
 #[derive(Clone)]

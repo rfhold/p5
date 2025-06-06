@@ -1,4 +1,4 @@
-use pui::controller::Action;
+use p5::controller::Action;
 use pulumi_automation::{
     local::{LocalStack, LocalWorkspace},
     workspace::{Deployment, OutputMap, StackSettings},
