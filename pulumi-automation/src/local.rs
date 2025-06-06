@@ -202,6 +202,19 @@ impl LocalWorkspace {
 
         Ok(())
     }
+
+    fn get_stack_file_path(&self, stack_name: &str) -> Option<String> {
+        let extensions = vec!["yaml", "yml"];
+
+        for ext in extensions {
+            let path = format!("{}/Pulumi.{}.{}", self.cwd, stack_name, ext);
+            if std::path::Path::new(&path).exists() {
+                return Some(path);
+            }
+        }
+
+        None
+    }
 }
 
 impl Workspace for LocalWorkspace {
@@ -452,6 +465,42 @@ impl Workspace for LocalWorkspace {
         })?;
 
         Ok(())
+    }
+
+    fn get_stack_config(&self, stack_name: &str) -> crate::Result<crate::workspace::StackSettings> {
+        if let Some(path) = self.get_stack_file_path(stack_name) {
+            let content = std::fs::read_to_string(path).map_err(|e| {
+                super::PulumiError::Other(format!("Failed to read stack file: {}", e))
+            })?;
+            let settings: crate::workspace::StackSettings = serde_yaml::from_str(&content)
+                .map_err(|e| {
+                    super::PulumiError::Other(format!("Failed to parse stack settings: {}", e))
+                })?;
+            return Ok(settings);
+        }
+
+        Err(super::PulumiError::Other(
+            "Stack file not found".to_string(),
+        ))
+    }
+
+    fn set_stack_config(
+        &self,
+        stack_name: &str,
+        config: crate::workspace::StackSettings,
+    ) -> crate::Result<()> {
+        if let Some(path) = self.get_stack_file_path(stack_name) {
+            let content = serde_yaml::to_string(&config).map_err(|e| {
+                super::PulumiError::Other(format!("Failed to serialize stack settings: {}", e))
+            })?;
+            std::fs::write(path, content).map_err(|e| {
+                super::PulumiError::Other(format!("Failed to write stack file: {}", e))
+            })?;
+            return Ok(());
+        }
+        Err(super::PulumiError::Other(
+            "Stack file not found".to_string(),
+        ))
     }
 }
 

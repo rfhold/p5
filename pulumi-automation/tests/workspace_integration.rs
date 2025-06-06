@@ -1,6 +1,6 @@
 use pulumi_automation::{
     local::LocalWorkspace,
-    workspace::{ConfigValue, StackListOptions, StackRemoveOptions, Workspace},
+    workspace::{ConfigValue, RawConfigValue, StackListOptions, StackRemoveOptions, Workspace},
 };
 
 const FIXTURES_DIR: &str = "tests/fixtures";
@@ -114,6 +114,108 @@ fn whoami() {
         whoami.url.unwrap(),
         backend_url,
         "Expected backend URL to match the environment variable"
+    );
+}
+
+#[test]
+fn get_stack_config() {
+    prep();
+    let workspace = get_workspace_for_program("basic-program");
+    let cfg = workspace
+        .get_stack_config("configured")
+        .expect("Failed to get stack config");
+
+    if let Some(config) = cfg.config {
+        let setting = config.get("other:configuration-setting").unwrap();
+        assert!(
+            match setting {
+                RawConfigValue::Plain(value) => value.as_str().unwrap() == "example",
+                _ => false,
+            },
+            "Expected config value to match"
+        );
+    } else {
+        panic!("Expected config to be present in stack config");
+    }
+}
+
+#[test]
+fn set_stack_config() {
+    prep();
+    let workspace = get_workspace_for_program("basic-program");
+    let mut cfg = workspace
+        .get_stack_config("case-5")
+        .expect("Failed to get stack config");
+
+    if let Some(config) = &mut cfg.config {
+        let original_setting = config.get("other:configuration-setting").unwrap().clone();
+
+        assert!(
+            match original_setting {
+                RawConfigValue::Plain(value) => value.as_str().unwrap() == "example",
+                _ => false,
+            },
+            "Expected original config value to match"
+        );
+
+        config.insert(
+            "other:configuration-setting".to_string(),
+            RawConfigValue::Plain(serde_yaml::from_str("new_value").unwrap()),
+        );
+    } else {
+        panic!("Expected config to be present in stack config");
+    }
+
+    workspace
+        .set_stack_config("case-5", cfg)
+        .expect("Failed to set stack config");
+
+    let updated_config = workspace
+        .get_stack_config("case-5")
+        .expect("Failed to get updated stack config");
+
+    if let Some(config) = updated_config.config {
+        let updated_setting = config.get("other:configuration-setting").unwrap();
+        assert!(
+            match updated_setting {
+                RawConfigValue::Plain(value) => value.as_str().unwrap() == "new_value",
+                _ => false,
+            },
+            "Expected updated config value to match"
+        );
+    } else {
+        panic!("Expected config to be present in updated stack config");
+    }
+}
+
+#[test]
+fn get_and_set_stack_config_expect_no_changes() {
+    let stack_name = "case-6";
+    let stack_config_location =
+        format!("{}/basic-program/Pulumi.{}.yaml", PROGRAMS_PATH, stack_name);
+
+    let before_config = std::fs::read_to_string(&stack_config_location)
+        .expect("Failed to read stack config before changes");
+
+    prep();
+    let workspace = get_workspace_for_program("basic-program");
+    let config = workspace
+        .get_stack_config(stack_name)
+        .expect("Failed to get stack config");
+
+    workspace
+        .set_stack_config(stack_name, config.clone())
+        .expect("Failed to set stack config");
+
+    let after_config = std::fs::read_to_string(&stack_config_location)
+        .expect("Failed to read stack config after changes");
+
+    assert_eq!(
+        serde_yaml::from_str::<serde_yaml::Value>(&before_config)
+            .expect("Failed to parse before config"),
+        serde_yaml::from_str::<serde_yaml::Value>(&after_config)
+            .expect("Failed to parse after config"),
+        "Expected stack config to remain unchanged after getting and setting"
     );
 }
 
@@ -381,10 +483,7 @@ fn export_stack_import_stack() {
         .expect("Failed to export stack");
 
     assert_eq!(deployment.version, 3, "Expected deployment version to be 1");
-    assert!(
-        deployment.deployment.is_object(),
-        "Expected deployment to be an object"
-    );
+    // TODO: make sure state file is not changed
 
     workspace
         .import_stack("existing", deployment)

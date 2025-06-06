@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tokio::sync::mpsc::Sender;
 
 use crate::event::EngineEvent;
@@ -12,7 +13,7 @@ pub struct ResourceState {
     pub outputs: Option<serde_json::Value>,
     pub urn: String,
     #[serde(rename = "type")]
-    pub _type: String,
+    pub resource_type: ResourceType,
     pub id: Option<String>,
     pub provider: Option<String>,
     pub parent: Option<String>,
@@ -27,6 +28,26 @@ pub struct ResourceState {
 
     #[serde(flatten)]
     pub extra_values: Option<serde_json::Value>,
+}
+
+impl ResourceState {
+    pub fn name(&self) -> String {
+        self.urn
+            .split("::")
+            .last()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| self.urn.clone())
+    }
+}
+
+#[derive(Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
+pub enum ResourceType {
+    #[serde(rename = "pulumi:pulumi:Stack")]
+    #[strum(serialize = "pulumi:pulumi:Stack")]
+    Stack,
+    #[serde(untagged)]
+    #[strum(serialize = "{0}")]
+    Other(String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]

@@ -1,17 +1,33 @@
 use serde::{Deserialize, Serialize};
 
+use crate::stack::ResourceState;
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ConfigValue {
     pub value: String,
     pub secret: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum RawConfigValue {
+    Plain(serde_yaml::Value),
+    Secret { secure: String },
+}
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct StackSettings {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub secrets_provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub encrypted_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub encryption_salt: Option<String>,
-    pub config: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<std::collections::HashMap<String, RawConfigValue>>,
+
+    #[serde(flatten)]
+    pub additional: Option<std::collections::HashMap<String, serde_yaml::Value>>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -53,7 +69,14 @@ pub struct StackSummary {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Deployment {
     pub version: usize,
-    pub deployment: serde_json::Value,
+    pub deployment: DeploymentDetails,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct DeploymentDetails {
+    pub resources: Vec<ResourceState>,
+    #[serde(flatten)]
+    pub additional: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -69,6 +92,8 @@ pub trait Workspace {
     type Stack: super::stack::Stack;
 
     fn whoami(&self) -> super::Result<Whoami>;
+    fn get_stack_config(&self, stack_name: &str) -> super::Result<StackSettings>;
+    fn set_stack_config(&self, stack_name: &str, config: StackSettings) -> super::Result<()>;
     fn get_config(&self, stack_name: &str, key: &str, path: bool) -> super::Result<ConfigValue>;
     fn set_config(
         &self,
