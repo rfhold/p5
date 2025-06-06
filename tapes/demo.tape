@@ -80,9 +80,13 @@ Sleep 500ms
 
 Type ":outputs" Sleep 600ms Enter
 
-Sleep 1s
+Sleep 500ms
 
 Type ":resources" Sleep 600ms Enter
 
-Sleep 3500ms
+Sleep 1s
+
+Type ":preview" Sleep 600ms Enter
+
+Sleep 5s
 
