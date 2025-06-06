@@ -1,14 +1,15 @@
 use p5::controller::Action;
 use pulumi_automation::{
     local::{LocalStack, LocalWorkspace},
+    stack::StackChangeSummary,
     workspace::{Deployment, OutputMap, StackSettings},
 };
 use tokio::sync::mpsc;
 
 use crate::{
     AppContext, AppState,
-    state::{Loadable, StackOutputs, StackState, WorkspaceState},
-    tasks::{AppTask, workspace::WorkspaceTask},
+    state::{Loadable, OperationProgress, StackOutputs, StackState, WorkspaceState},
+    tasks::{AppTask, stack::StackTask, workspace::WorkspaceTask},
 };
 
 #[derive(Clone)]
@@ -19,6 +20,7 @@ pub enum AppAction {
     PopContext,
     PushContext(AppContext),
     WorkspaceAction(WorkspaceAction),
+    StackAction(StackAction),
 }
 
 #[derive(Clone)]
@@ -33,6 +35,12 @@ pub enum WorkspaceAction {
     LoadStackState(LocalWorkspace, LocalStack),
     LoadStackOutputs(LocalWorkspace, LocalStack),
     LoadStackConfig(LocalWorkspace, LocalStack),
+}
+
+#[derive(Clone)]
+pub enum StackAction {
+    PersistStackPreview(LocalStack, StackChangeSummary),
+    LoadStackPreview(LocalStack),
 }
 
 impl Action for AppAction {
@@ -87,6 +95,11 @@ impl Action for AppAction {
                                             workspace.clone(),
                                             stack.clone(),
                                         ),
+                                    ))?;
+                                }
+                                crate::state::StackContext::Preview => {
+                                    action_tx.try_send(AppAction::StackAction(
+                                        StackAction::LoadStackPreview(stack.clone()),
                                     ))?;
                                 }
                             }
@@ -180,6 +193,7 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
+                            preview: Default::default(),
                         });
                     task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::SelectStack(
                         workspace.clone(),
@@ -208,6 +222,7 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -229,6 +244,7 @@ impl Action for AppAction {
                             outputs: Loadable::Loaded(outputs.clone()),
                             config: Default::default(),
                             state: Default::default(),
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -250,6 +266,7 @@ impl Action for AppAction {
                             config: Loadable::Loaded(config.clone()),
                             outputs: Default::default(),
                             state: Default::default(),
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -271,6 +288,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Loadable::Loaded(stack_state.clone()),
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -296,6 +314,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Loadable::Loading,
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -321,6 +340,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Loadable::Loading,
                             state: Default::default(),
+                            preview: Default::default(),
                         });
                     Ok(())
                 }
@@ -346,6 +366,61 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
+                            preview: Default::default(),
+                        });
+                    Ok(())
+                }
+            },
+            AppAction::StackAction(action) => match action {
+                StackAction::PersistStackPreview(local_stack, stack_change_summary) => {
+                    state
+                        .workspaces
+                        .entry(local_stack.workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(local_stack.workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(local_stack.name.clone())
+                        .and_modify(|s| {
+                            s.preview.change_summary =
+                                Loadable::Loaded(stack_change_summary.clone());
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(local_stack.clone()),
+                            config: Default::default(),
+                            outputs: Default::default(),
+                            state: Default::default(),
+                            preview: OperationProgress {
+                                change_summary: Loadable::Loaded(stack_change_summary.clone()),
+                            },
+                        });
+                    Ok(())
+                }
+                StackAction::LoadStackPreview(local_stack) => {
+                    task_tx.try_send(AppTask::StackTask(StackTask::GetStackPreview(
+                        local_stack.clone(),
+                    )))?;
+                    state
+                        .workspaces
+                        .entry(local_stack.workspace.cwd.clone())
+                        .or_insert_with(|| crate::state::WorkspaceOutputs {
+                            workspace: Loadable::Loaded(local_stack.workspace.clone()),
+                            stacks: Default::default(),
+                        })
+                        .stacks
+                        .entry(local_stack.name.clone())
+                        .and_modify(|s| {
+                            s.preview.change_summary = Loadable::Loading;
+                        })
+                        .or_insert_with(|| StackOutputs {
+                            stack: Loadable::Loaded(local_stack.clone()),
+                            config: Default::default(),
+                            outputs: Default::default(),
+                            state: Default::default(),
+                            preview: OperationProgress {
+                                change_summary: Loadable::Loading,
+                            },
                         });
                     Ok(())
                 }

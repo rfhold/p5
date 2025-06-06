@@ -50,7 +50,7 @@ pub enum ResourceType {
     Other(String),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(strum::Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum Operation {
     Same,

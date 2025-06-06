@@ -1,7 +1,7 @@
 use crate::{
+    AppState,
     actions::WorkspaceAction,
     state::{Loadable, StackContext},
-    AppState,
 };
 
 pub fn parse_command_to_action(
@@ -53,6 +53,9 @@ pub fn parse_command_to_action(
         ))),
         "resources" => Ok(Some(crate::AppAction::PushContext(
             crate::AppContext::Stack(StackContext::Resources),
+        ))),
+        "preview" => Ok(Some(crate::AppAction::PushContext(
+            crate::AppContext::Stack(StackContext::Preview),
         ))),
         command => Ok(Some(crate::AppAction::ToastError(format!(
             "Unknown command: '{}'",

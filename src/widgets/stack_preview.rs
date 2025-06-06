@@ -8,9 +8,9 @@ use crate::state::{AppState, Loadable};
 use super::resource_list_item::ResourceListItem;
 
 #[derive(Default, Clone)]
-pub struct StackResources {}
+pub struct StackPreview {}
 
-impl StatefulWidget for StackResources {
+impl StatefulWidget for StackPreview {
     type State = AppState;
 
     fn render(
@@ -20,22 +20,21 @@ impl StatefulWidget for StackResources {
         state: &mut Self::State,
     ) {
         let block = Block::bordered()
-            .title("Resources")
+            .title("Preview")
             .border_type(ratatui::widgets::BorderType::Rounded);
 
-        match state.stack_state_data() {
-            Loadable::Loaded(state) => {
-                let items: Vec<ListItem> = state
-                    .deployment
-                    .resources
+        match state.stack_preview() {
+            Loadable::Loaded(change_summary) => {
+                let items: Vec<ListItem> = change_summary
+                    .steps
                     .iter()
-                    .map(|resource| ResourceListItem::from(resource).into())
+                    .map(|step| ResourceListItem::from(step).into())
                     .collect();
 
                 Widget::render(List::new(items).block(block), area, buf);
             }
             Loadable::Loading => {
-                Paragraph::new("Loading State...".to_string())
+                Paragraph::new("Loading Preview...".to_string())
                     .block(block)
                     .alignment(Alignment::Left)
                     .render(area, buf);
