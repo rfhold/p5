@@ -12,9 +12,15 @@ cargo build --release --bin p5
 ~~~
 
 ## publish
+
+### pulumi-automation
 ~~~sh
 cargo publish --package pulumi-automation
-cargo publish
+~~~
+
+### p5
+~~~sh
+cargo publish --package p5
 ~~~
 
 ## check

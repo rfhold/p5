@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::stack::Operation;
+use crate::stack::{Operation, ResourceType};
 
 /// A Pulumi engine event, such as a change to a resource or diagnostic message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,18 +121,18 @@ pub struct PreludeDetails {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StepEventStateMetadata {
-    #[serde(rename = "type")]
-    pub _type: String,
-    pub urn: String,
-    pub custom: Option<bool>,
-    pub delete: Option<bool>,
-    pub id: String,
-    pub parent: String,
-    pub protect: Option<bool>,
-    pub retain_on_delete: Option<bool>,
     pub inputs: HashMap<String, serde_json::Value>,
     pub outputs: HashMap<String, serde_json::Value>,
+    pub urn: String,
+    #[serde(rename = "type")]
+    pub resource_type: String,
+    pub id: String,
     pub provider: String,
+    pub parent: String,
+    pub custom: Option<bool>,
+    pub delete: Option<bool>,
+    pub protect: Option<bool>,
+    pub retain_on_delete: Option<bool>,
     pub init_errors: Option<Vec<String>>,
 }
 
@@ -158,7 +158,7 @@ pub struct StepEventMetadata {
     pub op: Operation,
     pub urn: String,
     #[serde(rename = "type")]
-    pub _type: String,
+    pub resource_type: ResourceType,
     pub old: Option<StepEventStateMetadata>,
     pub new: Option<StepEventStateMetadata>,
     pub keys: Option<Vec<String>>,
@@ -166,6 +166,16 @@ pub struct StepEventMetadata {
     pub detailed_diff: Option<HashMap<String, PropertyDiff>>,
     pub logical: Option<bool>,
     pub provider: String,
+}
+
+impl StepEventMetadata {
+    pub fn name(&self) -> String {
+        self.urn
+            .split("::")
+            .last()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| self.urn.clone())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
