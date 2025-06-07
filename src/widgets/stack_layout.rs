@@ -7,7 +7,7 @@ use crate::state::{AppState, Loadable, StackContext};
 
 use super::{
     stack_config::StackConfig, stack_outputs::StackOutputs, stack_preview::StackPreview,
-    stack_resources::StackResources,
+    stack_resources::StackResources, stack_update::StackUpdate,
 };
 
 pub struct StackLayout {
@@ -64,6 +64,7 @@ impl StatefulWidget for StackLayout {
             StackContext::Config => StackConfig::default().render(layout[1], buf, state),
             StackContext::Resources => StackResources::default().render(layout[1], buf, state),
             StackContext::Preview => StackPreview::default().render(layout[1], buf, state),
+            StackContext::Update => StackUpdate::default().render(layout[1], buf, state),
         }
     }
 }

@@ -66,27 +66,27 @@ Set FontSize 20
 Set Width 1200
 Set Height 600
 
-Set PlaybackSpeed 2.0
+Set PlaybackSpeed 1.0
 
-Type "p5" Sleep 800ms  Enter
+Type "p5" Sleep 400ms  Enter
 
-Type ":workspace ./demo" Sleep 800ms Enter
+Type ":workspace ./demo" Sleep 400ms Enter
 
-Sleep 500ms
+Type ":stack dev" Sleep 300ms Enter
 
-Type ":stack dev" Sleep 600ms Enter
+Type ":outputs" Sleep 300ms Enter
 
-Sleep 500ms
+Type ":resources" Sleep 300ms Enter
 
-Type ":outputs" Sleep 600ms Enter
+Type ":preview" Sleep 300ms Enter
 
-Sleep 500ms
-
-Type ":resources" Sleep 600ms Enter
+Wait+Screen /.*Create.*/
 
 Sleep 1s
 
-Type ":preview" Sleep 600ms Enter
+Type ":update" Sleep 600ms Enter
 
-Sleep 5s
+Wait+Screen /.*Complete.*/
+
+Sleep 2s
 

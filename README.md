@@ -1,4 +1,4 @@
-# P5
+
 
 Pulumi was too long
 
@@ -33,9 +33,10 @@ cargo install p5
     - [ ] Special iconography
         - [ ] Protected resources
     - [ ] Component resources
-- [ ] Update stack
+- [x] Update stack
 - [ ] Destroy stack
 - [ ] Refresh stack
+- [ ] Cancel Operation
 - [ ] Include and Exclude resources
 - [ ] Import resources
 - [ ] Remove resources

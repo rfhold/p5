@@ -23,6 +23,12 @@ cargo publish --package pulumi-automation
 cargo publish --package p5
 ~~~
 
+### all
+~~~sh
+mask publish pulumi-automation
+mask publish p5
+~~~
+
 ## check
 
 ~~~sh

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use pulumi_automation::{
+    event::EngineEvent,
     local::{LocalStack, LocalWorkspace},
     stack::StackChangeSummary,
     workspace::{Deployment, OutputMap, StackSettings},
@@ -45,6 +46,20 @@ impl AppState {
         }
 
         &Loadable::NotLoaded
+    }
+
+    pub fn stack_state_mut(&mut self) -> Option<&mut StackOutputs> {
+        if let Some(state) = self.selected_workspace.as_mut() {
+            if let Some(outputs) = self.workspaces.get_mut(&state.workspace_path) {
+                if let Some(stack_name) = state.selected_stack.as_mut() {
+                    if let Some(stack_outputs) = outputs.stacks.get_mut(&stack_name.stack_name) {
+                        return Some(stack_outputs);
+                    }
+                }
+            }
+        }
+
+        None
     }
 
     pub fn stack_state(&self) -> Option<&StackOutputs> {
@@ -93,12 +108,37 @@ impl AppState {
         &Loadable::NotLoaded
     }
 
-    pub fn stack_preview(&self) -> &Loadable<StackChangeSummary> {
-        if let Some(stack_outputs) = self.stack_state() {
-            return &stack_outputs.preview.change_summary;
+    pub fn stack_preview(&mut self) -> Loadable<&mut StackChangeSummary> {
+        match self.stack_state_mut() {
+            Some(stack_outputs) => match &mut stack_outputs.preview.change_summary {
+                Loadable::Loaded(summary) => Loadable::Loaded(summary),
+                Loadable::Loading => Loadable::Loading,
+                Loadable::NotLoaded => Loadable::NotLoaded,
+            },
+            None => Loadable::NotLoaded,
         }
+    }
 
-        &Loadable::NotLoaded
+    pub fn stack_update_preview(&self) -> Loadable<&StackChangeSummary> {
+        match self.stack_state() {
+            Some(stack_outputs) => match &stack_outputs.update.change_summary {
+                Loadable::Loaded(summary) => Loadable::Loaded(summary),
+                Loadable::Loading => Loadable::Loading,
+                Loadable::NotLoaded => Loadable::NotLoaded,
+            },
+            None => Loadable::NotLoaded,
+        }
+    }
+
+    pub fn stack_update_events(&self) -> Loadable<&OperationEvents> {
+        match self.stack_state() {
+            Some(stack_outputs) => match &stack_outputs.update.events {
+                Loadable::Loaded(events) => Loadable::Loaded(events),
+                Loadable::Loading => Loadable::Loading,
+                Loadable::NotLoaded => Loadable::NotLoaded,
+            },
+            None => Loadable::NotLoaded,
+        }
     }
 }
 
@@ -108,6 +148,20 @@ pub enum Loadable<T> {
     NotLoaded,
     Loading,
     Loaded(T),
+}
+
+impl<T> Loadable<T> {
+    pub fn is_loaded(&self) -> bool {
+        matches!(self, Loadable::Loaded(_))
+    }
+
+    pub fn is_loading(&self) -> bool {
+        matches!(self, Loadable::Loading)
+    }
+
+    pub fn is_not_loaded(&self) -> bool {
+        matches!(self, Loadable::NotLoaded)
+    }
 }
 
 #[derive(Default)]
@@ -124,6 +178,7 @@ pub struct StackOutputs {
     pub config: Loadable<StackSettings>,
     pub state: Loadable<Deployment>,
     pub preview: OperationProgress,
+    pub update: OperationProgress,
 }
 
 #[derive(Default, Debug)]
@@ -152,10 +207,19 @@ pub enum StackContext {
     Config,
     Resources,
     Preview,
+    Update,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct OperationProgress {
     // loaded before executing for user review
     pub change_summary: Loadable<StackChangeSummary>,
+    // loaded during execution
+    pub events: Loadable<OperationEvents>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct OperationEvents {
+    pub events: Vec<EngineEvent>,
+    pub done: bool,
 }

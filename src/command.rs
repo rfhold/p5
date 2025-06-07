@@ -1,7 +1,8 @@
 use crate::{
     AppState,
-    actions::WorkspaceAction,
+    actions::{StackAction, WorkspaceAction},
     state::{Loadable, StackContext},
+    tasks::stack::StackUpdateOptions,
 };
 
 pub fn parse_command_to_action(
@@ -57,6 +58,17 @@ pub fn parse_command_to_action(
         "preview" => Ok(Some(crate::AppAction::PushContext(
             crate::AppContext::Stack(StackContext::Preview),
         ))),
+        "update" => {
+            if let Loadable::Loaded(stack) = &state.stack() {
+                Ok(Some(crate::AppAction::StackAction(
+                    StackAction::UpdateStack(stack.clone(), StackUpdateOptions::default()),
+                )))
+            } else {
+                Ok(Some(crate::AppAction::ToastError(
+                    "No stack selected".to_string(),
+                )))
+            }
+        }
         command => Ok(Some(crate::AppAction::ToastError(format!(
             "Unknown command: '{}'",
             command
