@@ -7,7 +7,7 @@ pub enum InputResult {
 }
 
 pub fn handle_user_input(event: Event, input: &mut Input) -> Option<InputResult> {
-    return if let Event::Key(key) = event {
+    if let Event::Key(key) = event {
         match key.code {
             crossterm::event::KeyCode::Esc => Some(InputResult::Cancel),
             crossterm::event::KeyCode::Enter => Some(InputResult::Submit(input.to_string())),
@@ -18,5 +18,5 @@ pub fn handle_user_input(event: Event, input: &mut Input) -> Option<InputResult>
         }
     } else {
         None
-    };
+    }
 }

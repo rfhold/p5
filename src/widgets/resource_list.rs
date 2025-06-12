@@ -37,7 +37,7 @@ pub struct ResourceList<'a, A: ResourceAdapter> {
 // Adapter implementations
 pub struct CurrentStateAdapter<'a>(pub &'a Vec<ResourceState>);
 
-impl<'a> ResourceAdapter for CurrentStateAdapter<'a> {
+impl ResourceAdapter for CurrentStateAdapter<'_> {
     fn get_items(&self) -> Vec<ResourceItem> {
         self.0
             .iter()
@@ -54,7 +54,7 @@ impl<'a> ResourceAdapter for CurrentStateAdapter<'a> {
 
 pub struct ChangeSummaryAdapter<'a>(pub &'a StackChangeSummary);
 
-impl<'a> ResourceAdapter for ChangeSummaryAdapter<'a> {
+impl ResourceAdapter for ChangeSummaryAdapter<'_> {
     fn get_items(&self) -> Vec<ResourceItem> {
         self.0
             .steps
@@ -66,7 +66,7 @@ impl<'a> ResourceAdapter for ChangeSummaryAdapter<'a> {
                     step.old_state.as_ref()
                 };
 
-                if let Some(ref state) = state {
+                if let Some(state) = state {
                     ResourceItem {
                         urn: state.urn.clone(),
                         line: line!(
@@ -92,7 +92,7 @@ impl<'a> ResourceAdapter for ChangeSummaryAdapter<'a> {
 
 pub struct OperationStateAdapter<'a>(pub &'a Vec<ResourceOperationState>);
 
-impl<'a> ResourceAdapter for OperationStateAdapter<'a> {
+impl ResourceAdapter for OperationStateAdapter<'_> {
     fn get_items(&self) -> Vec<ResourceItem> {
         self.0
             .iter()
@@ -155,7 +155,7 @@ impl<'a> ResourceAdapter for OperationStateAdapter<'a> {
     }
 }
 
-impl<'a, A: ResourceAdapter> StatefulWidget for ResourceList<'a, A> {
+impl<A: ResourceAdapter> StatefulWidget for ResourceList<'_, A> {
     type State = ResourceListState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {

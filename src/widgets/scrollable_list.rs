@@ -46,28 +46,24 @@ impl<'a> ScrollableList<'a> {
             .sum::<usize>();
 
         let overflow = content_height - area_height;
-        let offset_position = if position > overflow {
-            position - overflow
-        } else {
-            0
-        };
+        let offset_position = position.saturating_sub(overflow);
 
         Some(ScrollbarState::new(overflow).position(offset_position))
     }
 
     fn v_scroll_area(&self, area: Rect) -> Rect {
-        return if let Some(_block) = &self.block {
+        if let Some(_block) = &self.block {
             area.inner(Margin {
                 horizontal: 0,
                 vertical: 1,
             })
         } else {
             area
-        };
+        }
     }
 }
 
-impl<'a> StatefulWidget for ScrollableList<'a> {
+impl StatefulWidget for ScrollableList<'_> {
     type State = ScrollableListState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
@@ -75,7 +71,7 @@ impl<'a> StatefulWidget for ScrollableList<'a> {
         let v_scroll_state = self.v_scroll_state(&state.list_state, &v_scroll_area);
 
         let list = List::new(self.items)
-            .block(self.block.unwrap_or_else(Block::default))
+            .block(self.block.unwrap_or_default())
             .highlight_style(Style::default().fg(ratatui::style::Color::Yellow));
 
         StatefulWidget::render(list, area, buf, &mut state.list_state);

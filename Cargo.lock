@@ -1459,7 +1459,7 @@ checksum = "26995317201fa17f3656c36716aed4a7c81743a9634ac4c99c0eeda495db0cec"
 
 [[package]]
 name = "p5"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1610,7 +1610,7 @@ dependencies = [
 
 [[package]]
 name = "pulumi-automation"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "async-trait",
  "serde",

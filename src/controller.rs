@@ -211,7 +211,7 @@ mod tests {
         ) -> color_eyre::Result<()> {
             if let Event::Key(key_event) = event {
                 if key_event.kind == crossterm::event::KeyEventKind::Press {
-                    action_tx.try_send(TestAction::RecordKeyEvent(key_event.clone()))?;
+                    action_tx.try_send(TestAction::RecordKeyEvent(key_event))?;
                     match key_event.code {
                         crossterm::event::KeyCode::Char('t')
                             if key_event
@@ -268,7 +268,7 @@ mod tests {
                     state.tasks.push(task_name.clone());
                 }
                 TestAction::RecordKeyEvent(key_event) => {
-                    state.key_events.push(key_event.clone());
+                    state.key_events.push(*key_event);
                 }
                 TestAction::StartTask(task_name, actions) => {
                     state.tasks.push(task_name.clone());
@@ -303,7 +303,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_and_stop_controller() {
         let cancel_token = tokio_util::sync::CancellationToken::new();
-        let handler = TestHandler::default();
+        let handler = TestHandler;
         let state = TestState::default();
 
         let controller = Controller::new(handler, state, cancel_token.clone());

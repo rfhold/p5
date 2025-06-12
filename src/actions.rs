@@ -71,50 +71,47 @@ impl Action for AppAction {
                 // TODO: Handle clearing duplicate contexts or managing context stack size
                 state.context_stack.push(context.clone());
 
-                match context {
-                    AppContext::Stack(stack_context) => {
-                        let workspace = state.workspace();
-                        let stack = state.stack();
+                if let AppContext::Stack(stack_context) = context {
+                    let workspace = state.workspace();
+                    let stack = state.stack();
 
-                        if let (Loadable::Loaded(workspace), Loadable::Loaded(stack)) =
-                            (workspace, stack)
-                        {
-                            match stack_context {
-                                crate::state::StackContext::Outputs => {
-                                    action_tx.try_send(AppAction::WorkspaceAction(
-                                        WorkspaceAction::LoadStackOutputs(
-                                            workspace.clone(),
-                                            stack.clone(),
-                                        ),
-                                    ))?;
-                                }
-                                crate::state::StackContext::Config => {
-                                    action_tx.try_send(AppAction::WorkspaceAction(
-                                        WorkspaceAction::LoadStackConfig(
-                                            workspace.clone(),
-                                            stack.clone(),
-                                        ),
-                                    ))?;
-                                }
-                                crate::state::StackContext::Resources => {
-                                    action_tx.try_send(AppAction::WorkspaceAction(
-                                        WorkspaceAction::LoadStackState(
-                                            workspace.clone(),
-                                            stack.clone(),
-                                        ),
-                                    ))?;
-                                }
-                                crate::state::StackContext::Operation(_) => {}
+                    if let (Loadable::Loaded(workspace), Loadable::Loaded(stack)) =
+                        (workspace, stack)
+                    {
+                        match stack_context {
+                            crate::state::StackContext::Outputs => {
+                                action_tx.try_send(AppAction::WorkspaceAction(
+                                    WorkspaceAction::LoadStackOutputs(
+                                        workspace.clone(),
+                                        stack.clone(),
+                                    ),
+                                ))?;
                             }
+                            crate::state::StackContext::Config => {
+                                action_tx.try_send(AppAction::WorkspaceAction(
+                                    WorkspaceAction::LoadStackConfig(
+                                        workspace.clone(),
+                                        stack.clone(),
+                                    ),
+                                ))?;
+                            }
+                            crate::state::StackContext::Resources => {
+                                action_tx.try_send(AppAction::WorkspaceAction(
+                                    WorkspaceAction::LoadStackState(
+                                        workspace.clone(),
+                                        stack.clone(),
+                                    ),
+                                ))?;
+                            }
+                            crate::state::StackContext::Operation(_) => {}
                         }
                     }
-                    _ => {}
                 }
 
                 Ok(())
             }
             AppAction::PopContext => {
-                if state.context_stack.len() > 0 {
+                if !state.context_stack.is_empty() {
                     state.context_stack.pop();
                 } else {
                     action_tx.try_send(AppAction::Exit)?;

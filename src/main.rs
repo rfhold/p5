@@ -53,23 +53,20 @@ impl Handler for AppHandler {
                     }
                 }
             }
-        } else {
-            if let Event::Key(key) = event {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char(':') => {
-                            action_tx
-                                .try_send(AppAction::PushContext(AppContext::CommandPrompt))?;
-                        }
-                        KeyCode::Esc => {
-                            action_tx.try_send(AppAction::PopContext)?;
-                        }
-                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            action_tx.try_send(AppAction::Exit)?;
-                        }
-                        KeyCode::Char(' ') => {}
-                        _ => {}
+        } else if let Event::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char(':') => {
+                        action_tx.try_send(AppAction::PushContext(AppContext::CommandPrompt))?;
                     }
+                    KeyCode::Esc => {
+                        action_tx.try_send(AppAction::PopContext)?;
+                    }
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        action_tx.try_send(AppAction::Exit)?;
+                    }
+                    KeyCode::Char(' ') => {}
+                    _ => {}
                 }
             }
         }

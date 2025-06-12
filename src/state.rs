@@ -336,9 +336,9 @@ impl OperationEvents {
                 false
             }
         }) {
-            return Ok(&mut self.states[index]);
+            Ok(&mut self.states[index])
         } else {
-            return Err("InProgress state not found for the given URN".to_string());
+            Err("InProgress state not found for the given URN".to_string())
         }
     }
 
