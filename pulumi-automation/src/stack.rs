@@ -6,7 +6,7 @@ use tokio::sync::mpsc::Sender;
 
 use crate::event::EngineEvent;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceState {
     pub inputs: Option<serde_json::Value>,
@@ -40,8 +40,10 @@ impl ResourceState {
     }
 }
 
-#[derive(Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Default, Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub enum ResourceType {
+    #[default]
+    Unknown,
     #[serde(rename = "pulumi:pulumi:Stack")]
     #[strum(serialize = "pulumi:pulumi:Stack")]
     Stack,
@@ -50,9 +52,11 @@ pub enum ResourceType {
     Other(String),
 }
 
-#[derive(strum::Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Default, strum::Display, Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum Operation {
+    #[default]
+    Unknown,
     Same,
     Read,
     Create,
@@ -70,7 +74,7 @@ pub enum Operation {
     ImportReplacement,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StackChangeStep {
     pub op: Operation,
@@ -82,7 +86,7 @@ pub struct StackChangeStep {
     pub extra_values: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StackChangeSummary {
     pub steps: Vec<StackChangeStep>,
@@ -159,6 +163,11 @@ pub struct StackPreviewOptions {
 #[async_trait::async_trait]
 pub trait Stack: Sized {
     fn preview(&self, options: StackPreviewOptions) -> super::Result<StackChangeSummary>;
+    async fn preview_async(
+        &self,
+        options: StackPreviewOptions,
+        listener: PulumiProcessListener,
+    ) -> super::Result<()>;
     async fn up(
         &self,
         options: StackUpOptions,

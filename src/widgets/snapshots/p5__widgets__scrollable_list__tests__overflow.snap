@@ -1,0 +1,25 @@
+---
+source: src/widgets/scrollable_list.rs
+assertion_line: 154
+expression: terminal.backend()
+---
+"┌Scrollable List───────────────────────────────────────────────────────────────┐"
+"│Item 1                                                                        │"
+"│Item 2                                                                        │"
+"│Item 3                                                                        │"
+"│Item 4, which is a bit longer than the others to test overflow. Turns out, it │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

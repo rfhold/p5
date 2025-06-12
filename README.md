@@ -1,5 +1,4 @@
 
-
 Pulumi was too long
 
 A TUI application to help you manage your Pulumi stacks.
@@ -32,10 +31,10 @@ cargo install p5
     - [ ] Detailed Diff
     - [ ] Special iconography
         - [ ] Protected resources
-    - [ ] Component resources
+    - [ ] Resources Hierarchy
 - [x] Update stack
-- [ ] Destroy stack
-- [ ] Refresh stack
+- [x] Destroy stack
+- [x] Refresh stack
 - [ ] Cancel Operation
 - [ ] Include and Exclude resources
 - [ ] Import resources

@@ -27,7 +27,7 @@ export const newFileName = newFile.filename;
 export const newFileContent = newFile.contentMd5;
 
 let files = [];
-for (let i = 0; i < 5; i++) {
+for (let i = 0; i < 8; i++) {
 	const contentCommand = new command.local.Command(`sleep-${i}`, {
 		create: pulumi.interpolate`sleep ${i} && echo "${prev}"`,
 		triggers: [prev],

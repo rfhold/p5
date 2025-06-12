@@ -9,7 +9,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-pulumi-automation = { path = "./pulumi-automation", version = "0.7.0" }
+pulumi-automation = { path = "./pulumi-automation", version = "0.8.0" }
 ratatui = { version = "0.29.0", features = ["crossterm"] }
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 color-eyre = "0.6.5"
@@ -25,6 +25,7 @@ tracing-error.workspace = true
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 console-subscriber = "0.4.1"
 ratatui-macros = "0.6.0"
+strum.workspace = true
 
 [workspace]
 resolver = "3"
@@ -33,7 +34,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Robert Holden <rfhold@rholden.dev>"]
@@ -54,5 +55,6 @@ tracing-error = "0.2.1"
 chrono = "0.4.41"
 
 [dev-dependencies]
+insta = "1.43.1"
 tokio-console = "0.1.13"
 

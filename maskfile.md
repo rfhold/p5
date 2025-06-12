@@ -36,6 +36,15 @@ cargo clippy
 cargo fmt --all -- --check
 ~~~
 
+### all
+~~~sh
+set -e
+mask check
+mask test unit
+mask test integration
+mask vhs run
+~~~
+
 ## fix
 
 ~~~sh

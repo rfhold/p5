@@ -1,8 +1,7 @@
 use crate::{
     AppState,
     actions::{StackAction, WorkspaceAction},
-    state::{Loadable, StackContext},
-    tasks::stack::StackUpdateOptions,
+    state::{Loadable, OperationOptions, ProgramOperation, StackContext},
 };
 
 pub fn parse_command_to_action(
@@ -55,13 +54,59 @@ pub fn parse_command_to_action(
         "resources" => Ok(Some(crate::AppAction::PushContext(
             crate::AppContext::Stack(StackContext::Resources),
         ))),
-        "preview" => Ok(Some(crate::AppAction::PushContext(
-            crate::AppContext::Stack(StackContext::Preview),
-        ))),
+        "preview" => {
+            if let Loadable::Loaded(stack) = &state.stack() {
+                Ok(Some(crate::AppAction::StackAction(
+                    StackAction::RunProgram(
+                        ProgramOperation::Update,
+                        stack.clone(),
+                        OperationOptions::default().preview_only(),
+                    ),
+                )))
+            } else {
+                Ok(Some(crate::AppAction::ToastError(
+                    "No stack selected".to_string(),
+                )))
+            }
+        }
         "update" => {
             if let Loadable::Loaded(stack) = &state.stack() {
                 Ok(Some(crate::AppAction::StackAction(
-                    StackAction::UpdateStack(stack.clone(), StackUpdateOptions::default()),
+                    StackAction::RunProgram(
+                        ProgramOperation::Update,
+                        stack.clone(),
+                        OperationOptions::default(),
+                    ),
+                )))
+            } else {
+                Ok(Some(crate::AppAction::ToastError(
+                    "No stack selected".to_string(),
+                )))
+            }
+        }
+        "refresh" => {
+            if let Loadable::Loaded(stack) = &state.stack() {
+                Ok(Some(crate::AppAction::StackAction(
+                    StackAction::RunProgram(
+                        ProgramOperation::Refresh,
+                        stack.clone(),
+                        OperationOptions::default(),
+                    ),
+                )))
+            } else {
+                Ok(Some(crate::AppAction::ToastError(
+                    "No stack selected".to_string(),
+                )))
+            }
+        }
+        "destroy" => {
+            if let Loadable::Loaded(stack) = &state.stack() {
+                Ok(Some(crate::AppAction::StackAction(
+                    StackAction::RunProgram(
+                        ProgramOperation::Destroy,
+                        stack.clone(),
+                        OperationOptions::default(),
+                    ),
                 )))
             } else {
                 Ok(Some(crate::AppAction::ToastError(

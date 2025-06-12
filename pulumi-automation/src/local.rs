@@ -611,6 +611,30 @@ impl Stack for LocalStack {
         Ok(summary)
     }
 
+    async fn preview_async(
+        &self,
+        options: crate::stack::StackPreviewOptions,
+        listener: crate::stack::PulumiProcessListener,
+    ) -> crate::Result<()> {
+        if let Some(preview_tx) = listener.preview_tx {
+            if let Ok(summary) = self.preview(options) {
+                preview_tx.send(summary).await.map_err(|e| {
+                    super::PulumiError::Other(format!("Failed to send preview summary: {:?}", e))
+                })?;
+
+                return Ok(());
+            } else {
+                return Err(super::PulumiError::Other(
+                    "Failed to get preview summary".to_string(),
+                ));
+            }
+        } else {
+            return Err(super::PulumiError::Other(
+                "Preview channel not available".to_string(),
+            ));
+        }
+    }
+
     #[instrument(skip(self))]
     async fn up(
         &self,

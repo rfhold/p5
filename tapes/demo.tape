@@ -78,15 +78,29 @@ Type ":outputs" Sleep 300ms Enter
 
 Type ":resources" Sleep 300ms Enter
 
+Wait+Screen /.*demo-dev.*/
+
 Type ":preview" Sleep 300ms Enter
 
-Wait+Screen /.*Create.*/
+Wait+Screen /.*Preview - Summary.*/
 
 Sleep 1s
 
 Type ":update" Sleep 600ms Enter
 
-Wait+Screen /.*Complete.*/
+Wait+Screen /.*Update - Complete.*/
+
+Sleep 1s
+
+Type ":refresh" Sleep 600ms Enter
+
+Wait+Screen /.*Refresh - Complete.*/
+
+Sleep 1s
+
+Type ":destroy" Sleep 600ms Enter
+
+Wait+Screen /.*Destroy - Complete.*/
 
 Sleep 2s
 

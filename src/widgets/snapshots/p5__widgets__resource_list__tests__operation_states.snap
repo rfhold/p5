@@ -1,0 +1,25 @@
+---
+source: src/widgets/resource_list.rs
+assertion_line: 456
+expression: terminal.backend()
+---
+"┌Resource Operations───────────────────────────────────────────────────────────┐"
+"│Create    0s aws:s3/bucket:Bucket my-bucket                                   │"
+"│Update    0s aws:s3/bucket:Bucket my-bucket                                   │"
+"│Delete    0s aws:s3/bucket:Bucket my-bucket                                   │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

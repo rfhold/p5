@@ -10,14 +10,10 @@ use tokio::sync::mpsc;
 use crate::{
     AppContext, AppState,
     state::{
-        Loadable, OperationEvents, OperationProgress, StackContext, StackOutputs, StackState,
-        WorkspaceState,
+        Loadable, OperationContext, OperationEvents, OperationOptions, OperationProgress,
+        ProgramOperation, StackContext, StackOutputs, StackState, WorkspaceState,
     },
-    tasks::{
-        AppTask,
-        stack::{StackTask, StackUpdateOptions},
-        workspace::WorkspaceTask,
-    },
+    tasks::{AppTask, stack::StackTask, workspace::WorkspaceTask},
 };
 
 #[derive(Clone)]
@@ -47,13 +43,11 @@ pub enum WorkspaceAction {
 
 #[derive(Clone)]
 pub enum StackAction {
-    UpdateStack(LocalStack, StackUpdateOptions),
-    PersistStackPreview(LocalStack, StackChangeSummary),
-    LoadStackPreview(LocalStack),
-    BeginStackUpdate(LocalStack, StackUpdateOptions),
-    PersistStackUpdateChangeSummary(LocalStack, StackChangeSummary),
-    PersistStackUpdateEvent(LocalStack, EngineEvent),
-    PersistStackUpdateDone(LocalStack),
+    RunProgram(ProgramOperation, LocalStack, OperationOptions),
+    BeginOperation(ProgramOperation, LocalStack, OperationOptions),
+    PersistChangeSummary(ProgramOperation, LocalStack, StackChangeSummary),
+    PersistEvent(ProgramOperation, LocalStack, EngineEvent),
+    PersistOperationDone(ProgramOperation, LocalStack),
 }
 
 impl Action for AppAction {
@@ -110,12 +104,7 @@ impl Action for AppAction {
                                         ),
                                     ))?;
                                 }
-                                crate::state::StackContext::Preview => {
-                                    action_tx.try_send(AppAction::StackAction(
-                                        StackAction::LoadStackPreview(stack.clone()),
-                                    ))?;
-                                }
-                                crate::state::StackContext::Update => {}
+                                crate::state::StackContext::Operation(_) => {}
                             }
                         }
                     }
@@ -189,6 +178,7 @@ impl Action for AppAction {
                         })
                         .selected_stack = Some(StackState {
                         stack_name: name.clone(),
+                        resource_state: Default::default(),
                     });
                     state
                         .workspaces
@@ -207,8 +197,7 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     task_tx.try_send(AppTask::WorkspaceTask(WorkspaceTask::SelectStack(
                         workspace.clone(),
@@ -237,8 +226,7 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -260,8 +248,7 @@ impl Action for AppAction {
                             outputs: Loadable::Loaded(outputs.clone()),
                             config: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -283,8 +270,7 @@ impl Action for AppAction {
                             config: Loadable::Loaded(config.clone()),
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -306,8 +292,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Loadable::Loaded(stack_state.clone()),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -333,8 +318,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Loadable::Loading,
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -360,8 +344,7 @@ impl Action for AppAction {
                             config: Default::default(),
                             outputs: Loadable::Loading,
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
@@ -387,59 +370,29 @@ impl Action for AppAction {
                             config: Loadable::Loading,
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: Default::default(),
+                            operation: Default::default(),
                         });
                     Ok(())
                 }
             },
             AppAction::StackAction(action) => match action {
-                StackAction::UpdateStack(local_stack, options) => {
-                    match state.current_context() {
-                        AppContext::Stack(StackContext::Update) => {}
-                        _ => {
-                            action_tx.try_send(AppAction::PushContext(AppContext::Stack(
-                                StackContext::Update,
-                            )))?;
-                        }
-                    }
-                    action_tx.try_send(AppAction::StackAction(StackAction::BeginStackUpdate(
+                StackAction::RunProgram(operation, local_stack, options) => {
+                    action_tx.try_send(AppAction::PushContext(AppContext::Stack(
+                        StackContext::Operation(OperationContext::Summary),
+                    )))?;
+                    action_tx.try_send(AppAction::StackAction(StackAction::BeginOperation(
+                        operation.clone(),
                         local_stack.clone(),
                         options.clone(),
                     )))?;
 
                     Ok(())
                 }
-                StackAction::PersistStackPreview(local_stack, stack_change_summary) => {
-                    state
-                        .workspaces
-                        .entry(local_stack.workspace.cwd.clone())
-                        .or_insert_with(|| crate::state::WorkspaceOutputs {
-                            workspace: Loadable::Loaded(local_stack.workspace.clone()),
-                            stacks: Default::default(),
-                        })
-                        .stacks
-                        .entry(local_stack.name.clone())
-                        .and_modify(|s| {
-                            s.preview.change_summary =
-                                Loadable::Loaded(stack_change_summary.clone());
-                        })
-                        .or_insert_with(|| StackOutputs {
-                            stack: Loadable::Loaded(local_stack.clone()),
-                            config: Default::default(),
-                            outputs: Default::default(),
-                            state: Default::default(),
-                            preview: OperationProgress {
-                                change_summary: Loadable::Loaded(stack_change_summary.clone()),
-                                events: Default::default(),
-                            },
-                            update: Default::default(),
-                        });
-                    Ok(())
-                }
-                StackAction::LoadStackPreview(local_stack) => {
-                    task_tx.try_send(AppTask::StackTask(StackTask::GetStackPreview(
+                StackAction::BeginOperation(operation, local_stack, options) => {
+                    task_tx.try_send(AppTask::StackTask(StackTask::RunOperation(
+                        operation.clone(),
                         local_stack.clone(),
+                        options.clone(),
                     )))?;
                     state
                         .workspaces
@@ -451,26 +404,28 @@ impl Action for AppAction {
                         .stacks
                         .entry(local_stack.name.clone())
                         .and_modify(|s| {
-                            s.preview.change_summary = Loadable::Loading;
+                            s.operation = Some(OperationProgress {
+                                operation: operation.clone(),
+                                options: Some(options.clone()),
+                                change_summary: Loadable::Loading,
+                                events: Default::default(),
+                            });
                         })
                         .or_insert_with(|| StackOutputs {
                             stack: Loadable::Loaded(local_stack.clone()),
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: OperationProgress {
+                            operation: Some(OperationProgress {
+                                operation: operation.clone(),
+                                options: Some(options.clone()),
                                 change_summary: Loadable::Loading,
                                 events: Default::default(),
-                            },
-                            update: Default::default(),
+                            }),
                         });
                     Ok(())
                 }
-                StackAction::BeginStackUpdate(local_stack, stack_update_options) => {
-                    task_tx.try_send(AppTask::StackTask(StackTask::UpdateStack(
-                        local_stack.clone(),
-                        stack_update_options.clone(),
-                    )))?;
+                StackAction::PersistChangeSummary(operation, local_stack, stack_change_summary) => {
                     state
                         .workspaces
                         .entry(local_stack.workspace.cwd.clone())
@@ -481,54 +436,33 @@ impl Action for AppAction {
                         .stacks
                         .entry(local_stack.name.clone())
                         .and_modify(|s| {
-                            s.update = OperationProgress {
-                                change_summary: Loadable::Loading,
-                                events: Default::default(),
-                            };
+                            if let Some(op) = &mut s.operation {
+                                op.change_summary = Loadable::Loaded(stack_change_summary.clone());
+                            } else {
+                                s.operation = Some(OperationProgress {
+                                    operation: operation.clone(),
+                                    change_summary: Loadable::Loaded(stack_change_summary.clone()),
+                                    events: Default::default(),
+                                    options: Default::default(),
+                                });
+                            }
                         })
                         .or_insert_with(|| StackOutputs {
                             stack: Loadable::Loaded(local_stack.clone()),
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: OperationProgress {
-                                // TODO: check flags
-                                change_summary: Loadable::Loading,
-                                events: Default::default(),
-                            },
-                        });
-                    Ok(())
-                }
-                StackAction::PersistStackUpdateChangeSummary(local_stack, stack_change_summary) => {
-                    state
-                        .workspaces
-                        .entry(local_stack.workspace.cwd.clone())
-                        .or_insert_with(|| crate::state::WorkspaceOutputs {
-                            workspace: Loadable::Loaded(local_stack.workspace.clone()),
-                            stacks: Default::default(),
-                        })
-                        .stacks
-                        .entry(local_stack.name.clone())
-                        .and_modify(|s| {
-                            s.update.change_summary =
-                                Loadable::Loaded(stack_change_summary.clone());
-                        })
-                        .or_insert_with(|| StackOutputs {
-                            stack: Loadable::Loaded(local_stack.clone()),
-                            config: Default::default(),
-                            outputs: Default::default(),
-                            state: Default::default(),
-                            preview: Default::default(),
-                            update: OperationProgress {
+                            operation: Some(OperationProgress {
+                                operation: operation.clone(),
                                 change_summary: Loadable::Loaded(stack_change_summary.clone()),
                                 events: Default::default(),
-                            },
+                                options: Default::default(),
+                            }),
                         });
                     Ok(())
                 }
-                StackAction::PersistStackUpdateEvent(local_stack, engine_event) => {
-                    state
+                StackAction::PersistEvent(operation, local_stack, engine_event) => {
+                    let outputs = state
                         .workspaces
                         .entry(local_stack.workspace.cwd.clone())
                         .or_insert_with(|| crate::state::WorkspaceOutputs {
@@ -537,34 +471,41 @@ impl Action for AppAction {
                         })
                         .stacks
                         .entry(local_stack.name.clone())
-                        .and_modify(|s| {
-                            let mut events = match &s.update.events {
-                                Loadable::Loaded(events) => events.clone(),
-                                _ => OperationEvents {
-                                    events: vec![],
-                                    done: false,
-                                },
-                            };
-                            events.events.push(engine_event.clone());
-                            s.update.events = Loadable::Loaded(events);
-                        })
                         .or_insert_with(|| StackOutputs {
                             stack: Loadable::Loaded(local_stack.clone()),
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: OperationProgress {
+                            operation: Some(OperationProgress {
+                                operation: operation.clone(),
                                 change_summary: Loadable::default(),
                                 events: Loadable::Loaded(OperationEvents {
                                     events: vec![engine_event.clone()],
+                                    states: vec![],
                                     done: false,
                                 }),
-                            },
+                                options: Default::default(),
+                            }),
                         });
+
+                    let operation = outputs
+                        .operation
+                        .as_mut()
+                        .expect("Operation should be present");
+
+                    let events = operation.events.as_mut_or_default(OperationEvents {
+                        events: vec![],
+                        states: vec![],
+                        done: false,
+                    });
+
+                    if let Err(err) = events.apply_event(engine_event.clone()) {
+                        tracing::error!("Failed to apply engine event: {}", err);
+                    }
+
                     Ok(())
                 }
-                StackAction::PersistStackUpdateDone(local_stack) => {
+                StackAction::PersistOperationDone(op, local_stack) => {
                     state
                         .workspaces
                         .entry(local_stack.workspace.cwd.clone())
@@ -575,29 +516,47 @@ impl Action for AppAction {
                         .stacks
                         .entry(local_stack.name.clone())
                         .and_modify(|s| {
-                            let mut events = match &s.update.events {
-                                Loadable::Loaded(events) => events.clone(),
-                                _ => OperationEvents {
-                                    events: vec![],
-                                    done: false,
-                                },
+                            match &mut s.operation {
+                                Some(op) => {
+                                    let events = op.events.as_mut_or_default(OperationEvents {
+                                        events: vec![],
+                                        states: vec![],
+                                        done: true,
+                                    });
+                                    events.done = true;
+                                    op.events = Loadable::Loaded(events.clone());
+                                    op
+                                }
+                                None => {
+                                    s.operation = Some(OperationProgress {
+                                        operation: op.clone(),
+                                        change_summary: Loadable::default(),
+                                        events: Loadable::Loaded(OperationEvents {
+                                            events: vec![],
+                                            states: vec![],
+                                            done: true,
+                                        }),
+                                        options: Default::default(),
+                                    });
+                                    s.operation.as_mut().unwrap()
+                                }
                             };
-                            events.done = true;
-                            s.update.events = Loadable::Loaded(events);
                         })
                         .or_insert_with(|| StackOutputs {
                             stack: Loadable::Loaded(local_stack.clone()),
                             config: Default::default(),
                             outputs: Default::default(),
                             state: Default::default(),
-                            preview: Default::default(),
-                            update: OperationProgress {
+                            operation: Some(OperationProgress {
+                                operation: op.clone(),
                                 change_summary: Loadable::default(),
                                 events: Loadable::Loaded(OperationEvents {
                                     events: vec![],
+                                    states: vec![],
                                     done: true,
                                 }),
-                            },
+                                options: Default::default(),
+                            }),
                         });
                     Ok(())
                 }
