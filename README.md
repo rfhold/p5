@@ -39,10 +39,10 @@ cargo install p5
 - [ ] Include and Exclude resources
 - [ ] Import resources
 - [ ] Remove resources
-- [ ] List programs
-    - [ ] Select program
-    - [ ] Create program
-- [ ] List stacks
+- [x] List workspaces
+    - [ ] Select workspace
+    - [ ] Create workspace
+- [x] List stacks
     - [ ] Select stack
     - [ ] Create stack
     - [ ] Rename stack
