@@ -1,12 +1,12 @@
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::{Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Style},
     widgets::{Clear, Paragraph, StatefulWidget, Widget},
 };
 
 use crate::{
     AppContext, AppState,
-    widgets::{SplashScreen, StackLayout},
+    widgets::{SplashScreen, StackLayout, StackList, WorkspaceList},
 };
 
 #[derive(Clone, Default)]
@@ -31,10 +31,26 @@ impl StatefulWidget for AppLayout {
                 )
                 .render(area, buf);
             }
-            AppContext::Stack(stack_context) => {
-                StackLayout::new(stack_context.clone()).render(area, buf, state);
-            }
             AppContext::CommandPrompt => {}
+            _ => {
+                let main_layout = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
+                    .split(area);
+
+                let sidebar_area = main_layout[0];
+                let main_area = main_layout[1];
+
+                let sidebar_layout = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .split(sidebar_area);
+
+                WorkspaceList::new().render(sidebar_layout[0], buf, state);
+                StackList::new().render(sidebar_layout[1], buf, state);
+
+                StackLayout::new(state.stack_context()).render(main_area, buf, state);
+            }
         }
 
         if let AppContext::CommandPrompt = current_context {

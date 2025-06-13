@@ -4,7 +4,7 @@ use pulumi_automation::{
     event::{EngineEvent, EventType, ResOpFailedDetails, ResOutputsDetails, ResourcePreDetails},
     local::{LocalStack, LocalWorkspace},
     stack::StackChangeSummary,
-    workspace::{Deployment, OutputMap, StackSettings},
+    workspace::{Deployment, OutputMap, StackSettings, StackSummary},
 };
 use tui_input::Input;
 
@@ -20,8 +20,10 @@ pub struct AppState {
 
     pub toast: Option<(chrono::DateTime<chrono::Utc>, String)>,
 
+    pub workspaces: Loadable<Vec<LocalWorkspace>>,
+
     /// workspace paths to their outputs
-    pub workspaces: HashMap<String, WorkspaceOutputs>,
+    pub workspace_store: HashMap<String, WorkspaceOutputs>,
 }
 
 impl AppState {
@@ -44,7 +46,7 @@ impl AppState {
 
     pub fn workspace(&self) -> &Loadable<LocalWorkspace> {
         if let Some(state) = &self.selected_workspace {
-            if let Some(outputs) = self.workspaces.get(&state.workspace_path) {
+            if let Some(outputs) = self.workspace_store.get(&state.workspace_path) {
                 return &outputs.workspace;
             }
         }
@@ -54,9 +56,10 @@ impl AppState {
 
     pub fn stack_state_mut(&mut self) -> Option<&mut StackOutputs> {
         if let Some(state) = self.selected_workspace.as_mut() {
-            if let Some(outputs) = self.workspaces.get_mut(&state.workspace_path) {
+            if let Some(outputs) = self.workspace_store.get_mut(&state.workspace_path) {
                 if let Some(stack_name) = state.selected_stack.as_mut() {
-                    if let Some(stack_outputs) = outputs.stacks.get_mut(&stack_name.stack_name) {
+                    if let Some(stack_outputs) = outputs.stack_store.get_mut(&stack_name.stack_name)
+                    {
                         return Some(stack_outputs);
                     }
                 }
@@ -68,9 +71,9 @@ impl AppState {
 
     pub fn stack_state(&self) -> Option<&StackOutputs> {
         if let Some(state) = self.selected_workspace.as_ref() {
-            if let Some(outputs) = self.workspaces.get(&state.workspace_path) {
+            if let Some(outputs) = self.workspace_store.get(&state.workspace_path) {
                 if let Some(stack_name) = state.selected_stack.as_ref() {
-                    if let Some(stack_outputs) = outputs.stacks.get(&stack_name.stack_name) {
+                    if let Some(stack_outputs) = outputs.stack_store.get(&stack_name.stack_name) {
                         return Some(stack_outputs);
                     }
                 }
@@ -117,11 +120,12 @@ impl AppState {
     ) -> Option<(&Loadable<Deployment>, &mut ResourceListState)> {
         if let Some(workspace_state) = self.selected_workspace.as_mut() {
             if let Some(stack_name) = workspace_state.selected_stack.as_mut() {
-                if let Some(stack_outputs) =
-                    self.workspaces.get_mut(&workspace_state.workspace_path)
+                if let Some(stack_outputs) = self
+                    .workspace_store
+                    .get_mut(&workspace_state.workspace_path)
                 {
                     if let Some(stack_outputs) =
-                        stack_outputs.stacks.get_mut(&stack_name.stack_name)
+                        stack_outputs.stack_store.get_mut(&stack_name.stack_name)
                     {
                         return Some((&stack_outputs.state, &mut stack_name.resource_state));
                     }
@@ -136,11 +140,12 @@ impl AppState {
     ) -> Option<(&mut OperationProgress, &mut ResourceListState)> {
         if let Some(workspace_state) = self.selected_workspace.as_mut() {
             if let Some(stack_name) = workspace_state.selected_stack.as_mut() {
-                if let Some(stack_outputs) =
-                    self.workspaces.get_mut(&workspace_state.workspace_path)
+                if let Some(stack_outputs) = self
+                    .workspace_store
+                    .get_mut(&workspace_state.workspace_path)
                 {
                     if let Some(stack_outputs) =
-                        stack_outputs.stacks.get_mut(&stack_name.stack_name)
+                        stack_outputs.stack_store.get_mut(&stack_name.stack_name)
                     {
                         if let Some(operation_progress) = &mut stack_outputs.operation {
                             return Some((operation_progress, &mut stack_name.resource_state));
@@ -157,6 +162,27 @@ impl AppState {
             return stack_outputs.operation.as_ref();
         }
         None
+    }
+
+    pub fn stacks(&self) -> &Loadable<Vec<StackSummary>> {
+        if let Some(state) = &self.selected_workspace {
+            if let Some(outputs) = self.workspace_store.get(&state.workspace_path) {
+                return &outputs.stacks;
+            }
+        }
+
+        &Loadable::NotLoaded
+    }
+
+    pub fn workspaces(&self) -> &Loadable<Vec<LocalWorkspace>> {
+        &self.workspaces
+    }
+
+    pub fn stack_context(&self) -> StackContext {
+        if let AppContext::Stack(stack_context) = self.background_context() {
+            return stack_context.clone();
+        }
+        StackContext::Config
     }
 }
 
@@ -207,8 +233,9 @@ impl<T> Loadable<T> {
 #[derive(Default)]
 pub struct WorkspaceOutputs {
     pub workspace: Loadable<LocalWorkspace>,
+    pub stacks: Loadable<Vec<StackSummary>>,
     /// stack names to their outputs
-    pub stacks: HashMap<String, StackOutputs>,
+    pub stack_store: HashMap<String, StackOutputs>,
 }
 
 #[derive(Default)]
@@ -244,6 +271,8 @@ pub enum AppContext {
     #[default]
     Default,
     CommandPrompt,
+    WorkspaceList,
+    StackList,
     Stack(StackContext),
 }
 

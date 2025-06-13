@@ -10,6 +10,7 @@ use super::AppTask;
 
 #[derive(Clone)]
 pub enum WorkspaceTask {
+    ListStacks(LocalWorkspace),
     SelectWorkspace(String),
     SelectStack(LocalWorkspace, String),
     GetStackOutputs(LocalWorkspace, LocalStack),
@@ -25,6 +26,17 @@ impl WorkspaceTask {
         action_tx: &mpsc::Sender<AppAction>,
     ) -> crate::Result<()> {
         match self {
+            WorkspaceTask::ListStacks(workspace) => {
+                if let Ok(stacks) = workspace.list_stacks(Default::default()) {
+                    action_tx.try_send(AppAction::WorkspaceAction(
+                        WorkspaceAction::PersistStacks(workspace.clone(), stacks),
+                    ))?;
+                } else {
+                    tracing::error!("Failed to list stacks for workspace: {}", workspace.cwd);
+                }
+
+                Ok(())
+            }
             WorkspaceTask::SelectWorkspace(cwd) => {
                 let workspace = LocalWorkspace::new(cwd.clone());
 

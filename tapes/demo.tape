@@ -70,7 +70,20 @@ Set PlaybackSpeed 1.0
 
 Type "p5" Sleep 400ms  Enter
 
-Type ":workspace ./demo" Sleep 400ms Enter
+Sleep 1s
+
+Type ":workspaces" Sleep 400ms Enter
+
+Wait+Screen /.*demo.*/
+
+Sleep 400ms
+
+Type ":workspace demo" Sleep 400ms Enter
+
+Wait+Screen /.*Loading Stacks.*/
+Wait+Screen /.*dev.*/
+
+Sleep 400ms
 
 Type ":stack dev" Sleep 300ms Enter
 

@@ -15,6 +15,9 @@ pub fn parse_command_to_action(
         return Ok(None);
     }
     match parts[0] {
+        "workspaces" => Ok(Some(crate::AppAction::PushContext(
+            crate::AppContext::WorkspaceList,
+        ))),
         "workspace" => {
             if parts.len() < 2 {
                 return Ok(Some(crate::AppAction::ToastError(
