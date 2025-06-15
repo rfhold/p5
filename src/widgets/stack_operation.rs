@@ -82,7 +82,7 @@ impl StatefulWidget for StackOperation {
                         .border_type(ratatui::widgets::BorderType::Rounded)
                         .border_style(Style::default().fg(
                             if let AppContext::Stack(StackContext::Operation(
-                                OperationContext::Events,
+                                OperationContext::Events(_),
                             )) = background_context
                             {
                                 color::BORDER_HIGHLIGHT
@@ -103,8 +103,9 @@ impl StatefulWidget for StackOperation {
                 })
                 .border_type(ratatui::widgets::BorderType::Rounded)
                 .border_style(Style::default().fg(
-                    if let AppContext::Stack(StackContext::Operation(OperationContext::Summary)) =
-                        background_context
+                    if let AppContext::Stack(StackContext::Operation(OperationContext::Summary(
+                        _,
+                    ))) = background_context
                     {
                         color::BORDER_HIGHLIGHT
                     } else {

@@ -496,7 +496,7 @@ impl Action for AppAction {
             AppAction::StackAction(action) => match action {
                 StackAction::RunProgram(operation, local_stack, options) => {
                     action_tx.try_send(AppAction::PushContext(AppContext::Stack(
-                        StackContext::Operation(OperationContext::Summary),
+                        StackContext::Operation(OperationContext::Summary(Default::default())),
                     )))?;
                     action_tx.try_send(AppAction::StackAction(StackAction::BeginOperation(
                         operation.clone(),
@@ -622,7 +622,7 @@ impl Action for AppAction {
 
                     if events.events.is_empty() {
                         action_tx.try_send(AppAction::PushContext(AppContext::Stack(
-                            StackContext::Operation(OperationContext::Events),
+                            StackContext::Operation(OperationContext::Events(Default::default())),
                         )))?;
                     }
 

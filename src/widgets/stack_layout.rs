@@ -54,16 +54,24 @@ impl StatefulWidget for StackLayout {
 
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Length(3), Constraint::Percentage(90)])
+            .constraints(if stack.is_loaded() {
+                vec![Constraint::Length(3), Constraint::Percentage(90)]
+            } else {
+                vec![Constraint::Percentage(100)]
+            })
             .split(area);
 
         body_paragraph.render(layout[0], buf);
 
-        match self.context {
-            StackContext::Outputs => StackOutputs::default().render(layout[1], buf, state),
-            StackContext::Config => StackConfig::default().render(layout[1], buf, state),
-            StackContext::Resources => StackResources::default().render(layout[1], buf, state),
-            StackContext::Operation(_) => StackOperation::default().render(layout[1], buf, state),
+        if layout.get(1).is_some() {
+            match self.context {
+                StackContext::Outputs => StackOutputs::default().render(layout[1], buf, state),
+                StackContext::Config => StackConfig::default().render(layout[1], buf, state),
+                StackContext::Resources => StackResources::default().render(layout[1], buf, state),
+                StackContext::Operation(_) => {
+                    StackOperation::default().render(layout[1], buf, state)
+                }
+            }
         }
     }
 }

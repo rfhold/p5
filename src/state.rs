@@ -384,9 +384,16 @@ pub enum StackContext {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OperationContext {
+    Summary(OperationDetailsContent),
+    Events(OperationDetailsContent),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub enum OperationDetailsContent {
+    #[default]
+    List,
     Details,
-    Summary,
-    Events,
+    Item,
 }
 
 #[derive(Debug, Clone)]
