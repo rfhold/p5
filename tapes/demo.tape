@@ -72,8 +72,6 @@ Type "p5" Sleep 400ms  Enter
 
 Sleep 1s
 
-Type ":workspaces" Sleep 400ms Enter
-
 Wait+Screen /.*demo.*/
 
 Sleep 400ms
@@ -116,4 +114,8 @@ Type ":destroy" Sleep 600ms Enter
 Wait+Screen /.*Destroy - Complete.*/
 
 Sleep 2s
+
+Left 1 Sleep 100ms
+Left 1 Sleep 100ms
+Left 1 Sleep 100ms
 

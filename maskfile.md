@@ -1,5 +1,11 @@
 # P5 Tasks
 
+## install
+> Install P5
+~~~sh
+cargo install --path .
+~~~
+
 ## tools
 > Install the tools required to run the tasks in this file
 ~~~sh

@@ -1,12 +1,12 @@
 ---
 source: src/widgets/resource_list.rs
-assertion_line: 456
+assertion_line: 463
 expression: terminal.backend()
 ---
 "┌Resource Operations───────────────────────────────────────────────────────────┐"
-"│Create    0s aws:s3/bucket:Bucket my-bucket                                   │"
-"│Update    0s aws:s3/bucket:Bucket my-bucket                                   │"
-"│Delete    0s aws:s3/bucket:Bucket my-bucket                                   │"
+"│Create    0s aws:s3/bucket:Bucket           my-bucket                         │"
+"│Update    0s aws:s3/bucket:Bucket           my-bucket                         │"
+"│Delete    0s aws:s3/bucket:Bucket           my-bucket                         │"
 "│                                                                              │"
 "│                                                                              │"
 "│                                                                              │"

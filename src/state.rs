@@ -6,6 +6,7 @@ use pulumi_automation::{
     stack::StackChangeSummary,
     workspace::{Deployment, OutputMap, StackSettings, StackSummary},
 };
+use ratatui::widgets::ListState;
 use tui_input::Input;
 
 use crate::widgets::ResourceListState;
@@ -18,6 +19,9 @@ pub struct AppState {
     pub command_prompt: Input,
     pub selected_workspace: Option<WorkspaceState>,
 
+    pub workspace_list_state: ListState,
+    pub stack_list_state: ListState,
+
     pub toast: Option<(chrono::DateTime<chrono::Utc>, String)>,
 
     pub workspaces: Loadable<Vec<LocalWorkspace>>,
@@ -27,17 +31,104 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn push_context(&mut self, context: AppContext) {
+        if let Some(current_context) = self.context_stack.last() {
+            if current_context == &context {
+                return; // No need to push the same context again
+            }
+        }
+
+        match context {
+            AppContext::WorkspaceList => {
+                self.context_stack.clear();
+            }
+            AppContext::StackList => {
+                self.context_stack.clear();
+                self.context_stack.push(AppContext::WorkspaceList);
+            }
+            AppContext::Stack(_) => {
+                self.context_stack.clear();
+                self.context_stack.push(AppContext::WorkspaceList);
+                self.context_stack.push(AppContext::StackList);
+            }
+            _ => {}
+        }
+
+        self.context_stack.push(context);
+    }
+
+    pub fn try_selected_workspace(&self) -> Option<LocalWorkspace> {
+        if let Some(i) = self.workspace_list_state.selected() {
+            if let Some(workspace) = self.workspaces.as_option().and_then(|ws| ws.get(i)) {
+                return Some(workspace.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn try_selected_stack(&self) -> Option<StackSummary> {
+        if let Some(state) = &self.selected_workspace {
+            if let Some(i) = self.stack_list_state.selected() {
+                if let Some(outputs) = self.workspace_store.get(&state.workspace_path) {
+                    if let Some(stack) = outputs.stacks.as_option().and_then(|stacks| stacks.get(i))
+                    {
+                        return Some(stack.clone());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn select_workspace_by_cwd(&mut self, cwd: &str) -> () {
+        if let Some(i) = self
+            .workspaces
+            .as_option()
+            .and_then(|ws| ws.iter().position(|w| w.cwd == cwd))
+        {
+            self.workspace_list_state.select(Some(i));
+        }
+
+        self.selected_workspace = Some(WorkspaceState {
+            workspace_path: cwd.to_string(),
+            selected_stack: None,
+        });
+    }
+
+    pub fn select_stack_by_name_and_cwd(&mut self, stack_name: &str, cwd: &str) -> () {
+        self.select_workspace_by_cwd(cwd);
+
+        if let Some(state) = self.selected_workspace.as_mut() {
+            if let Some(outputs) = self.workspace_store.get_mut(&state.workspace_path) {
+                if let Some(i) = outputs
+                    .stacks
+                    .as_option()
+                    .and_then(|stacks| stacks.iter().position(|s| s.name == stack_name))
+                {
+                    self.stack_list_state.select(Some(i));
+                }
+            }
+
+            state.selected_stack = Some(StackState {
+                stack_name: stack_name.to_string(),
+                resource_state: ResourceListState::default(),
+            });
+        }
+    }
+
     pub fn background_context(&self) -> AppContext {
         if let Some(context) = self.context_stack.last() {
             if let AppContext::CommandPrompt = context {
                 if self.context_stack.len() > 1 {
                     return self.context_stack[self.context_stack.len() - 2].clone();
                 }
-                return AppContext::Default;
+                return Default::default();
             }
             return context.clone();
         }
-        AppContext::Default
+        Default::default()
     }
 
     pub fn current_context(&self) -> AppContext {
@@ -228,6 +319,13 @@ impl<T> Loadable<T> {
             Loadable::NotLoaded => Loadable::NotLoaded,
         }
     }
+
+    pub fn as_option(&self) -> Option<&T> {
+        match self {
+            Loadable::Loaded(value) => Some(value),
+            Loadable::Loading | Loadable::NotLoaded => None,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -266,17 +364,16 @@ pub struct StackState {
     pub resource_state: ResourceListState,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub enum AppContext {
-    #[default]
-    Default,
     CommandPrompt,
+    #[default]
     WorkspaceList,
     StackList,
     Stack(StackContext),
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub enum StackContext {
     Outputs,
     #[default]
@@ -285,7 +382,7 @@ pub enum StackContext {
     Operation(OperationContext),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OperationContext {
     Details,
     Summary,

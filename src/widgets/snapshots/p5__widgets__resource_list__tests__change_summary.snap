@@ -1,11 +1,11 @@
 ---
 source: src/widgets/resource_list.rs
-assertion_line: 328
+assertion_line: 335
 expression: terminal.backend()
 ---
 "┌Change Summary────────────────────────────────────────────────────────────────┐"
-"│Create    aws:s3/bucket:Bucket      my-bucket                                 │"
-"│Delete    aws:s3/bucket:Bucket      old-bucket                                │"
+"│Create    aws:s3/bucket:Bucket           my-bucket                            │"
+"│Delete    aws:s3/bucket:Bucket           old-bucket                           │"
 "│                                                                              │"
 "│                                                                              │"
 "│                                                                              │"

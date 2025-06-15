@@ -1,11 +1,12 @@
 use ratatui::{
     layout::Alignment,
+    style::Style,
     widgets::{Block, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::state::{AppState, Loadable};
+use crate::state::{AppContext, AppState, Loadable, StackContext};
 
-use super::resource_list::ResourceList;
+use super::{resource_list::ResourceList, theme::color};
 
 #[derive(Default, Clone)]
 pub struct StackResources {}
@@ -21,7 +22,14 @@ impl StatefulWidget for StackResources {
     ) {
         let block = Block::bordered()
             .title("Resources")
-            .border_type(ratatui::widgets::BorderType::Rounded);
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(
+                if let AppContext::Stack(StackContext::Resources) = state.background_context() {
+                    color::BORDER_HIGHLIGHT
+                } else {
+                    color::BORDER_DEFAULT
+                },
+            ));
 
         if let Some((data, selection)) = state.stack_resource_state() {
             match data {

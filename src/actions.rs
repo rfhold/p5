@@ -11,7 +11,7 @@ use crate::{
     AppContext, AppState,
     state::{
         Loadable, OperationContext, OperationEvents, OperationOptions, OperationProgress,
-        ProgramOperation, StackContext, StackOutputs, StackState, WorkspaceState,
+        ProgramOperation, StackContext, StackOutputs,
     },
     tasks::{AppTask, stack::StackTask, workspace::WorkspaceTask},
 };
@@ -27,6 +27,10 @@ pub enum AppAction {
     StackAction(StackAction),
     ListWorkspaces,
     PersistWorkspaces(Vec<LocalWorkspace>),
+    NavigateDown,
+    NavigateUp,
+    NavigateLeft,
+    NavigateRight,
 }
 
 #[derive(Clone)]
@@ -71,9 +75,74 @@ impl Action for AppAction {
                 cancel_token.cancel();
                 Ok(())
             }
+            AppAction::NavigateDown => {
+                match state.current_context() {
+                    AppContext::WorkspaceList => state.workspace_list_state.select_next(),
+                    AppContext::StackList => state.stack_list_state.select_next(),
+                    AppContext::Stack(stack_context) => match stack_context {
+                        StackContext::Resources | StackContext::Operation(_) => {
+                            if let Some((_, selection)) = state.stack_resource_state() {
+                                selection.scrollable_state.list_state.select_next();
+                            }
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                }
+                Ok(())
+            }
+            AppAction::NavigateUp => {
+                match state.current_context() {
+                    AppContext::WorkspaceList => state.workspace_list_state.select_previous(),
+                    AppContext::StackList => state.stack_list_state.select_previous(),
+                    AppContext::Stack(stack_context) => match stack_context {
+                        StackContext::Resources | StackContext::Operation(_) => {
+                            if let Some((_, selection)) = state.stack_resource_state() {
+                                selection.scrollable_state.list_state.select_previous();
+                            }
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                }
+                Ok(())
+            }
+            AppAction::NavigateLeft => {
+                match state.current_context() {
+                    _ => {
+                        action_tx.try_send(AppAction::PopContext)?;
+                    }
+                }
+
+                Ok(())
+            }
+            AppAction::NavigateRight => {
+                match state.current_context() {
+                    AppContext::WorkspaceList => {
+                        if let Some(workspace) = state.try_selected_workspace() {
+                            action_tx.try_send(AppAction::WorkspaceAction(
+                                WorkspaceAction::SelectWorkspace(workspace.cwd.clone()),
+                            ))?;
+                        }
+                    }
+                    AppContext::StackList => {
+                        if let Some(stack) = state.try_selected_stack() {
+                            if let Some(workspace) = state.workspace().as_option() {
+                                action_tx.try_send(AppAction::WorkspaceAction(
+                                    WorkspaceAction::SelectStack(
+                                        workspace.clone(),
+                                        stack.name.clone(),
+                                    ),
+                                ))?;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+                Ok(())
+            }
             AppAction::PushContext(context) => {
-                // TODO: Handle clearing duplicate contexts or managing context stack size
-                state.context_stack.push(context.clone());
+                state.push_context(context.clone());
 
                 match context {
                     AppContext::Stack(stack_context) => {
@@ -180,10 +249,7 @@ impl Action for AppAction {
                     Ok(())
                 }
                 WorkspaceAction::SelectWorkspace(cwd) => {
-                    state.selected_workspace = Some(WorkspaceState {
-                        workspace_path: cwd.clone(),
-                        selected_stack: None,
-                    });
+                    state.select_workspace_by_cwd(cwd.as_str());
                     state.workspace_store.entry(cwd.clone()).or_insert_with(|| {
                         crate::state::WorkspaceOutputs {
                             workspace: Loadable::Loading,
@@ -223,16 +289,7 @@ impl Action for AppAction {
                     Ok(())
                 }
                 WorkspaceAction::SelectStack(workspace, name) => {
-                    state
-                        .selected_workspace
-                        .get_or_insert_with(|| WorkspaceState {
-                            workspace_path: workspace.cwd.clone(),
-                            selected_stack: None,
-                        })
-                        .selected_stack = Some(StackState {
-                        stack_name: name.clone(),
-                        resource_state: Default::default(),
-                    });
+                    state.select_stack_by_name_and_cwd(name.as_str(), workspace.cwd.as_str());
                     state
                         .workspace_store
                         .entry(workspace.cwd.clone())
@@ -544,7 +601,7 @@ impl Action for AppAction {
                                 operation: operation.clone(),
                                 change_summary: Loadable::default(),
                                 events: Loadable::Loaded(OperationEvents {
-                                    events: vec![engine_event.clone()],
+                                    events: vec![],
                                     states: vec![],
                                     done: false,
                                 }),
@@ -562,6 +619,12 @@ impl Action for AppAction {
                         states: vec![],
                         done: false,
                     });
+
+                    if events.events.is_empty() {
+                        action_tx.try_send(AppAction::PushContext(AppContext::Stack(
+                            StackContext::Operation(OperationContext::Events),
+                        )))?;
+                    }
 
                     if let Err(err) = events.apply_event(engine_event.clone()) {
                         tracing::error!("Failed to apply engine event: {}", err);

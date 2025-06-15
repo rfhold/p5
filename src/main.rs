@@ -19,11 +19,13 @@ pub(crate) type Result<T> = p5::Result<T>;
 async fn main() -> Result<()> {
     let handler = AppHandler;
     let state = AppState {
-        context_stack: vec![AppContext::Default],
+        context_stack: vec![AppContext::WorkspaceList],
         ..Default::default()
     };
 
-    p5::run(handler, state, layout::AppLayout::default()).await
+    let init_actions = vec![AppAction::ListWorkspaces];
+
+    p5::run(handler, state, init_actions, layout::AppLayout::default()).await
 }
 
 #[derive(Clone)]
@@ -56,6 +58,18 @@ impl Handler for AppHandler {
         } else if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        action_tx.try_send(AppAction::NavigateDown)?;
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        action_tx.try_send(AppAction::NavigateUp)?;
+                    }
+                    KeyCode::Char('h') | KeyCode::Left => {
+                        action_tx.try_send(AppAction::NavigateLeft)?;
+                    }
+                    KeyCode::Char('l') | KeyCode::Right => {
+                        action_tx.try_send(AppAction::NavigateRight)?;
+                    }
                     KeyCode::Char(':') => {
                         action_tx.try_send(AppAction::PushContext(AppContext::CommandPrompt))?;
                     }

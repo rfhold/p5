@@ -1,8 +1,8 @@
+# P5
 
 Pulumi was too long
 
 A TUI application to help you manage your Pulumi stacks.
-
 
 ## Installation
 
@@ -40,10 +40,10 @@ cargo install p5
 - [ ] Import resources
 - [ ] Remove resources
 - [x] List workspaces
-    - [ ] Select workspace
+    - [x] Select workspace
     - [ ] Create workspace
 - [x] List stacks
-    - [ ] Select stack
+    - [x] Select stack
     - [ ] Create stack
     - [ ] Rename stack
     - [ ] Delete stack
@@ -57,7 +57,7 @@ cargo install p5
 - [ ] Edit Pulumi config
     - [ ] Edit stack config
     - [ ] Edit program config
-- [ ] Navigation
+- [x] Navigation
 - [ ] Context Command Palette
 	- [ ] Keybinds
 - [ ] Help

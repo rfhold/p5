@@ -45,6 +45,7 @@ pub trait Task: Send + Sync + Clone + 'static {
 
 pub struct Controller<H: Handler> {
     state: Arc<Mutex<H::State>>,
+    init_actions: Vec<H::Action>,
     handler: H,
     cancel_token: tokio_util::sync::CancellationToken,
 }
@@ -53,10 +54,12 @@ impl<H: Handler> Controller<H> {
     pub fn new(
         handler: H,
         state: H::State,
+        init_actions: Vec<H::Action>,
         cancel_token: tokio_util::sync::CancellationToken,
     ) -> Self {
         Self {
             state: Arc::new(Mutex::new(state)),
+            init_actions,
             handler,
             cancel_token,
         }
@@ -115,6 +118,15 @@ impl<H: Handler> Controller<H> {
                 }
             }
         });
+
+        for action in self.init_actions {
+            let mut state = self.state.lock().await;
+            if let Err(e) =
+                action.handle_action(&mut state, &task_tx, &action_tx, &self.cancel_token)
+            {
+                tracing::error!("Error handling initial action: {}", e);
+            }
+        }
 
         let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1000 / 60));
 
@@ -306,7 +318,7 @@ mod tests {
         let handler = TestHandler;
         let state = TestState::default();
 
-        let controller = Controller::new(handler, state, cancel_token.clone());
+        let controller = Controller::new(handler, state, vec![], cancel_token.clone());
 
         let start_time = std::time::Instant::now();
 

@@ -1,9 +1,12 @@
 use ratatui::{
     layout::Alignment,
+    style::Style,
     widgets::{Block, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::state::{AppState, Loadable};
+use crate::state::{AppContext, AppState, Loadable, StackContext};
+
+use super::theme::color;
 
 #[derive(Default, Clone)]
 pub struct StackOutputs {}
@@ -29,7 +32,14 @@ impl StatefulWidget for StackOutputs {
         if let Some(outputs) = outputs {
             let outputs_block = Block::bordered()
                 .title("Outputs")
-                .border_type(ratatui::widgets::BorderType::Rounded);
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(
+                    if let AppContext::Stack(StackContext::Outputs) = state.background_context() {
+                        color::BORDER_HIGHLIGHT
+                    } else {
+                        color::BORDER_DEFAULT
+                    },
+                ));
 
             let outputs_paragraph = Paragraph::new(outputs)
                 .block(outputs_block)

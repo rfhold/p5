@@ -6,7 +6,7 @@ use ratatui::{
 
 use crate::{
     AppContext, AppState,
-    widgets::{SplashScreen, StackLayout, StackList, WorkspaceList},
+    widgets::{StackLayout, StackList, WorkspaceList},
 };
 
 #[derive(Clone, Default)]
@@ -24,18 +24,11 @@ impl StatefulWidget for AppLayout {
         let current_context = state.current_context();
         let background_context = state.background_context();
         match &background_context {
-            AppContext::Default => {
-                SplashScreen::new(
-                    "P5".to_string(),
-                    "Press ':' to open the command prompt. Ctrl+C to exit.".to_string(),
-                )
-                .render(area, buf);
-            }
             AppContext::CommandPrompt => {}
             _ => {
                 let main_layout = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
+                    .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
                     .split(area);
 
                 let sidebar_area = main_layout[0];

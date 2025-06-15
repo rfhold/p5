@@ -1,11 +1,14 @@
 use ratatui::{
     layout::{Alignment, Direction, Layout},
+    style::Style,
     widgets::{Block, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::state::{AppState, Loadable, ProgramOperation};
+use crate::state::{
+    AppContext, AppState, Loadable, OperationContext, ProgramOperation, StackContext,
+};
 
-use super::{ResourceListState, resource_list::ResourceList};
+use super::{ResourceListState, resource_list::ResourceList, theme::color};
 
 #[derive(Default, Clone)]
 pub struct StackOperation {}
@@ -27,6 +30,7 @@ impl StatefulWidget for StackOperation {
         buf: &mut ratatui::prelude::Buffer,
         state: &mut Self::State,
     ) {
+        let background_context = state.background_context();
         if let Some((operation, selection)) = state.stack_operation_state() {
             let change_summary = operation.change_summary.as_ref();
             let events = operation.events.as_ref();
@@ -57,15 +61,15 @@ impl StatefulWidget for StackOperation {
 
             let layout_constraints = if should_split {
                 vec![
-                    ratatui::layout::Constraint::Percentage(50),
-                    ratatui::layout::Constraint::Percentage(50),
+                    ratatui::layout::Constraint::Percentage(90),
+                    ratatui::layout::Constraint::Percentage(10),
                 ]
             } else {
                 vec![ratatui::layout::Constraint::Percentage(100)]
             };
 
             let layout = Layout::default()
-                .direction(Direction::Horizontal)
+                .direction(Direction::Vertical)
                 .constraints(layout_constraints)
                 .split(area);
 
@@ -75,7 +79,17 @@ impl StatefulWidget for StackOperation {
                 ResourceList::from_operations(
                     Block::bordered()
                         .title(title.to_string())
-                        .border_type(ratatui::widgets::BorderType::Rounded),
+                        .border_type(ratatui::widgets::BorderType::Rounded)
+                        .border_style(Style::default().fg(
+                            if let AppContext::Stack(StackContext::Operation(
+                                OperationContext::Events,
+                            )) = background_context
+                            {
+                                color::BORDER_HIGHLIGHT
+                            } else {
+                                color::BORDER_DEFAULT
+                            },
+                        )),
                     &events.states,
                 )
                 .render(layout[0], buf, &mut ResourceListState::default());
@@ -87,7 +101,16 @@ impl StatefulWidget for StackOperation {
                 } else {
                     "Preview".to_string()
                 })
-                .border_type(ratatui::widgets::BorderType::Rounded);
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(
+                    if let AppContext::Stack(StackContext::Operation(OperationContext::Summary)) =
+                        background_context
+                    {
+                        color::BORDER_HIGHLIGHT
+                    } else {
+                        color::BORDER_DEFAULT
+                    },
+                ));
 
             match change_summary {
                 Loadable::Loaded(change_summary) => {

@@ -1,9 +1,12 @@
 use ratatui::{
     layout::Alignment,
+    style::Style,
     widgets::{Block, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::state::{AppState, Loadable};
+use crate::state::{AppContext, AppState, Loadable, StackContext};
+
+use super::theme::color;
 
 #[derive(Default, Clone)]
 pub struct StackConfig {}
@@ -29,7 +32,14 @@ impl StatefulWidget for StackConfig {
         if let Some(config) = config {
             let config_block = Block::bordered()
                 .title("Config")
-                .border_type(ratatui::widgets::BorderType::Rounded);
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(
+                    if let AppContext::Stack(StackContext::Config) = state.background_context() {
+                        color::BORDER_HIGHLIGHT
+                    } else {
+                        color::BORDER_DEFAULT
+                    },
+                ));
 
             let config_paragraph = Paragraph::new(config)
                 .block(config_block)

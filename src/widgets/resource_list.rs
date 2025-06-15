@@ -8,7 +8,10 @@ use ratatui::{
 };
 use ratatui_macros::{line, span};
 
-use super::scrollable_list::{ScrollableList, ScrollableListState};
+use super::{
+    scrollable_list::{ScrollableList, ScrollableListState},
+    theme::color,
+};
 use crate::state::ResourceOperationState;
 
 #[derive(Debug, Clone)]
@@ -44,7 +47,7 @@ impl ResourceAdapter for CurrentStateAdapter<'_> {
             .map(|resource| ResourceItem {
                 urn: resource.urn.clone(),
                 line: line!(
-                    span!(Style::default().fg(Color::White); "{:25} ", resource.resource_type),
+                    span!(Style::default().fg(Color::White); "{:30} ", resource.resource_type),
                     span!(Style::default().fg(Color::Cyan); "{:<}", resource.name()),
                 ),
             })
@@ -71,7 +74,7 @@ impl ResourceAdapter for ChangeSummaryAdapter<'_> {
                         urn: state.urn.clone(),
                         line: line!(
                             operation_to_span(&step.op, Some(10)),
-                            span!(Style::default().fg(Color::Gray); "{:<25} ", state.resource_type),
+                            span!(Style::default().fg(Color::Gray); "{:<30} ", state.resource_type),
                             span!(Style::default(); "{:<}", state.name()),
                         ),
                     }
@@ -80,7 +83,7 @@ impl ResourceAdapter for ChangeSummaryAdapter<'_> {
                         urn: String::new(),
                         line: line!(
                             operation_to_span(&step.op, Some(10)),
-                            span!(Style::default().fg(Color::Gray); "{:<25} ", "Unknown resource type"),
+                            span!(Style::default().fg(Color::Gray); "{:<30} ", "Unknown resource type"),
                             span!(Style::default(); "{:<}", "Unknown resource"),
                         ),
                     }
@@ -130,9 +133,9 @@ impl ResourceAdapter for OperationStateAdapter<'_> {
                     (
                         format!("{:.0}s", duration_s as f64),
                         Style::default().fg(match op_state {
-                            ResourceOperationState::InProgress { .. } => Color::Gray,
-                            ResourceOperationState::Completed { .. } => Color::DarkGray,
-                            ResourceOperationState::Failed { .. } => Color::Red,
+                            ResourceOperationState::InProgress { .. } => color::TEXT_DEFAULT,
+                            ResourceOperationState::Completed { .. } => color::ATTENTION_NIL,
+                            ResourceOperationState::Failed { .. } => color::ATTENTION_DISCARD,
                         }),
                     )
                 };
@@ -146,7 +149,7 @@ impl ResourceAdapter for OperationStateAdapter<'_> {
                     line: line!(
                         operation_to_span(&pre_event.metadata.op, Some(10)),
                         span!(dur_style; "{:<2} ", dur_text),
-                        span!(Style::default().fg(Color::Gray); "{:.25} ", resource_type),
+                        span!(Style::default().fg(Color::Gray); "{:<30} ", resource_type),
                         span!(Style::default(); "{:<}", name),
                     ),
                 }
@@ -213,11 +216,18 @@ impl<'a> ResourceList<'a, OperationStateAdapter<'a>> {
 
 fn operation_to_span(op: &Operation, width: Option<usize>) -> Span<'_> {
     let style = match op {
-        Operation::Create => Style::default().fg(Color::Green),
-        Operation::Update => Style::default().fg(Color::Yellow),
-        Operation::Delete => Style::default().fg(Color::Red),
-        Operation::Read => Style::default().fg(Color::Blue),
-        Operation::Replace => Style::default().fg(Color::Magenta),
+        Operation::CreateReplacement | Operation::Create => {
+            Style::default().fg(color::ATTENTION_CREATE)
+        }
+        Operation::Update => Style::default().fg(color::ATTENTION_WRITE),
+        Operation::Delete => Style::default().fg(color::ATTENTION_DESTROY),
+        Operation::Refresh | Operation::Read => Style::default().fg(color::ATTENTION_READ),
+        Operation::Replace => Style::default().fg(color::ATTENTION_REPLACE),
+        Operation::Import => Style::default().fg(color::ATTENTION_IMPORT),
+        Operation::Discard | Operation::DiscardReplaced | Operation::DeleteReplaced => {
+            Style::default().fg(color::ATTENTION_DISCARD)
+        }
+        Operation::Same => Style::default().fg(color::ATTENTION_NIL),
         _ => Style::default(),
     };
 

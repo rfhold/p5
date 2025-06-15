@@ -5,7 +5,12 @@ pub type Result<T> = color_eyre::Result<T>;
 use ratatui::{crossterm::ExecutableCommand, widgets::StatefulWidget};
 use tracing_subscriber::prelude::*;
 
-pub async fn run<H, W>(handler: H, state: H::State, widget: W) -> color_eyre::Result<()>
+pub async fn run<H, W>(
+    handler: H,
+    state: H::State,
+    init_actions: Vec<H::Action>,
+    widget: W,
+) -> color_eyre::Result<()>
 where
     H: controller::Handler + Send + Sync + Clone + 'static,
     W: StatefulWidget<State = H::State> + Send + Sync + Clone + 'static,
@@ -17,7 +22,8 @@ where
 
     let terminal = init_terminal()?;
 
-    let controller = controller::Controller::new(handler, state, cancel_token.clone());
+    let controller =
+        controller::Controller::new(handler, state, init_actions, cancel_token.clone());
 
     tokio::select! {
         _ = controller.run(terminal, widget) => {
