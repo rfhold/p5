@@ -1,0 +1,4 @@
+encryptionsalt: v1:5fo6KzUp8DQ=:v1:z70z5KV9IKeAvNh3:pHdNzJ8fv8jMLUggRZAsK03ZX14B6w==
+config:
+  debug:reset: false
+  debug:fail: true

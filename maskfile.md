@@ -90,7 +90,7 @@ docker run --rm p5:tests "*integration"
 ~~~sh
 set -e
 mask test build
-docker run -it --rm p5:tests "debug"
+docker run -it --rm -v "$PWD/pulumi-automation/tests/fixtures/dumps:/app/pulumi-automation/tests/fixtures/dumps" p5:tests "debug"
 ~~~
 
 ## vhs

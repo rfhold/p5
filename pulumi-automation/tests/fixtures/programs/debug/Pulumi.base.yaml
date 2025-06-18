@@ -1,0 +1,5 @@
+encryptionsalt: v1:lkggwNzTeIk=:v1:4oYBsJ89oLSqpqIE:ub6+2Bo3cftGcAxprtJL7L1VUYEXPQ==
+config:
+  debug:reset: false
+  debug:fail: false
+
