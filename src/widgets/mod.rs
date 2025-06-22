@@ -1,3 +1,4 @@
+mod list_details;
 mod resource_list;
 mod scrollable_list;
 mod stack_config;

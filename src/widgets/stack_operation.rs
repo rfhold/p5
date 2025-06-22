@@ -5,7 +5,8 @@ use ratatui::{
 };
 
 use crate::state::{
-    AppContext, AppState, Loadable, OperationContext, ProgramOperation, StackContext,
+    AppContext, AppState, Loadable, OperationContext, OperationProgress, ProgramOperation,
+    StackContext,
 };
 
 use super::{ResourceListState, resource_list::ResourceList, theme::color};
@@ -21,6 +22,17 @@ enum StackOperationType {
     Preview,
 }
 
+impl From<OperationProgress> for StackOperationType {
+    fn from(progress: OperationProgress) -> Self {
+        match progress.operation {
+            ProgramOperation::Update if progress.is_preview() => StackOperationType::Preview,
+            ProgramOperation::Update => StackOperationType::Update,
+            ProgramOperation::Refresh => StackOperationType::Refresh,
+            ProgramOperation::Destroy => StackOperationType::Destroy,
+        }
+    }
+}
+
 impl StatefulWidget for StackOperation {
     type State = AppState;
 
@@ -32,14 +44,9 @@ impl StatefulWidget for StackOperation {
     ) {
         let background_context = state.background_context();
         if let Some((operation, selection)) = state.stack_operation_state() {
-            let change_summary = operation.change_summary.as_ref();
+            let operation_view = StackOperationType::from(operation.clone());
             let events = operation.events.as_ref();
-            let operation_view = match operation.operation {
-                ProgramOperation::Update if operation.is_preview() => StackOperationType::Preview,
-                ProgramOperation::Update => StackOperationType::Update,
-                ProgramOperation::Refresh => StackOperationType::Refresh,
-                ProgramOperation::Destroy => StackOperationType::Destroy,
-            };
+            let change_summary = operation.change_summary.as_ref();
 
             let title = format!(
                 "{} - {}",

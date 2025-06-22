@@ -1,0 +1,24 @@
+---
+source: src/widgets/list_details.rs
+expression: terminal.backend()
+---
+"┌Change Diff───────────────────────────────────────────────────────────────────┐"
+"│Operation: Create                                                             │"
+"│URN: urn:pulumi:stack::project::aws:s3/bucket:Bucket::new-bucket              │"
+"│Type: Other("aws:s3/bucket:Bucket")                                           │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

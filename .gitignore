@@ -2,3 +2,6 @@
 .obsidian
 
 **/snapshots/*.snap.new
+
+pulumi-automation/tests/fixtures/dumps
+.aider*

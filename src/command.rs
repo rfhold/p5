@@ -117,6 +117,28 @@ pub fn parse_command_to_action(
                 )))
             }
         }
+        "details" => match state.background_context() {
+            crate::AppContext::Stack(StackContext::Operation(context)) => {
+                let new_context = match context {
+                    crate::state::OperationContext::Summary(_) => {
+                        crate::state::OperationContext::Summary(
+                            crate::state::OperationDetailsContent::Details,
+                        )
+                    }
+                    crate::state::OperationContext::Events(_) => {
+                        crate::state::OperationContext::Events(
+                            crate::state::OperationDetailsContent::Details,
+                        )
+                    }
+                };
+                Ok(Some(crate::AppAction::PushContext(
+                    crate::AppContext::Stack(StackContext::Operation(new_context)),
+                )))
+            }
+            _ => Ok(Some(crate::AppAction::ToastError(
+                "Details command only available in operation context".to_string(),
+            ))),
+        },
         command => Ok(Some(crate::AppAction::ToastError(format!(
             "Unknown command: '{}'",
             command

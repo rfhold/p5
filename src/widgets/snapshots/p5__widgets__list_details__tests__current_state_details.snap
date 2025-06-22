@@ -1,0 +1,24 @@
+---
+source: src/widgets/list_details.rs
+expression: terminal.backend()
+---
+"┌Resource Details: project─────────────────────────────────────────────────────┐"
+"│URN: urn:pulumi:stack::project::pulumi:pulumi:Stack::project                  │"
+"│Type: Stack                                                                   │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

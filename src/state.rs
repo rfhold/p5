@@ -46,10 +46,25 @@ impl AppState {
                 self.context_stack.clear();
                 self.context_stack.push(AppContext::WorkspaceList);
             }
-            AppContext::Stack(_) => {
-                self.context_stack.clear();
-                self.context_stack.push(AppContext::WorkspaceList);
-                self.context_stack.push(AppContext::StackList);
+            AppContext::Stack(ref stack_context) => {
+                // Check if we're pushing Details context and push instead of clear
+                match stack_context {
+                    StackContext::Operation(OperationContext::Summary(
+                        OperationDetailsContent::Details,
+                    ))
+                    | StackContext::Operation(OperationContext::Events(
+                        OperationDetailsContent::Details,
+                    )) => {
+                        // For Details context, just push without clearing to preserve navigation stack
+                        // This allows users to go back from details view
+                    }
+                    _ => {
+                        // Default behavior for non-operation stack contexts
+                        self.context_stack.clear();
+                        self.context_stack.push(AppContext::WorkspaceList);
+                        self.context_stack.push(AppContext::StackList);
+                    }
+                }
             }
             _ => {}
         }
@@ -388,7 +403,7 @@ pub enum OperationContext {
     Events(OperationDetailsContent),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum OperationDetailsContent {
     #[default]
     List,
@@ -538,5 +553,415 @@ impl OperationEvents {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[cfg(test)]
+pub mod tests {
+    use pulumi_automation::{
+        event::EngineEvent,
+        local::{LocalStack, LocalWorkspace},
+        stack::StackChangeSummary,
+    };
+    use std::collections::HashMap;
+
+    use crate::widgets::ResourceListState;
+
+    fn relative_file(path: &str) -> std::path::PathBuf {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+
+        std::path::PathBuf::from(manifest_dir)
+            .join("src/test/fixtures")
+            .join(path)
+    }
+
+    fn load_preview_from_fixture(fixture: &str) -> Result<StackChangeSummary, String> {
+        let path = relative_file(fixture);
+        let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    }
+
+    fn load_events_from_fixture(fixture: &str) -> Result<Vec<EngineEvent>, String> {
+        let path = relative_file(fixture);
+        let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+
+        content
+            .lines()
+            .map(|line| serde_json::from_str(line).map_err(|e| e.to_string()))
+            .collect()
+    }
+
+    /// Create a complete AppState loaded with fixture data for layout testing
+    pub fn create_test_app_state_with_fixtures(complete: bool) -> super::AppState {
+        let mut state = super::AppState::default();
+
+        // Load test workspaces
+        let mut workspaces = Vec::new();
+        workspaces.push(LocalWorkspace {
+            cwd: "test-workspace".to_string(),
+        });
+        state.workspaces = super::Loadable::Loaded(workspaces);
+
+        // Create a test workspace state
+        state.selected_workspace = Some(super::WorkspaceState {
+            workspace_path: "test-workspace".to_string(),
+            selected_stack: Some(super::StackState {
+                stack_name: "test-stack".to_string(),
+                resource_state: ResourceListState::default(),
+            }),
+        });
+
+        // Load fixture data into workspace store
+        let mut workspace_outputs = super::WorkspaceOutputs {
+            workspace: super::Loadable::NotLoaded,
+            stacks: super::Loadable::Loaded(vec![super::StackSummary {
+                name: "test-stack".to_string(),
+                last_update: None,
+                ..Default::default()
+            }]),
+            stack_store: HashMap::new(),
+        };
+
+        // Try to load preview and events from fixtures
+        let preview = load_preview_from_fixture("preview.json").unwrap();
+
+        let stack_outputs = super::StackOutputs {
+            stack: super::Loadable::Loaded(LocalStack {
+                name: "test-stack".to_string(),
+                workspace: LocalWorkspace {
+                    cwd: "test-workspace".to_string(),
+                },
+            }),
+            outputs: super::Loadable::NotLoaded,
+            config: super::Loadable::NotLoaded,
+            state: super::Loadable::NotLoaded,
+            operation: None,
+        };
+        workspace_outputs
+            .stack_store
+            .insert("test-stack".to_string(), stack_outputs);
+
+        let events = load_events_from_fixture("success-events.json").unwrap();
+        let mut operation_events = super::OperationEvents {
+            events: events.clone(),
+            states: Vec::new(),
+            done: false,
+        };
+
+        // Apply events to build operation states
+        for event in events {
+            operation_events.apply_event(event).unwrap();
+        }
+
+        let operation_progress = super::OperationProgress {
+            operation: super::ProgramOperation::Update,
+            options: Some(super::OperationOptions {
+                preview_only: false,
+                skip_preview: false,
+            }),
+            change_summary: super::Loadable::Loaded(preview),
+            events: super::Loadable::Loaded(operation_events),
+        };
+
+        if let Some(stack_outputs) = workspace_outputs.stack_store.get_mut("test-stack") {
+            stack_outputs.operation = Some(operation_progress);
+        }
+
+        state
+            .workspace_store
+            .insert("test-workspace".to_string(), workspace_outputs);
+
+        // Set up default context stack
+        state
+            .context_stack
+            .push(super::AppContext::Stack(super::StackContext::Operation(
+                super::OperationContext::Summary(super::OperationDetailsContent::List),
+            )));
+
+        state
+    }
+
+    /// Helper struct to analyze operation events for testing
+    #[derive(Debug)]
+    struct OperationAnalysis {
+        /// Total number of states
+        pub total_states: usize,
+        /// States grouped by URN
+        pub states_by_urn: HashMap<String, Vec<super::ResourceOperationState>>,
+        /// States grouped by operation type
+        pub states_by_operation: HashMap<String, Vec<super::ResourceOperationState>>,
+        /// Count of replacement operations (create-replacement, delete-replaced, replace)
+        pub replacement_operation_count: usize,
+    }
+
+    impl OperationAnalysis {
+        fn from_operation_events(operation_events: &super::OperationEvents) -> Self {
+            let mut states_by_urn = HashMap::new();
+            let mut states_by_operation = HashMap::new();
+            let mut replacement_operation_count = 0;
+
+            for state in &operation_events.states {
+                let (urn, op) = match state {
+                    super::ResourceOperationState::InProgress { pre_event, .. } => (
+                        pre_event.metadata.urn.clone(),
+                        pre_event.metadata.op.to_string(),
+                    ),
+                    super::ResourceOperationState::Completed { pre_event, .. } => (
+                        pre_event.metadata.urn.clone(),
+                        pre_event.metadata.op.to_string(),
+                    ),
+                    super::ResourceOperationState::Failed { pre_event, .. } => (
+                        pre_event.metadata.urn.clone(),
+                        pre_event.metadata.op.to_string(),
+                    ),
+                };
+
+                // Count replacement operations
+                if op.to_lowercase().contains("replacement")
+                    || op.to_lowercase().contains("replace")
+                    || op.to_lowercase().contains("deleted")
+                {
+                    replacement_operation_count += 1;
+                }
+
+                // Group by URN
+                states_by_urn
+                    .entry(urn.clone())
+                    .or_insert_with(Vec::new)
+                    .push(state.clone());
+
+                // Group by operation type
+                states_by_operation
+                    .entry(op)
+                    .or_insert_with(Vec::new)
+                    .push(state.clone());
+            }
+
+            Self {
+                total_states: operation_events.states.len(),
+                states_by_urn,
+                states_by_operation,
+                replacement_operation_count,
+            }
+        }
+
+        /// Get the number of unique resources (URNs) involved
+        pub fn unique_resource_count(&self) -> usize {
+            self.states_by_urn.len()
+        }
+
+        /// Get resources that have multiple states (potential candidates for combining)
+        pub fn resources_with_multiple_states(&self) -> HashMap<String, usize> {
+            self.states_by_urn
+                .iter()
+                .filter(|(_, states)| states.len() > 1)
+                .map(|(urn, states)| (urn.clone(), states.len()))
+                .collect()
+        }
+
+        /// Print detailed analysis for debugging
+        pub fn print_analysis(&self) {
+            println!("=== Operation Events Analysis ===");
+            println!("Total states: {}", self.total_states);
+            println!("Unique resources: {}", self.unique_resource_count());
+            println!(
+                "Replacement operations: {}",
+                self.replacement_operation_count
+            );
+
+            println!("\n--- States by Operation Type ---");
+            for (op, states) in &self.states_by_operation {
+                println!("{}: {} states", op, states.len());
+            }
+
+            println!("\n--- Resources with Multiple States ---");
+            for (urn, count) in self.resources_with_multiple_states() {
+                println!("{}: {} states", urn, count);
+            }
+
+            println!("\n--- Detailed State Breakdown ---");
+            for (urn, states) in &self.states_by_urn {
+                if states.len() > 1 {
+                    println!("\nResource: {}", urn);
+                    for (i, state) in states.iter().enumerate() {
+                        let (sequence, op) = match state {
+                            super::ResourceOperationState::InProgress {
+                                sequence,
+                                pre_event,
+                                ..
+                            } => (*sequence, pre_event.metadata.op.to_string()),
+                            super::ResourceOperationState::Completed {
+                                sequence,
+                                pre_event,
+                                ..
+                            } => (*sequence, pre_event.metadata.op.to_string()),
+                            super::ResourceOperationState::Failed {
+                                sequence,
+                                pre_event,
+                                ..
+                            } => (*sequence, pre_event.metadata.op.to_string()),
+                        };
+                        println!("  State {}: seq={}, op={}", i + 1, sequence, op);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Test framework for asserting expected state counts
+    struct StateCountAssertions {
+        /// Expected total number of states after optimization
+        pub expected_total_states: Option<usize>,
+        /// Expected number of states per resource (URN -> expected count)
+        pub expected_states_per_resource: HashMap<String, usize>,
+        /// Expected number of states per operation type
+        pub expected_states_per_operation: HashMap<String, usize>,
+    }
+
+    impl StateCountAssertions {
+        fn new() -> Self {
+            Self {
+                expected_total_states: None,
+                expected_states_per_resource: HashMap::new(),
+                expected_states_per_operation: HashMap::new(),
+            }
+        }
+
+        fn expect_total_states(mut self, count: usize) -> Self {
+            self.expected_total_states = Some(count);
+            self
+        }
+
+        fn expect_states_for_resource(mut self, urn: &str, count: usize) -> Self {
+            self.expected_states_per_resource
+                .insert(urn.to_string(), count);
+            self
+        }
+
+        fn expect_states_for_operation(mut self, operation: &str, count: usize) -> Self {
+            self.expected_states_per_operation
+                .insert(operation.to_string(), count);
+            self
+        }
+
+        fn assert_against(&self, analysis: &OperationAnalysis) {
+            if let Some(expected_total) = self.expected_total_states {
+                assert_eq!(
+                    analysis.total_states, expected_total,
+                    "Expected {} total states, but got {}",
+                    expected_total, analysis.total_states
+                );
+            }
+
+            for (urn, expected_count) in &self.expected_states_per_resource {
+                let actual_count = analysis
+                    .states_by_urn
+                    .get(urn)
+                    .map(|states| states.len())
+                    .unwrap_or(0);
+                assert_eq!(
+                    actual_count, *expected_count,
+                    "Expected {} states for resource '{}', but got {}",
+                    expected_count, urn, actual_count
+                );
+            }
+
+            for (operation, expected_count) in &self.expected_states_per_operation {
+                let actual_count = analysis
+                    .states_by_operation
+                    .get(operation)
+                    .map(|states| states.len())
+                    .unwrap_or(0);
+                assert_eq!(
+                    actual_count, *expected_count,
+                    "Expected {} states for operation '{}', but got {}",
+                    expected_count, operation, actual_count
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_operation_events_success_analysis() {
+        let events = load_events_from_fixture("success-events.json").unwrap();
+        let mut operation_events = super::OperationEvents::default();
+
+        for event in events {
+            operation_events.apply_event(event).unwrap();
+        }
+
+        let analysis = OperationAnalysis::from_operation_events(&operation_events);
+        analysis.print_analysis();
+
+        // Current baseline assertions (before optimization)
+        let baseline_assertions = StateCountAssertions::new().expect_total_states(20); // This is what we currently get
+
+        baseline_assertions.assert_against(&analysis);
+
+        // TODO: After implementing replacement event combining logic, update these assertions
+        // Example of what we might want after optimization:
+        // let optimized_assertions = StateCountAssertions::new()
+        //     .expect_total_states(15) // Reduced from 20 to 15 by combining replacements
+        //     .expect_states_for_resource("urn:pulumi:base-reference::debug::local:index/file:File::iteration", 1); // Should be 1 instead of multiple
+
+        // optimized_assertions.assert_against(&analysis);
+    }
+
+    #[test]
+    fn test_operation_events_replacement_combining() {
+        let events = load_events_from_fixture("success-events.json").unwrap();
+        let mut operation_events = super::OperationEvents::default();
+
+        for event in events {
+            operation_events.apply_event(event).unwrap();
+        }
+
+        let analysis = OperationAnalysis::from_operation_events(&operation_events);
+
+        // Log the current state for debugging
+        println!("Before optimization:");
+        println!("- Total states: {}", analysis.total_states);
+        println!(
+            "- Replacement operations: {}",
+            analysis.replacement_operation_count
+        );
+        println!(
+            "- Resources with multiple states: {:?}",
+            analysis.resources_with_multiple_states()
+        );
+
+        // TODO: Implement logic to combine replacement events here
+        // This is where you would add the logic to merge:
+        // - delete-replaced + create-replacement -> single replace operation
+        // - Multiple states for the same URN -> combined state
+
+        // For now, we just assert the current behavior
+        assert_eq!(analysis.total_states, 20);
+        assert!(
+            analysis.replacement_operation_count > 0,
+            "Should have replacement operations"
+        );
+
+        // After implementing the combining logic, you would:
+        // 1. Apply the optimization to operation_events
+        // 2. Create a new analysis
+        // 3. Assert the optimized counts
+    }
+
+    #[test]
+    fn test_operation_events_failed() {
+        let events = load_events_from_fixture("failed-events.json").unwrap();
+        let mut operation_events = super::OperationEvents::default();
+
+        for event in events {
+            operation_events.apply_event(event).unwrap();
+        }
+
+        let analysis = OperationAnalysis::from_operation_events(&operation_events);
+        analysis.print_analysis();
+
+        assert!(!operation_events.events.is_empty());
+        assert!(!operation_events.states.is_empty());
     }
 }

@@ -1,0 +1,24 @@
+---
+source: src/widgets/list_details.rs
+expression: terminal.backend()
+---
+"┌Operation Details─────────────────────────────────────────────────────────────┐"
+"│URN: urn:pulumi:stack::project::aws:s3/bucket:Bucket::other-bucket            │"
+"│Operation: Update                                                             │"
+"│Status: Completed                                                             │"
+"│Resource Type: Other("aws:s3/bucket:Bucket")                                  │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

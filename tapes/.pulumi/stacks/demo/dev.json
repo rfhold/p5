@@ -4,9 +4,9 @@
         "stack": "organization/demo/dev",
         "latest": {
             "manifest": {
-                "time": "2025-06-05T14:14:21.124844-04:00",
-                "magic": "e6c0aa7069a791ee1f5f0134b2e4d3fd2a33895ac173f4930f09ed56065602cb",
-                "version": "v3.167.0"
+                "time": "2025-06-15T18:18:17.4568-04:00",
+                "magic": "74d6dfeae46fede71a19e4a0f7952621dc8201c350e75f575ba8b9ef0249d0ba",
+                "version": "v3.175.0"
             },
             "secrets_providers": {
                 "type": "passphrase",
@@ -20,17 +20,39 @@
                     "custom": false,
                     "type": "pulumi:pulumi:Stack",
                     "outputs": {
-                        "fileContent": "0b26e313ed4a7ca6904b0e9369e5b957",
-                        "fileName": "./files/dev.txt"
+                        "arrayOutput": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "booleanOutput": true,
+                        "iteration": 2,
+                        "numberOutput": 42,
+                        "objectOutput": {
+                            "key": "value"
+                        },
+                        "secretOutput": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:Huhi8w8RVYNALh/Z:psJYYQsFCn40XTYpLRYSAj6fYdSB964My+jZWkdl7190gdyKF3Dv"
+                        },
+                        "stringOutput": "This is a string output"
                     },
-                    "created": "2025-06-05T18:14:20.936055Z",
-                    "modified": "2025-06-05T18:14:20.936055Z",
+                    "created": "2025-06-15T22:15:48.0646Z",
+                    "modified": "2025-06-15T22:15:48.0646Z",
                     "sourcePosition": "project:///../node_modules/@pulumi/runtime/stack.ts#37,19"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::pulumi:providers:pulumi::default",
+                    "custom": true,
+                    "id": "b97ea505-f948-4c8d-8c16-b2e22651c172",
+                    "type": "pulumi:providers:pulumi",
+                    "created": "2025-06-15T22:15:48.242187Z",
+                    "modified": "2025-06-15T22:15:48.242187Z"
                 },
                 {
                     "urn": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6",
                     "custom": true,
-                    "id": "64be84ca-0361-4f46-b20b-a27840b0fe00",
+                    "id": "ea19a750-16ce-4f70-ab99-f0045e042038",
                     "type": "pulumi:providers:local",
                     "inputs": {
                         "__internal": {},
@@ -39,8 +61,46 @@
                     "outputs": {
                         "version": "0.1.6"
                     },
-                    "created": "2025-06-05T18:14:21.107543Z",
-                    "modified": "2025-06-05T18:14:21.107543Z"
+                    "created": "2025-06-15T22:15:48.270319Z",
+                    "modified": "2025-06-15T22:15:48.270319Z"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current",
+                    "custom": true,
+                    "id": "organization/demo/dev",
+                    "type": "pulumi:pulumi:StackReference",
+                    "inputs": {
+                        "name": "organization/demo/dev"
+                    },
+                    "outputs": {
+                        "name": "organization/demo/dev",
+                        "outputs": {
+                            "arrayOutput": [
+                                1,
+                                2,
+                                3
+                            ],
+                            "booleanOutput": true,
+                            "iteration": 1,
+                            "numberOutput": 42,
+                            "objectOutput": {
+                                "key": "value"
+                            },
+                            "secretOutput": {
+                                "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                "ciphertext": "v1:mi7izVLTf+sHLsxD:CTxwITYKFgIVK+eL6dfHzG0oUN5VLUUm3DeV9/hS0pIdLg=="
+                            },
+                            "stringOutput": "This is a string output"
+                        },
+                        "secretOutputNames": [
+                            "secretOutput"
+                        ]
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "external": true,
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:pulumi::default::b97ea505-f948-4c8d-8c16-b2e22651c172",
+                    "modified": "2025-06-15T22:16:02.843067Z",
+                    "sourcePosition": "project:///index.ts#38,22"
                 },
                 {
                     "urn": "urn:pulumi:dev::demo::local:index/file:File::file",
@@ -49,7 +109,7 @@
                     "type": "local:index/file:File",
                     "inputs": {
                         "content": "This is a test file",
-                        "filename": "./files/dev.txt"
+                        "filename": "./files/dev/file.txt"
                     },
                     "outputs": {
                         "content": "This is a test file",
@@ -61,11 +121,11 @@
                         "contentSha512": "bfe7b99fb97ba3249af08cc43d9bfd39b20c6f2e97010b5928406d1958b4701d2f053187da522c4c878dd0567e793d9ed7104905cd8df3d1f6fbac9e20c8ad91",
                         "directoryPermission": "0777",
                         "filePermission": "0777",
-                        "filename": "./files/dev.txt",
+                        "filename": "./files/dev/file.txt",
                         "id": "91b7b0b1e27bfbf7bc646946f35fa972c47c2d32"
                     },
                     "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
-                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::64be84ca-0361-4f46-b20b-a27840b0fe00",
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
                     "propertyDependencies": {
                         "content": [],
                         "filename": []
@@ -73,9 +133,375 @@
                     "additionalSecretOutputs": [
                         "sensitiveContent"
                     ],
-                    "created": "2025-06-05T18:14:21.111887Z",
-                    "modified": "2025-06-05T18:14:21.111887Z",
-                    "sourcePosition": "project:///index.ts#4,14"
+                    "created": "2025-06-15T22:15:48.277109Z",
+                    "modified": "2025-06-15T22:15:48.277109Z",
+                    "sourcePosition": "project:///index.ts#25,1"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::local:index/file:File::discard",
+                    "custom": true,
+                    "id": "2c59e341c0ee0cbbb3164d59b17ec84e74a2c1c0",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "file to discard",
+                        "filename": "./files/dev/discard.txt"
+                    },
+                    "outputs": {
+                        "content": "file to discard",
+                        "contentBase64sha256": "tF8VKdUp6uJtzDGIN0UpKLygjSzUxGQa/5M0QXA9L5k=",
+                        "contentBase64sha512": "ClCfMa2C13pjsxoy+il4z1y0AD5/T4WIpwNoGKcDbMDQNeqNFKVGJHuAWX+BZLs00NM6bZ2Wbjkg9g3mTTGKMQ==",
+                        "contentMd5": "ec7ed334a69dcde1180e395bf8efdeaf",
+                        "contentSha1": "2c59e341c0ee0cbbb3164d59b17ec84e74a2c1c0",
+                        "contentSha256": "b45f1529d529eae26dcc318837452928bca08d2cd4c4641aff933441703d2f99",
+                        "contentSha512": "0a509f31ad82d77a63b31a32fa2978cf5cb4003e7f4f8588a7036818a7036cc0d035ea8d14a546247b80597f8164bb34d0d33a6d9d966e3920f60de64d318a31",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/dev/discard.txt",
+                        "id": "2c59e341c0ee0cbbb3164d59b17ec84e74a2c1c0"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
+                    "propertyDependencies": {
+                        "content": [],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "retainOnDelete": true,
+                    "created": "2025-06-15T22:15:48.275504Z",
+                    "modified": "2025-06-15T22:15:48.275504Z",
+                    "sourcePosition": "project:///index.ts#17,2"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::removed-reference",
+                    "custom": true,
+                    "id": "organization/demo/dev",
+                    "type": "pulumi:pulumi:StackReference",
+                    "inputs": {
+                        "name": "organization/demo/dev"
+                    },
+                    "outputs": {
+                        "name": "organization/demo/dev",
+                        "outputs": {
+                            "arrayOutput": [
+                                1,
+                                2,
+                                3
+                            ],
+                            "booleanOutput": true,
+                            "iteration": 1,
+                            "numberOutput": 42,
+                            "objectOutput": {
+                                "key": "value"
+                            },
+                            "secretOutput": {
+                                "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                "ciphertext": "v1:OHqIZZLtRCFSGslh:2KNLzQWexCrgJuuiFwrD3iXnNg5ExCorr8YKGR/tqkXHoQ=="
+                            },
+                            "stringOutput": "This is a string output"
+                        },
+                        "secretOutputNames": [
+                            "secretOutput"
+                        ]
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "external": true,
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:pulumi::default::b97ea505-f948-4c8d-8c16-b2e22651c172",
+                    "modified": "2025-06-15T22:18:15.357206Z",
+                    "sourcePosition": "project:///index.ts#33,2"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::local:index/file:File::delete",
+                    "custom": true,
+                    "id": "e89a9696d0c2532d2de4dcbc7c25fcee51355d6f",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "file to delete",
+                        "filename": "./files/dev/delete.txt"
+                    },
+                    "outputs": {
+                        "content": "file to delete",
+                        "contentBase64sha256": "43HqOyQCFTK/04wQRxJqYX39uGHsszSbgymQnjDYw1Y=",
+                        "contentBase64sha512": "5mHrzVmP7sQ9/8hjqpkjFF/6hZAceqsE6pTI5GtWyM/8ghVsLxoUdiWkYDnMt4h65fFa9Lal/OyNI/rVdDqnzw==",
+                        "contentMd5": "eca223573e2cefa9502977ad65a703f1",
+                        "contentSha1": "e89a9696d0c2532d2de4dcbc7c25fcee51355d6f",
+                        "contentSha256": "e371ea3b24021532bfd38c1047126a617dfdb861ecb3349b8329909e30d8c356",
+                        "contentSha512": "e661ebcd598feec43dffc863aa9923145ffa85901c7aab04ea94c8e46b56c8cffc82156c2f1a147625a46039ccb7887ae5f15af4b6a5fcec8d23fad5743aa7cf",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/dev/delete.txt",
+                        "id": "e89a9696d0c2532d2de4dcbc7c25fcee51355d6f"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
+                    "propertyDependencies": {
+                        "content": [],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-06-15T22:15:48.275495Z",
+                    "modified": "2025-06-15T22:15:48.275495Z",
+                    "sourcePosition": "project:///index.ts#12,2"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::pulumi:providers:command::default_1_1_0",
+                    "custom": true,
+                    "id": "e14a2a05-2983-4598-8ba4-c098b3c87f48",
+                    "type": "pulumi:providers:command",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "1.1.0"
+                    },
+                    "outputs": {
+                        "version": "1.1.0"
+                    },
+                    "created": "2025-06-15T22:15:48.327262Z",
+                    "modified": "2025-06-15T22:15:48.327262Z"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::local:index/file:File::iteration",
+                    "custom": true,
+                    "id": "1c4810cc82748b92048ebbdf517d39ee18316663",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "Iteration: 2",
+                        "filename": "./files/dev/iteration.txt"
+                    },
+                    "outputs": {
+                        "content": "Iteration: 2",
+                        "contentBase64sha256": "pOVrp6Oj0/x0SFEc+QY1EQDkBp7uWVTnOlNHkH/SzUA=",
+                        "contentBase64sha512": "z59Fr19FxONKXmMOWicvKdsD057U6tU9MFI3fdfsEHq+QiI+OKWWNygoh9+OzgGtz+YT3t61z2b+FspAi7rCrQ==",
+                        "contentMd5": "42e1bccf87a976ad9eca4b73b7612eef",
+                        "contentSha1": "1c4810cc82748b92048ebbdf517d39ee18316663",
+                        "contentSha256": "a4e56ba7a3a3d3fc7448511cf906351100e4069eee5954e73a5347907fd2cd40",
+                        "contentSha512": "cf9f45af5f45c4e34a5e630e5a272f29db03d39ed4ead53d3052377dd7ec107abe42223e38a59637282887df8ece01adcfe613dedeb5cf66fe16ca408bbac2ad",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/dev/iteration.txt",
+                        "id": "1c4810cc82748b92048ebbdf517d39ee18316663"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "dependencies": [
+                        "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                    ],
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
+                    "propertyDependencies": {
+                        "content": [
+                            "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                        ],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-06-15T22:16:02.876645Z",
+                    "modified": "2025-06-15T22:16:02.876645Z",
+                    "sourcePosition": "project:///index.ts#46,1"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::pulumi:providers:random::default_4_18_2",
+                    "custom": true,
+                    "id": "55a6d604-ea08-42d2-a5be-e7c5833534c4",
+                    "type": "pulumi:providers:random",
+                    "inputs": {
+                        "__internal": {},
+                        "version": "4.18.2"
+                    },
+                    "outputs": {
+                        "version": "4.18.2"
+                    },
+                    "created": "2025-06-15T22:15:48.302914Z",
+                    "modified": "2025-06-15T22:15:48.302914Z"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::random:index/randomPassword:RandomPassword::password",
+                    "custom": true,
+                    "id": "none",
+                    "type": "random:index/randomPassword:RandomPassword",
+                    "inputs": {
+                        "keepers": {
+                            "iteration": 2
+                        },
+                        "length": 16
+                    },
+                    "outputs": {
+                        "__meta": "{\"schema_version\":\"3\"}",
+                        "__pulumi_raw_state_delta": {
+                            "obj": {
+                                "ps": {
+                                    "keepers": {
+                                        "map": {}
+                                    },
+                                    "overrideSpecial": {
+                                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                                        "ciphertext": "v1:f+2db+QVdX9nD+qd:cdZHMCcQzeNEnTYMoW31tEu4ZpoSouBKgg2xsQqNhAbDevBo9asN3Q=="
+                                    }
+                                }
+                            }
+                        },
+                        "bcryptHash": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:ajJ7DEdJWKvGmC64:nDBsOaYx4MmqZ0s37bXu4lxr5YrtAis/R4SjtW/f0ToaMhtduAPmH9evIG+x3RsOejT6remIPfSd2c1B4Da6X8ttmEwg1efQM1me6DWv"
+                        },
+                        "id": "none",
+                        "keepers": {
+                            "iteration": "2"
+                        },
+                        "length": 16,
+                        "lower": true,
+                        "minLower": 0,
+                        "minNumeric": 0,
+                        "minSpecial": 0,
+                        "minUpper": 0,
+                        "number": true,
+                        "numeric": true,
+                        "result": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:L6E6rXnRy0kEA2ls:0848R+03QUBN6xk3A6gAZwtsug87jVXFuCcyOsHjhQgl5kc1t+Gy"
+                        },
+                        "special": true,
+                        "upper": true
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "dependencies": [
+                        "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                    ],
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:random::default_4_18_2::55a6d604-ea08-42d2-a5be-e7c5833534c4",
+                    "propertyDependencies": {
+                        "keepers": [
+                            "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                        ],
+                        "length": []
+                    },
+                    "additionalSecretOutputs": [
+                        "bcryptHash",
+                        "result"
+                    ],
+                    "created": "2025-06-15T22:18:15.481402Z",
+                    "modified": "2025-06-15T22:18:15.481402Z",
+                    "sourcePosition": "project:///index.ts#68,16"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::local:index/file:File::secret",
+                    "custom": true,
+                    "id": "6af3343c9585eadb7e3b6b02f83c13599aece7cc",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:jodmrn5e/h4E/wen:8my76jlse0Mo4RMIL43nhfODRah/r9rSZGjS+FJks4gMrc+6dr7j"
+                        },
+                        "filename": "./files/dev/secret.txt"
+                    },
+                    "outputs": {
+                        "content": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:KO/nkA22nRV5SSzc:ugoZNBHwENa9R8ps6WKyfLnqx304YSYnFLVXCZp5MSMFGV1W1PRu"
+                        },
+                        "contentBase64sha256": "ASKFbnLKsxkDsW4NXNgvjXASYOWldHrSiNgrVwce7fQ=",
+                        "contentBase64sha512": "uhFNUB9ZkEsyWalrtzBxD3R1UnzUHIT96TjpvEERl9rQA1FuR8ZrFLoZfOs4e3oZm+4hy/2QOGjeqmIuc4C8CA==",
+                        "contentMd5": "046731178ac804d2c705fb5c71b68fd4",
+                        "contentSha1": "6af3343c9585eadb7e3b6b02f83c13599aece7cc",
+                        "contentSha256": "0122856e72cab31903b16e0d5cd82f8d701260e5a5747ad288d82b57071eedf4",
+                        "contentSha512": "ba114d501f59904b3259a96bb730710f7475527cd41c84fde938e9bc411197dad003516e47c66b14ba197ceb387b7a199bee21cbfd903868deaa622e7380bc08",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/dev/secret.txt",
+                        "id": "6af3343c9585eadb7e3b6b02f83c13599aece7cc"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "dependencies": [
+                        "urn:pulumi:dev::demo::random:index/randomPassword:RandomPassword::password"
+                    ],
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
+                    "propertyDependencies": {
+                        "content": [
+                            "urn:pulumi:dev::demo::random:index/randomPassword:RandomPassword::password"
+                        ],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-06-15T22:18:15.490547Z",
+                    "modified": "2025-06-15T22:18:15.490547Z",
+                    "sourcePosition": "project:///index.ts#79,1"
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::command:local:Command::sleep",
+                    "custom": true,
+                    "id": "sleep81681203",
+                    "type": "command:local:Command",
+                    "inputs": {
+                        "addPreviousOutputInEnv": true,
+                        "create": "sleep 2 && echo \"2\""
+                    },
+                    "outputs": {
+                        "addPreviousOutputInEnv": true,
+                        "create": "sleep 2 && echo \"2\"",
+                        "stderr": "",
+                        "stdout": "2"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "dependencies": [
+                        "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                    ],
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:command::default_1_1_0::e14a2a05-2983-4598-8ba4-c098b3c87f48",
+                    "propertyDependencies": {
+                        "addPreviousOutputInEnv": [],
+                        "create": [
+                            "urn:pulumi:dev::demo::pulumi:pulumi:StackReference::current"
+                        ]
+                    },
+                    "created": "2025-06-15T22:15:50.350468Z",
+                    "modified": "2025-06-15T22:18:17.408392Z",
+                    "sourcePosition": "project:///index.ts#84,24",
+                    "replaceOnChanges": [
+                        "triggers[*]"
+                    ]
+                },
+                {
+                    "urn": "urn:pulumi:dev::demo::local:index/file:File::file-from-command",
+                    "custom": true,
+                    "id": "da4b9237bacccdf19c0760cab7aec4a8359010b0",
+                    "type": "local:index/file:File",
+                    "inputs": {
+                        "content": "2",
+                        "filename": "./files/dev/file-from-command.txt"
+                    },
+                    "outputs": {
+                        "content": "2",
+                        "contentBase64sha256": "1HNeOiZeFu7gP1lxi5tdAwGcB9i2xR+Q2jpmbuwTqzU=",
+                        "contentBase64sha512": "QLJEESZB3XjdT5O2yRkN1G4AmRlNWkQle3761u+f9Gg9oe2gJERIyzQ6poj10+/XMU2v5YCsC8vxFa7Kno3BFA==",
+                        "contentMd5": "c81e728d9d4c2f636f067f89cc14862c",
+                        "contentSha1": "da4b9237bacccdf19c0760cab7aec4a8359010b0",
+                        "contentSha256": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+                        "contentSha512": "40b244112641dd78dd4f93b6c9190dd46e0099194d5a44257b7efad6ef9ff4683da1eda0244448cb343aa688f5d3efd7314dafe580ac0bcbf115aeca9e8dc114",
+                        "directoryPermission": "0777",
+                        "filePermission": "0777",
+                        "filename": "./files/dev/file-from-command.txt",
+                        "id": "da4b9237bacccdf19c0760cab7aec4a8359010b0"
+                    },
+                    "parent": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+                    "dependencies": [
+                        "urn:pulumi:dev::demo::command:local:Command::sleep"
+                    ],
+                    "provider": "urn:pulumi:dev::demo::pulumi:providers:local::default_0_1_6::ea19a750-16ce-4f70-ab99-f0045e042038",
+                    "propertyDependencies": {
+                        "content": [
+                            "urn:pulumi:dev::demo::command:local:Command::sleep"
+                        ],
+                        "filename": []
+                    },
+                    "additionalSecretOutputs": [
+                        "sensitiveContent"
+                    ],
+                    "created": "2025-06-15T22:18:17.42136Z",
+                    "modified": "2025-06-15T22:18:17.42136Z",
+                    "sourcePosition": "project:///index.ts#88,1"
                 }
             ],
             "metadata": {}

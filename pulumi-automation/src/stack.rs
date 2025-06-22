@@ -74,6 +74,22 @@ pub enum Operation {
     ImportReplacement,
 }
 
+impl Operation {
+    /// Returns true if this operation is part of a replacement workflow
+    pub fn is_replacement(&self) -> bool {
+        matches!(
+            self,
+            Operation::Replace
+                | Operation::CreateReplacement
+                | Operation::DeleteReplaced
+                | Operation::ReadReplacement
+                | Operation::DiscardReplaced
+                | Operation::RemovePendingReplace
+                | Operation::ImportReplacement
+        )
+    }
+}
+
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StackChangeStep {

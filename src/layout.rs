@@ -88,3 +88,41 @@ fn popup_area(area: Rect, length_x: u16, length_y: u16, v_flex: Flex, h_flex: Fl
     let [area] = horizontal.areas(area);
     area
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::tests::create_test_app_state_with_fixtures;
+    use insta::assert_snapshot;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    #[test]
+    fn test_layout_complete_update() {
+        let mut state = create_test_app_state_with_fixtures(true);
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_in_progress_update() {
+        let mut state = create_test_app_state_with_fixtures(false);
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+}

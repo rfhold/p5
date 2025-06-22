@@ -101,6 +101,8 @@ Type ":update" Sleep 600ms Enter
 
 Wait+Screen /.*Update - Complete.*/
 
+Type ":details" Sleep 600ms Enter
+
 Sleep 1s
 
 Type ":refresh" Sleep 600ms Enter
