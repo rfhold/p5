@@ -75,12 +75,10 @@ pub enum Operation {
 }
 
 impl Operation {
-    /// Returns true if this operation is part of a replacement workflow
-    pub fn is_replacement(&self) -> bool {
+    pub fn is_replacement_step(&self) -> bool {
         matches!(
             self,
-            Operation::Replace
-                | Operation::CreateReplacement
+            Operation::CreateReplacement
                 | Operation::DeleteReplaced
                 | Operation::ReadReplacement
                 | Operation::DiscardReplaced

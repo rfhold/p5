@@ -97,7 +97,7 @@ impl AppState {
         None
     }
 
-    pub fn select_workspace_by_cwd(&mut self, cwd: &str) -> () {
+    pub fn select_workspace_by_cwd(&mut self, cwd: &str) {
         if let Some(i) = self
             .workspaces
             .as_option()
@@ -112,7 +112,7 @@ impl AppState {
         });
     }
 
-    pub fn select_stack_by_name_and_cwd(&mut self, stack_name: &str, cwd: &str) -> () {
+    pub fn select_stack_by_name_and_cwd(&mut self, stack_name: &str, cwd: &str) {
         self.select_workspace_by_cwd(cwd);
 
         if let Some(state) = self.selected_workspace.as_mut() {
@@ -441,6 +441,7 @@ impl OperationProgress {
 
 #[derive(Clone, Default, Debug)]
 pub struct OperationOptions {
+    pub show_replacement_steps: bool,
     pub preview_only: bool,
     pub skip_preview: bool,
 }
@@ -490,8 +491,19 @@ impl OperationEvents {
         }
     }
 
-    pub fn apply_event(&mut self, event: EngineEvent) -> Result<()> {
+    pub fn apply_event(
+        &mut self,
+        event: EngineEvent,
+        options: Option<OperationOptions>,
+    ) -> Result<()> {
         self.events.push(event.clone());
+
+        if let Some(opts) = options {
+            if !opts.show_replacement_steps && event.event.is_replacement_step_event() {
+                // Skip replacement steps if the option is set
+                return Ok(());
+            }
+        }
 
         let event_time = event
             .timestamp
@@ -557,7 +569,6 @@ impl OperationEvents {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 pub mod tests {
     use pulumi_automation::{
         event::EngineEvent,
@@ -597,10 +608,9 @@ pub mod tests {
         let mut state = super::AppState::default();
 
         // Load test workspaces
-        let mut workspaces = Vec::new();
-        workspaces.push(LocalWorkspace {
+        let workspaces = vec![LocalWorkspace {
             cwd: "test-workspace".to_string(),
-        });
+        }];
         state.workspaces = super::Loadable::Loaded(workspaces);
 
         // Create a test workspace state
@@ -646,20 +656,25 @@ pub mod tests {
         let mut operation_events = super::OperationEvents {
             events: events.clone(),
             states: Vec::new(),
-            done: false,
+            done: complete,
+        };
+
+        let options = super::OperationOptions {
+            show_replacement_steps: false,
+            preview_only: false,
+            skip_preview: false,
         };
 
         // Apply events to build operation states
         for event in events {
-            operation_events.apply_event(event).unwrap();
+            operation_events
+                .apply_event(event, Some(options.clone()))
+                .unwrap();
         }
 
         let operation_progress = super::OperationProgress {
             operation: super::ProgramOperation::Update,
-            options: Some(super::OperationOptions {
-                preview_only: false,
-                skip_preview: false,
-            }),
+            options: Some(options),
             change_summary: super::Loadable::Loaded(preview),
             events: super::Loadable::Loaded(operation_events),
         };
@@ -888,24 +903,28 @@ pub mod tests {
         let mut operation_events = super::OperationEvents::default();
 
         for event in events {
-            operation_events.apply_event(event).unwrap();
+            operation_events.apply_event(event, None).unwrap();
         }
 
         let analysis = OperationAnalysis::from_operation_events(&operation_events);
         analysis.print_analysis();
 
-        // Current baseline assertions (before optimization)
         let baseline_assertions = StateCountAssertions::new().expect_total_states(20); // This is what we currently get
 
         baseline_assertions.assert_against(&analysis);
 
-        // TODO: After implementing replacement event combining logic, update these assertions
-        // Example of what we might want after optimization:
-        // let optimized_assertions = StateCountAssertions::new()
-        //     .expect_total_states(15) // Reduced from 20 to 15 by combining replacements
-        //     .expect_states_for_resource("urn:pulumi:base-reference::debug::local:index/file:File::iteration", 1); // Should be 1 instead of multiple
+        // Enable detailed assertions to validate the filtering behavior
+        let detailed_assertions = StateCountAssertions::new()
+            .expect_total_states(20) // Current state after filtering
+            .expect_states_for_resource("urn:pulumi:base-reference::debug::local:index/file:File::iteration", 3)
+            .expect_states_for_resource("urn:pulumi:base-reference::debug::local:index/file:File::secret", 3)
+            .expect_states_for_resource("urn:pulumi:base-reference::debug::random:index/randomPassword:RandomPassword::password", 3)
+            .expect_states_for_resource("urn:pulumi:base-reference::debug::local:index/file:File::file-from-command", 3)
+            .expect_states_for_operation("CreateReplacement", 4)
+            .expect_states_for_operation("DeleteReplaced", 4)
+            .expect_states_for_operation("Replace", 4);
 
-        // optimized_assertions.assert_against(&analysis);
+        detailed_assertions.assert_against(&analysis);
     }
 
     #[test]
@@ -914,7 +933,7 @@ pub mod tests {
         let mut operation_events = super::OperationEvents::default();
 
         for event in events {
-            operation_events.apply_event(event).unwrap();
+            operation_events.apply_event(event, None).unwrap();
         }
 
         let analysis = OperationAnalysis::from_operation_events(&operation_events);
@@ -931,22 +950,35 @@ pub mod tests {
             analysis.resources_with_multiple_states()
         );
 
-        // TODO: Implement logic to combine replacement events here
-        // This is where you would add the logic to merge:
-        // - delete-replaced + create-replacement -> single replace operation
-        // - Multiple states for the same URN -> combined state
+        let replacement_assertions = StateCountAssertions::new()
+            .expect_total_states(20)
+            .expect_states_for_operation("CreateReplacement", 4)
+            .expect_states_for_operation("DeleteReplaced", 4)
+            .expect_states_for_operation("Replace", 4)
+            .expect_states_for_operation("Delete", 2)
+            .expect_states_for_operation("Create", 1)
+            .expect_states_for_operation("Update", 1);
 
-        // For now, we just assert the current behavior
+        replacement_assertions.assert_against(&analysis);
+
         assert_eq!(analysis.total_states, 20);
-        assert!(
-            analysis.replacement_operation_count > 0,
-            "Should have replacement operations"
+        assert_eq!(
+            analysis.replacement_operation_count, 12,
+            "Should have exactly 12 replacement operations"
+        );
+        assert_eq!(
+            analysis.unique_resource_count(),
+            12,
+            "Should have 12 unique resources"
         );
 
-        // After implementing the combining logic, you would:
-        // 1. Apply the optimization to operation_events
-        // 2. Create a new analysis
-        // 3. Assert the optimized counts
+        // Validate specific resources with multiple states
+        let multiple_states = analysis.resources_with_multiple_states();
+        assert_eq!(
+            multiple_states.len(),
+            4,
+            "Should have 4 resources with multiple states"
+        );
     }
 
     #[test]
@@ -955,7 +987,7 @@ pub mod tests {
         let mut operation_events = super::OperationEvents::default();
 
         for event in events {
-            operation_events.apply_event(event).unwrap();
+            operation_events.apply_event(event, None).unwrap();
         }
 
         let analysis = OperationAnalysis::from_operation_events(&operation_events);
@@ -963,5 +995,33 @@ pub mod tests {
 
         assert!(!operation_events.events.is_empty());
         assert!(!operation_events.states.is_empty());
+    }
+
+    #[test]
+    fn test_operation_events_hide_replacement_steps() {
+        let events = load_events_from_fixture("success-events.json").unwrap();
+        let mut operation_events = super::OperationEvents::default();
+
+        let options = super::OperationOptions {
+            show_replacement_steps: false,
+            preview_only: false,
+            skip_preview: false,
+        };
+
+        for event in events {
+            operation_events
+                .apply_event(event, Some(options.clone()))
+                .unwrap();
+        }
+
+        // Analyze the operation events after filtering replacements
+        let analysis = OperationAnalysis::from_operation_events(&operation_events);
+        analysis.print_analysis();
+
+        // Validate that replacement steps are filtered out
+        assert!(
+            analysis.replacement_operation_count < 12,
+            "Replacement operations should be filtered out"
+        );
     }
 }

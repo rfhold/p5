@@ -83,6 +83,7 @@ impl StackTask {
                         if let Err(err) = local_stack
                             .preview_async(
                                 pulumi_automation::stack::StackPreviewOptions {
+                                    show_replacement_steps: Some(options.show_replacement_steps),
                                     ..Default::default()
                                 },
                                 PulumiProcessListener {
@@ -97,6 +98,7 @@ impl StackTask {
                     }
                     ProgramOperation::Update => {
                         let mut update_options = pulumi_automation::stack::StackUpOptions {
+                            show_replacement_steps: Some(options.show_replacement_steps),
                             ..Default::default()
                         };
 

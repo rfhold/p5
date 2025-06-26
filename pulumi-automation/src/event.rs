@@ -87,6 +87,15 @@ impl EventType {
             EventType::Unknown { .. } => "unknown".to_string(),
         }
     }
+
+    pub fn is_replacement_step_event(&self) -> bool {
+        match self {
+            EventType::ResourcePreEvent { details } => details.metadata.op.is_replacement_step(),
+            EventType::ResOutputsEvent { details } => details.metadata.op.is_replacement_step(),
+            EventType::ResOpFailedEvent { details } => details.metadata.op.is_replacement_step(),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

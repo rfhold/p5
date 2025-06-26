@@ -626,7 +626,9 @@ impl Action for AppAction {
                         )))?;
                     }
 
-                    if let Err(err) = events.apply_event(engine_event.clone()) {
+                    if let Err(err) =
+                        events.apply_event(engine_event.clone(), operation.options.clone())
+                    {
                         tracing::error!("Failed to apply engine event: {}", err);
                     }
 

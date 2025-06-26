@@ -1,6 +1,5 @@
 ---
 source: src/layout.rs
-assertion_line: 111
 expression: terminal.backend()
 ---
 "╭Workspaces──────────────────╮╭No Workspace Loaded─────────────────────────────────────────────────────────────────────╮"
@@ -11,9 +10,9 @@ expression: terminal.backend()
 "│                            ││Create    0s local:index/file:File          new                                         │"
 "│                            ││Same      0s local:index/file:File          file                                        │"
 "│                            ││Read      0s pulumi:pulumi:StackReference   current                                     │"
-"│                            ││Replace   0s local:index/file:File          iteration                                   │"
 "│                            ││Update    2s command:local:Command          sleep                                       │"
-"│                            ││Replace   1s random:index/randomPassword:RandomPassword password                        │"
+"│                            ││Replace   0s local:index/file:File          iteration                                   │"
+"│                            ││Replace   0s random:index/randomPassword:RandomPassword password                        │"
 "│                            ││Replace   0s local:index/file:File          secret                                      │"
 "│                            ││Replace   0s local:index/file:File          file-from-command                           │"
 "│                            ││Delete    0s local:index/file:File          delete                                      │"
