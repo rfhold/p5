@@ -93,6 +93,7 @@ fn popup_area(area: Rect, length_x: u16, length_y: u16, v_flex: Flex, h_flex: Fl
 mod tests {
     use super::*;
     use crate::state::tests::create_test_app_state_with_fixtures;
+    use crate::state::{OperationContext, OperationDetailsContent, StackContext};
     use insta::assert_snapshot;
     use ratatui::{Terminal, backend::TestBackend};
 
@@ -123,6 +124,156 @@ mod tests {
             })
             .unwrap();
 
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_operation_details_view() {
+        let mut state = create_test_app_state_with_fixtures(true);
+        // Change the context to show Details view for Events
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Events(OperationDetailsContent::Details),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_operation_item_view() {
+        let mut state = create_test_app_state_with_fixtures(true);
+        // Change the context to show Item view for Events
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Events(OperationDetailsContent::Item),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_summary_details_view() {
+        let mut state = create_test_app_state_with_fixtures(true);
+        // Change the context to show Details view for Summary
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Summary(OperationDetailsContent::Details),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_summary_item_view() {
+        let mut state = create_test_app_state_with_fixtures(true);
+        // Change the context to show Item view for Summary
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Summary(OperationDetailsContent::Item),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_operation_details_with_selection() {
+        let mut state = create_test_app_state_with_fixtures(true);
+
+        // Set a selection in the operation list
+        if let Some((_, selection)) = state.stack_operation_state() {
+            selection.scrollable_state.list_state.select(Some(2)); // Select 3rd item
+        }
+
+        // Change to Details view
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Events(OperationDetailsContent::Details),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        // The snapshot should show details for the selected item
+        assert_snapshot!(terminal.backend())
+    }
+
+    #[test]
+    fn test_layout_summary_details_with_selection() {
+        let mut state = create_test_app_state_with_fixtures(true);
+
+        // Set a selection in the summary list
+        if let Some((_, selection)) = state.stack_operation_state() {
+            selection.scrollable_state.list_state.select(Some(1)); // Select 2nd item
+        }
+
+        // Change to Details view for Summary
+        state.context_stack.pop();
+        state
+            .context_stack
+            .push(AppContext::Stack(StackContext::Operation(
+                OperationContext::Summary(OperationDetailsContent::Details),
+            )));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        terminal
+            .draw(|frame| {
+                let layout = AppLayout::default();
+                frame.render_stateful_widget(layout, frame.area(), &mut state);
+            })
+            .unwrap();
+
+        // The snapshot should show details for the selected item
         assert_snapshot!(terminal.backend())
     }
 }
