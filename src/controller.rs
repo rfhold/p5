@@ -76,6 +76,7 @@ impl<H: Handler> Controller<H> {
         let (key_event_tx, mut key_event_rx) = tokio::sync::mpsc::channel::<Event>(100);
         let (action_tx, mut action_rx) = tokio::sync::mpsc::channel::<H::Action>(100);
         let (task_tx, mut task_rx) = tokio::sync::mpsc::channel::<H::Task>(100);
+        let (render_tx, mut render_rx) = tokio::sync::mpsc::channel::<()>(100);
 
         let tracker = TaskTracker::new();
 
@@ -97,6 +98,7 @@ impl<H: Handler> Controller<H> {
 
         let event_action_tx = action_tx.clone();
         let event_state = self.state.clone();
+        let event_render_tx = render_tx.clone();
         tracker.spawn(async move {
             while let Some(event) = key_event_rx.recv().await {
                 let mut state = event_state.lock().await;
@@ -106,16 +108,21 @@ impl<H: Handler> Controller<H> {
                 {
                     tracing::error!("Error handling event: {}", e);
                 }
+                // Trigger render after handling event
+                let _ = event_render_tx.send(()).await;
             }
         });
 
         let task_action_tx = action_tx.clone();
         let loopback_task_tx = task_tx.clone();
+        let task_render_tx = render_tx.clone();
         tracker.spawn(async move {
             while let Some(mut task) = task_rx.recv().await {
                 if let Err(e) = task.run(&loopback_task_tx, &task_action_tx).await {
                     tracing::error!("Error running task: {}", e);
                 }
+                // Trigger render after task completion
+                let _ = task_render_tx.send(()).await;
             }
         });
 
@@ -126,9 +133,16 @@ impl<H: Handler> Controller<H> {
             {
                 tracing::error!("Error handling initial action: {}", e);
             }
+            // Trigger render after initial action
+            let _ = render_tx.send(()).await;
         }
 
-        let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1000 / 60));
+        // Slow ticker for time-based updates (e.g., clock, animations)
+        let mut time_ticker = tokio::time::interval(std::time::Duration::from_secs(1));
+        time_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+        // Initial render
+        let _ = render_tx.send(()).await;
 
         loop {
             tokio::select! {
@@ -138,12 +152,14 @@ impl<H: Handler> Controller<H> {
                         if let Err(e) = action.handle_action(&mut state, &task_tx, &action_tx, &self.cancel_token) {
                             tracing::error!("Error handling action: {}", e);
                         }
+                        // Trigger render after action
+                        let _ = render_tx.send(()).await;
                     } else {
                         tracing::debug!("Action channel closed, exiting controller run");
                         break;
                     }
                 }
-                _ = ticker.tick() => {
+                _ = render_rx.recv() => {
                     let mut state = self.state.lock().await;
                     if let Err(e) = terminal.draw(|f| {
                        f.render_stateful_widget(widget.clone(), f.area() , &mut state);
@@ -151,6 +167,10 @@ impl<H: Handler> Controller<H> {
                         tracing::error!("Error rendering terminal: {}", e);
                         break;
                     }
+                }
+                _ = time_ticker.tick() => {
+                    // Trigger render for time-based updates
+                    let _ = render_tx.send(()).await;
                 }
             }
         }
