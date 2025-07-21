@@ -1,3 +1,4 @@
+use pulumi_automation::event::DiffKind;
 use pulumi_automation::stack::{ResourceState, StackChangeSummary};
 use ratatui::{
     buffer::Buffer,
@@ -7,6 +8,7 @@ use ratatui::{
     widgets::{Block, ListItem, StatefulWidget},
 };
 use ratatui_macros::{line, span};
+use std::collections::HashMap;
 
 use super::scrollable_list::{ScrollableList, ScrollableListState};
 use crate::state::ResourceOperationState;
@@ -63,28 +65,6 @@ impl DetailAdapter for CurrentStateDetailAdapter<'_> {
             },
         ];
 
-        if let Some(ref inputs) = resource.inputs {
-            if inputs.is_object() {
-                if let Some(obj) = inputs.as_object() {
-                    details.push(DetailItem {
-                        label: "Inputs".to_string(),
-                        line: line![span![format!("{} properties", obj.len())]],
-                    });
-                }
-            }
-        }
-
-        if let Some(ref outputs) = resource.outputs {
-            if outputs.is_object() {
-                if let Some(obj) = outputs.as_object() {
-                    details.push(DetailItem {
-                        label: "Outputs".to_string(),
-                        line: line![span![format!("{} properties", obj.len())]],
-                    });
-                }
-            }
-        }
-
         if let Some(ref id) = resource.id {
             details.push(DetailItem {
                 label: "ID".to_string(),
@@ -97,6 +77,24 @@ impl DetailAdapter for CurrentStateDetailAdapter<'_> {
                 label: "Provider".to_string(),
                 line: line![span![provider.clone()]],
             });
+        }
+
+        // Add inputs section with actual values
+        if let Some(ref inputs) = resource.inputs {
+            details.push(DetailItem {
+                label: String::new(),
+                line: line![span!["── Inputs ──"].style(Style::default().fg(Color::Cyan))],
+            });
+            details.extend(format_json_value(inputs, 2, 60));
+        }
+
+        // Add outputs section with actual values
+        if let Some(ref outputs) = resource.outputs {
+            details.push(DetailItem {
+                label: String::new(),
+                line: line![span!["── Outputs ──"].style(Style::default().fg(Color::Cyan))],
+            });
+            details.extend(format_json_value(outputs, 2, 60));
         }
 
         details
@@ -131,7 +129,7 @@ impl DetailAdapter for ChangeSummaryDetailAdapter<'_> {
             }];
         };
 
-        vec![
+        let mut details = vec![
             DetailItem {
                 label: "Operation".to_string(),
                 line: line![operation_to_span(format!("{:?}", step.op))],
@@ -150,7 +148,51 @@ impl DetailAdapter for ChangeSummaryDetailAdapter<'_> {
                     },
                 }]],
             },
-        ]
+        ];
+
+        // Show what's changing
+        match (&step.old_state, &step.new_state) {
+            (Some(old), Some(new)) => {
+                // For updates, show property changes
+                details.push(DetailItem {
+                    label: String::new(),
+                    line: line![span!["── Changes ──"].style(Style::default().fg(Color::Cyan))],
+                });
+
+                // Compare inputs if both exist
+                if let (Some(old_inputs), Some(new_inputs)) = (&old.inputs, &new.inputs) {
+                    let changes = compare_json_values(old_inputs, new_inputs, "");
+                    details.extend(changes);
+                }
+            }
+            (None, Some(new)) => {
+                // For creates, show new properties
+                if let Some(inputs) = &new.inputs {
+                    details.push(DetailItem {
+                        label: String::new(),
+                        line: line![
+                            span!["── New Resource ──"].style(Style::default().fg(Color::Green))
+                        ],
+                    });
+                    details.extend(format_json_value(inputs, 2, 60));
+                }
+            }
+            (Some(old), None) => {
+                // For deletes, show old properties
+                if let Some(inputs) = &old.inputs {
+                    details.push(DetailItem {
+                        label: String::new(),
+                        line: line![
+                            span!["── Deleted Resource ──"].style(Style::default().fg(Color::Red))
+                        ],
+                    });
+                    details.extend(format_json_value(inputs, 2, 60));
+                }
+            }
+            _ => {}
+        }
+
+        details
     }
 
     fn get_title(&self, _selected_index: Option<usize>) -> String {
@@ -205,18 +247,73 @@ impl DetailAdapter for OperationDetailAdapter<'_> {
             },
         ];
 
-        if let Some(ref old) = metadata.old {
+        // Show detailed diff if available
+        if let Some(ref detailed_diff) = metadata.detailed_diff {
             details.push(DetailItem {
-                label: "Old Inputs".to_string(),
-                line: line![span![format!("{} properties", old.inputs.len())]],
+                label: String::new(),
+                line: line![
+                    span!["── Property Changes ──"].style(Style::default().fg(Color::Cyan))
+                ],
             });
+
+            for (property, diff) in detailed_diff {
+                details.push(DetailItem {
+                    label: "  ".to_string(),
+                    line: line![diff_kind_to_span(&diff.diff_kind, property)],
+                });
+            }
         }
 
-        if let Some(ref new) = metadata.new {
-            details.push(DetailItem {
-                label: "New Inputs".to_string(),
-                line: line![span![format!("{} properties", new.inputs.len())]],
-            });
+        // Show actual changes
+        match (&metadata.old, &metadata.new) {
+            (Some(old), Some(new)) => {
+                details.push(DetailItem {
+                    label: String::new(),
+                    line: line![
+                        span!["── Detailed Changes ──"].style(Style::default().fg(Color::Cyan))
+                    ],
+                });
+
+                let changes = compare_json_maps(&old.inputs, &new.inputs, "");
+                details.extend(changes);
+            }
+            (None, Some(new)) => {
+                details.push(DetailItem {
+                    label: String::new(),
+                    line: line![
+                        span!["── New Properties ──"].style(Style::default().fg(Color::Green))
+                    ],
+                });
+
+                for (key, value) in &new.inputs {
+                    details.push(DetailItem {
+                        label: format!("  {}", key),
+                        line: line![
+                            span![format_value_summary(value)]
+                                .style(Style::default().fg(Color::Green))
+                        ],
+                    });
+                }
+            }
+            (Some(old), None) => {
+                details.push(DetailItem {
+                    label: String::new(),
+                    line: line![
+                        span!["── Deleted Properties ──"].style(Style::default().fg(Color::Red))
+                    ],
+                });
+
+                for (key, value) in &old.inputs {
+                    details.push(DetailItem {
+                        label: format!("  {}", key),
+                        line: line![
+                            span![format_value_summary(value)]
+                                .style(Style::default().fg(Color::Red))
+                        ],
+                    });
+                }
+            }
+            _ => {}
         }
 
         details
@@ -294,6 +391,240 @@ fn operation_to_span(operation: String) -> Span<'static> {
         "Replace" => span![operation].style(Style::default().fg(Color::Magenta)),
         _ => span![operation],
     }
+}
+
+fn diff_kind_to_span(diff_kind: &DiffKind, property: &str) -> Span<'static> {
+    let (prefix, color) = match diff_kind {
+        DiffKind::Add => ("+ ", Color::Green),
+        DiffKind::AddReplace => ("± ", Color::Magenta),
+        DiffKind::Delete => ("- ", Color::Red),
+        DiffKind::DeleteReplace => ("∓ ", Color::Magenta),
+        DiffKind::Update => ("~ ", Color::Yellow),
+        DiffKind::UpdateReplace => ("≈ ", Color::Magenta),
+    };
+    let text = match diff_kind {
+        DiffKind::AddReplace | DiffKind::DeleteReplace | DiffKind::UpdateReplace => {
+            format!("{}{} (replace)", prefix, property)
+        }
+        _ => format!("{}{}", prefix, property),
+    };
+    span![text].style(Style::default().fg(color))
+}
+
+fn format_value_summary(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "null".to_string(),
+        serde_json::Value::Bool(b) => b.to_string(),
+        serde_json::Value::Number(n) => n.to_string(),
+        serde_json::Value::String(s) => {
+            if s.starts_with("[secret]") || s.contains("ciphertext") {
+                "[secret]".to_string()
+            } else if s.len() > 50 {
+                format!("\"{}...\"", &s[..47])
+            } else {
+                format!("\"{}\"", s)
+            }
+        }
+        serde_json::Value::Array(arr) => format!("[{} items]", arr.len()),
+        serde_json::Value::Object(obj) => {
+            if obj.contains_key("ciphertext") {
+                "[secret]".to_string()
+            } else {
+                format!("{{{} props}}", obj.len())
+            }
+        }
+    }
+}
+
+fn format_json_value(
+    value: &serde_json::Value,
+    indent: usize,
+    max_width: usize,
+) -> Vec<DetailItem> {
+    let mut items = Vec::new();
+
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, val) in map {
+                let label = format!("{}{}", " ".repeat(indent), key);
+                let value_str = format_value_summary(val);
+
+                // Handle nested objects and arrays
+                match val {
+                    serde_json::Value::Object(_) | serde_json::Value::Array(_) => {
+                        items.push(DetailItem {
+                            label: label.clone(),
+                            line: line![span![value_str]],
+                        });
+                        // Optionally expand nested structures
+                        if indent < 6 && (val.is_object() || val.is_array()) {
+                            items.extend(format_json_value(val, indent + 2, max_width));
+                        }
+                    }
+                    _ => {
+                        items.push(DetailItem {
+                            label,
+                            line: line![span![value_str]],
+                        });
+                    }
+                }
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for (i, val) in arr.iter().enumerate() {
+                let label = format!("{}[{}]", " ".repeat(indent), i);
+                items.push(DetailItem {
+                    label,
+                    line: line![span![format_value_summary(val)]],
+                });
+            }
+        }
+        _ => {
+            items.push(DetailItem {
+                label: " ".repeat(indent),
+                line: line![span![format_value_summary(value)]],
+            });
+        }
+    }
+
+    items
+}
+
+fn compare_json_values<'a>(
+    old: &'a serde_json::Value,
+    new: &'a serde_json::Value,
+    path: &'a str,
+) -> Vec<DetailItem<'a>> {
+    match (old, new) {
+        (serde_json::Value::Object(old_map), serde_json::Value::Object(new_map)) => {
+            compare_json_maps_from_serde(old_map, new_map, path)
+        }
+        _ => {
+            // For non-objects, just show the change
+            vec![DetailItem {
+                label: path.to_string(),
+                line: line![
+                    span![format_value_summary(old)].style(Style::default().fg(Color::Red)),
+                    span![" → "],
+                    span![format_value_summary(new)].style(Style::default().fg(Color::Green))
+                ],
+            }]
+        }
+    }
+}
+
+fn compare_json_maps_from_serde<'a>(
+    old: &'a serde_json::Map<String, serde_json::Value>,
+    new: &'a serde_json::Map<String, serde_json::Value>,
+    prefix: &'a str,
+) -> Vec<DetailItem<'a>> {
+    let mut items = Vec::new();
+    let indent = if prefix.is_empty() {
+        2
+    } else {
+        prefix.len() + 2
+    };
+
+    // Check for deleted properties
+    for (key, old_value) in old {
+        if !new.contains_key(key) {
+            items.push(DetailItem {
+                label: format!("{}{}", " ".repeat(indent), key),
+                line: line![
+                    span!["- "].style(Style::default().fg(Color::Red)),
+                    span![format_value_summary(old_value)]
+                ],
+            });
+        }
+    }
+
+    // Check for added or modified properties
+    for (key, new_value) in new {
+        if let Some(old_value) = old.get(key) {
+            if old_value != new_value {
+                // Modified
+                items.push(DetailItem {
+                    label: format!("{}{}", " ".repeat(indent), key),
+                    line: line![
+                        span!["~ "].style(Style::default().fg(Color::Yellow)),
+                        span![format_value_summary(old_value)]
+                            .style(Style::default().fg(Color::Red)),
+                        span![" → "],
+                        span![format_value_summary(new_value)]
+                            .style(Style::default().fg(Color::Green))
+                    ],
+                });
+            }
+        } else {
+            // Added
+            items.push(DetailItem {
+                label: format!("{}{}", " ".repeat(indent), key),
+                line: line![
+                    span!["+ "].style(Style::default().fg(Color::Green)),
+                    span![format_value_summary(new_value)]
+                ],
+            });
+        }
+    }
+
+    items
+}
+
+fn compare_json_maps<'a>(
+    old: &'a HashMap<String, serde_json::Value>,
+    new: &'a HashMap<String, serde_json::Value>,
+    prefix: &'a str,
+) -> Vec<DetailItem<'a>> {
+    let mut items = Vec::new();
+    let indent = if prefix.is_empty() {
+        2
+    } else {
+        prefix.len() + 2
+    };
+
+    // Check for deleted properties
+    for (key, old_value) in old {
+        if !new.contains_key(key) {
+            items.push(DetailItem {
+                label: format!("{}{}", " ".repeat(indent), key),
+                line: line![
+                    span!["- "].style(Style::default().fg(Color::Red)),
+                    span![format_value_summary(old_value)]
+                ],
+            });
+        }
+    }
+
+    // Check for added or modified properties
+    for (key, new_value) in new {
+        if let Some(old_value) = old.get(key) {
+            if old_value != new_value {
+                // Modified
+                items.push(DetailItem {
+                    label: format!("{}{}", " ".repeat(indent), key),
+                    line: line![
+                        span!["~ "].style(Style::default().fg(Color::Yellow)),
+                        span![format_value_summary(old_value)]
+                            .style(Style::default().fg(Color::Red)),
+                        span![" → "],
+                        span![format_value_summary(new_value)]
+                            .style(Style::default().fg(Color::Green))
+                    ],
+                });
+            }
+        } else {
+            // Added
+            items.push(DetailItem {
+                label: format!("{}{}", " ".repeat(indent), key),
+                line: line![
+                    span!["+ "].style(Style::default().fg(Color::Green)),
+                    span![format_value_summary(new_value)]
+                ],
+            });
+        }
+    }
+
+    items
 }
 
 #[cfg(test)]
