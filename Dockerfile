@@ -1,8 +1,8 @@
-ARG PULUMI_VERSION=3.175.0
+ARG PULUMI_VERSION=3.209.0
 ARG RUST_VERSION=1.86.0
 ARG PULUMI_IMAGE_SUFFIX=""
 
-FROM cr.holdenitdown.net/docker/pulumi/pulumi${PULUMI_IMAGE_SUFFIX}:${PULUMI_VERSION} AS pulumi
+FROM docker.cr.holdenitdown.net/pulumi/pulumi${PULUMI_IMAGE_SUFFIX}:${PULUMI_VERSION} AS pulumi
 
 ENV PULUMI_HOME=/root/.pulumi
 RUN mkdir -p ${PULUMI_HOME} && chmod 777 ${PULUMI_HOME}
