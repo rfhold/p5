@@ -1,0 +1,173 @@
+package ui
+
+import "github.com/charmbracelet/lipgloss"
+
+// Color palette (Tokyo Night)
+var (
+	ColorPrimary   = lipgloss.Color("#7aa2f7")
+	ColorSecondary = lipgloss.Color("#bb9af7")
+	ColorText      = lipgloss.Color("#c0caf5")
+	ColorDim       = lipgloss.Color("#565f89")
+	ColorError     = lipgloss.Color("#f7768e")
+	ColorBg        = lipgloss.Color("#1a1b26")
+	ColorSelection = lipgloss.Color("#283457") // subtle selection highlight
+	ColorFlash     = lipgloss.Color("#3d59a1") // brighter flash highlight
+
+	// Operation colors
+	ColorCreate  = lipgloss.Color("#9ece6a") // green
+	ColorUpdate  = lipgloss.Color("#e0af68") // yellow/orange
+	ColorDelete  = lipgloss.Color("#f7768e") // red
+	ColorReplace = lipgloss.Color("#bb9af7") // purple
+	ColorRefresh = lipgloss.Color("#7dcfff") // cyan
+	ColorSuccess = lipgloss.Color("#9ece6a") // green (same as create)
+
+	// Flag colors
+	ColorTarget  = lipgloss.Color("#7dcfff") // cyan
+	ColorExclude = lipgloss.Color("#f7768e") // red (same as error/delete)
+)
+
+// Styles
+var (
+	// Text styles
+	LabelStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorSecondary)
+
+	ValueStyle = lipgloss.NewStyle().
+			Foreground(ColorText)
+
+	DimStyle = lipgloss.NewStyle().
+			Foreground(ColorDim)
+
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(ColorError)
+
+	// Box styles
+	BoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorDim).
+			Padding(0, 1)
+
+	// Dialog styles
+	DialogStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorPrimary).
+			Padding(1, 2)
+
+	DialogTitleStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorPrimary).
+				MarginBottom(1)
+
+	// Operation styles
+	OpCreateStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorCreate)
+
+	OpUpdateStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorUpdate)
+
+	OpDeleteStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorDelete)
+
+	OpReplaceStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorReplace)
+
+	OpRefreshStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorRefresh)
+
+	// Execution status styles
+	StatusPendingStyle = lipgloss.NewStyle().Foreground(ColorDim)
+	StatusRunningStyle = lipgloss.NewStyle().Foreground(ColorPrimary)
+	StatusSuccessStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
+	StatusFailedStyle  = lipgloss.NewStyle().Foreground(ColorError)
+
+	// Scroll indicator styles
+	ScrollIndicatorStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorPrimary)
+
+	// Cursor and selection styles
+	CursorStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorPrimary)
+
+	SelectionStyle = lipgloss.NewStyle().
+			Background(ColorSelection)
+
+	// Flag badge styles
+	FlagTargetStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorTarget)
+
+	FlagReplaceStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorReplace)
+
+	FlagExcludeStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorExclude)
+
+	// View mode label styles
+	ViewLabelStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorPrimary)
+
+	// Tree connector style for component resources
+	TreeLineStyle = lipgloss.NewStyle().
+			Foreground(ColorDim)
+)
+
+// Status icons
+const (
+	IconPending = "○"
+	IconRunning = "◐" // or use spinner
+	IconSuccess = "✓"
+	IconFailed  = "✗"
+)
+
+// RenderOp renders a resource operation with appropriate styling
+func RenderOp(op ResourceOp) string {
+	switch op {
+	case OpCreate:
+		return OpCreateStyle.Render("create")
+	case OpUpdate:
+		return OpUpdateStyle.Render("update")
+	case OpDelete:
+		return OpDeleteStyle.Render("delete")
+	case OpReplace:
+		return OpReplaceStyle.Render("replace")
+	case OpCreateReplace:
+		return OpCreateStyle.Render("create-replacement")
+	case OpDeleteReplace:
+		return OpDeleteStyle.Render("delete-replaced")
+	case OpRefresh:
+		return OpRefreshStyle.Render("refresh")
+	case OpSame:
+		return DimStyle.Render("unchanged")
+	default:
+		return DimStyle.Render(string(op))
+	}
+}
+
+// RenderStatus renders a status with appropriate styling
+func RenderStatus(status ItemStatus) string {
+	switch status {
+	case StatusNone:
+		return DimStyle.Render("none")
+	case StatusPending:
+		return StatusPendingStyle.Render("pending")
+	case StatusRunning:
+		return StatusRunningStyle.Render("running")
+	case StatusSuccess:
+		return StatusSuccessStyle.Render("success")
+	case StatusFailed:
+		return StatusFailedStyle.Render("failed")
+	default:
+		return DimStyle.Render("unknown")
+	}
+}

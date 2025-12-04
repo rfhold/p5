@@ -1,0 +1,38 @@
+name: dev-env
+version: "1.0.0"
+description: "Sets Pulumi environment variables for local development"
+
+# Security permissions
+permissions:
+  # No HTTP access needed - this plugin is fully local
+  http: []
+  # Environment variables this plugin can set
+  env:
+    - "PULUMI_BACKEND_URL"
+    - "PULUMI_CONFIG_PASSPHRASE"
+
+# No browser auth needed
+interactive: false
+
+# Configuration schema
+config:
+  program:
+    backendUrl:
+      type: string
+      required: false
+      description: "Pulumi backend URL (e.g., file://~/.pulumi, s3://bucket)"
+      default: "file://~/.pulumi"
+    passphrase:
+      type: string
+      required: false
+      description: "Config passphrase for encrypted secrets (can be empty)"
+      default: ""
+  stack:
+    backendUrl:
+      type: string
+      required: false
+      description: "Override backend URL for this stack"
+    passphrase:
+      type: string
+      required: false
+      description: "Override passphrase for this stack"

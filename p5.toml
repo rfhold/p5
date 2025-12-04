@@ -1,0 +1,18 @@
+# p5 Global Configuration
+# This file configures plugins that apply to all Pulumi programs in this repository
+
+[plugins.dev-env]
+# Use local plugin for development testing
+source = "./plugins/dev-env"
+
+[plugins.dev-env.config]
+# Local file backend in the repo root
+backendUrl = "file:///Users/rfhold/repos/rfhold/p5"
+# Empty passphrase for local dev (no encryption)
+passphrase = ""
+
+[plugins.dev-env.refresh]
+# These are static values, no need to refresh on context changes
+onWorkspaceChange = false
+onStackChange = false
+onConfigChange = false

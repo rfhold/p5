@@ -1,8 +1,0 @@
-target/
-.git/
-maskfile.md
-Dockerfile
-README.md
-.gitignore
-.dockerignore
-tapes/output
