@@ -161,16 +161,16 @@ type UpdateSummary struct {
 	UserEmail string // git.author.email or git.committer.email
 }
 
-// ImportOptions for importing a resource
-type ImportOptions struct {
-	Env map[string]string // Environment variables to set for the operation
-}
-
-// ImportResult contains the result of an import operation
-type ImportResult struct {
+// CommandResult contains the result of a CLI command operation (import, state delete, etc.)
+type CommandResult struct {
 	Success bool
 	Output  string
 	Error   error
+}
+
+// ImportOptions for importing a resource
+type ImportOptions struct {
+	Env map[string]string // Environment variables to set for the operation
 }
 
 // StateDeleteOptions for deleting a resource from state
@@ -178,9 +178,10 @@ type StateDeleteOptions struct {
 	Env map[string]string // Environment variables to set for the operation
 }
 
-// StateDeleteResult contains the result of a state delete operation
-type StateDeleteResult struct {
-	Success bool
-	Output  string
-	Error   error
-}
+// History pagination defaults
+const (
+	// DefaultHistoryPageSize is the default number of history entries to fetch
+	DefaultHistoryPageSize = 50
+	// DefaultHistoryPage is the default page number (1-indexed)
+	DefaultHistoryPage = 1
+)

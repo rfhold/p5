@@ -183,14 +183,13 @@ func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFla
 
 	// Calculate max width for type to prevent overflow
 	// Account for: cursor(2) + tree prefix(3*depth) + op(4) + spacing(3) + name + badges + status
-	// Use a reasonable max of 50 chars for type, but adjust based on available width
-	maxTypeLen := 50
+	maxTypeLen := DefaultMaxTypeLength
 	if r.Width() > 0 {
 		// Estimate other elements: cursor(2) + op(4) + spaces(3) + name(~20) + badges(~12) + status(~20) + padding(4)
 		treePrefixLen := item.Depth * 3
 		otherElements := 2 + treePrefixLen + 4 + 3 + len(item.Name) + 12 + 20 + 4
 		available := r.Width() - otherElements
-		if available > 20 && available < maxTypeLen {
+		if available > MinTypeLength && available < maxTypeLen {
 			maxTypeLen = available
 		}
 	}

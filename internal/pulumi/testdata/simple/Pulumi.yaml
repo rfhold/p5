@@ -1,0 +1,3 @@
+name: integration-test-simple
+runtime: go
+description: Simple test project for integration tests

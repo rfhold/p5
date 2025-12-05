@@ -126,16 +126,26 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]an
 		return nil, fmt.Errorf("failed to parse stack config: %w", err)
 	}
 
-	// Look for config -> p5:plugins:{pluginName}
+	// Look for config -> p5:plugins -> {pluginName}
 	configRaw, ok := raw["config"].(map[string]any)
 	if !ok {
 		return nil, nil
 	}
 
-	key := fmt.Sprintf("p5:plugins:%s", pluginName)
-	pluginConfig, ok := configRaw[key].(map[string]any)
+	p5Plugins, ok := configRaw["p5:plugins"].(map[string]any)
 	if !ok {
 		return nil, nil
+	}
+
+	pluginConfig, ok := p5Plugins[pluginName].(map[string]any)
+	if !ok {
+		return nil, nil
+	}
+
+	// Look for .config nesting to match global and program config structure
+	// config -> p5:plugins -> {pluginName} -> config
+	if nestedConfig, ok := pluginConfig["config"].(map[string]any); ok {
+		return nestedConfig, nil
 	}
 
 	return pluginConfig, nil

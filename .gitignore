@@ -33,10 +33,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-Pulumi.yaml
-Pulumi.*.yaml
+.obsidian
+
 .pulumi/
 
 ./p5
 ./everything
 ./simple
+
+coverage.out

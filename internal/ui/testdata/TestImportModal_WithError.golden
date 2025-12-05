@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+                                                                                
+          ╭─────────────────────────────────────────────────────────╮           
+          │                                                         │           
+          │  Import Resource                                        │           
+          │                                                         │           
+          │  Type: aws:s3/bucket:Bucket                             │           
+          │  Name: my-bucket                                        │           
+          │                                                         │           
+          │  Suggestions                                            │           
+          │    No suggestions available                             │           
+          │  Import ID                                              │           
+          │  > Enter import ID...                                   │           
+          │                                                         │           
+          │  invalid import ID format                               │           
+          │                                                         │           
+          │  tab suggestions  enter select/confirm  esc cancel      │           
+          │                                                         │           
+          ╰─────────────────────────────────────────────────────────╯           
+                                                                                
+                                                                                
+                                                                                
+                                                                                

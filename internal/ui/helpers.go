@@ -260,6 +260,162 @@ func RenderScrollHint(canScrollUp, canScrollDown bool, padding string) string {
 	return ""
 }
 
+// ResourceChangesFormat specifies the output format for RenderResourceChanges
+type ResourceChangesFormat int
+
+const (
+	// ResourceChangesCompact renders as: +2 ~1 ±1 -0
+	ResourceChangesCompact ResourceChangesFormat = iota
+	// ResourceChangesExpanded renders as: + 2 created, ~ 1 updated, etc.
+	ResourceChangesExpanded
+)
+
+// RenderResourceChanges renders a map of resource changes with appropriate styling.
+// The changes map typically has keys: "create", "update", "delete", "replace", "same".
+func RenderResourceChanges(changes map[string]int, format ResourceChangesFormat) string {
+	if changes == nil || len(changes) == 0 {
+		return DimStyle.Render("no changes")
+	}
+
+	create := changes["create"]
+	update := changes["update"]
+	del := changes["delete"]
+	replace := changes["replace"]
+	same := changes["same"]
+
+	var parts []string
+
+	switch format {
+	case ResourceChangesCompact:
+		if create > 0 {
+			parts = append(parts, OpCreateStyle.Render(fmt.Sprintf("+%d", create)))
+		}
+		if update > 0 {
+			parts = append(parts, OpUpdateStyle.Render(fmt.Sprintf("~%d", update)))
+		}
+		if replace > 0 {
+			parts = append(parts, OpReplaceStyle.Render(fmt.Sprintf("±%d", replace)))
+		}
+		if del > 0 {
+			parts = append(parts, OpDeleteStyle.Render(fmt.Sprintf("-%d", del)))
+		}
+
+		if len(parts) == 0 {
+			if same > 0 {
+				return DimStyle.Render(fmt.Sprintf("%d unchanged", same))
+			}
+			return DimStyle.Render("no changes")
+		}
+		return strings.Join(parts, " ")
+
+	case ResourceChangesExpanded:
+		if create > 0 {
+			parts = append(parts, OpCreateStyle.Render(fmt.Sprintf("  + %d created", create)))
+		}
+		if update > 0 {
+			parts = append(parts, OpUpdateStyle.Render(fmt.Sprintf("  ~ %d updated", update)))
+		}
+		if replace > 0 {
+			parts = append(parts, OpReplaceStyle.Render(fmt.Sprintf("  ± %d replaced", replace)))
+		}
+		if del > 0 {
+			parts = append(parts, OpDeleteStyle.Render(fmt.Sprintf("  - %d deleted", del)))
+		}
+		if same > 0 {
+			parts = append(parts, DimStyle.Render(fmt.Sprintf("  = %d unchanged", same)))
+		}
+
+		if len(parts) == 0 {
+			return DimStyle.Render("no changes")
+		}
+		return strings.Join(parts, "\n")
+	}
+
+	return DimStyle.Render("no changes")
+}
+
+// CursorState holds cursor and scroll state for list components
+type CursorState struct {
+	Cursor       int
+	ScrollOffset int
+}
+
+// MoveCursor moves the cursor by delta, clamping to valid range [0, itemCount-1].
+// Returns the new cursor position.
+func MoveCursor(cursor, delta, itemCount int) int {
+	cursor += delta
+	if cursor < 0 {
+		cursor = 0
+	}
+	if itemCount > 0 && cursor >= itemCount {
+		cursor = itemCount - 1
+	}
+	return cursor
+}
+
+// EnsureCursorVisible adjusts scroll offset to keep cursor visible within the viewport.
+// Returns the new scroll offset.
+func EnsureCursorVisible(cursor, scrollOffset, itemCount, visibleHeight int) int {
+	if itemCount == 0 {
+		return 0
+	}
+
+	// Scroll up if cursor is above visible area
+	if cursor < scrollOffset {
+		scrollOffset = cursor
+	}
+
+	// Scroll down if cursor is below visible area
+	if cursor >= scrollOffset+visibleHeight {
+		scrollOffset = cursor - visibleHeight + 1
+	}
+
+	// Clamp scroll offset
+	maxScroll := itemCount - visibleHeight
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if scrollOffset > maxScroll {
+		scrollOffset = maxScroll
+	}
+	if scrollOffset < 0 {
+		scrollOffset = 0
+	}
+
+	return scrollOffset
+}
+
+// CalculateVisibleHeight returns the number of lines available for items.
+// Accounts for padding and scroll indicators if content is scrollable.
+func CalculateVisibleHeight(totalHeight, itemCount, padding int) int {
+	// Base height minus padding
+	baseHeight := totalHeight - padding
+	if baseHeight < 1 {
+		baseHeight = 1
+	}
+
+	// Check if scrollable (more items than base height)
+	if itemCount > baseHeight {
+		// Reserve 2 lines for scroll indicators
+		height := baseHeight - 2
+		if height < 1 {
+			height = 1
+		}
+		return height
+	}
+
+	return baseHeight
+}
+
+// IsScrollable returns true if there are more items than can fit in the base height.
+func IsScrollable(totalHeight, itemCount, padding int) bool {
+	baseHeight := totalHeight - padding
+	if baseHeight < 1 {
+		baseHeight = 1
+	}
+	return itemCount > baseHeight
+}
+
 // DetailPanelContent holds the parameters for rendering a detail panel
 type DetailPanelContent struct {
 	Header       string // Header text (e.g., resource name)

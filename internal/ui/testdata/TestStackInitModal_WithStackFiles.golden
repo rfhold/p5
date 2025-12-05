@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+      ╭─────────────────────────────────────────────────────────────────╮       
+      │                                                                 │       
+      │  Initialize Stack                                               │       
+      │                   (1/3)                                         │       
+      │  Select or enter stack name                                     │       
+      │                                                                 │       
+      │  Backend: file://~                                              │       
+      │  User: user@example.com                                         │       
+      │                                                                 │       
+      │  > dev [from Pulumi.dev.yaml]                                   │       
+      │    staging [from Pulumi.staging.yaml] !has existing encryption  │       
+      │    prod [from Pulumi.prod.yaml] !has existing encryption        │       
+      │                                                                 │       
+      │  Stack name                                                     │       
+      │  > Enter stack name...                                          │       
+      │                                                                 │       
+      │  tab suggestions  enter next  esc cancel                        │       
+      │                                                                 │       
+      ╰─────────────────────────────────────────────────────────────────╯       
+                                                                                
+                                                                                
+                                                                                

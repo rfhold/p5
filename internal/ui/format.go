@@ -52,8 +52,8 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 		result := "[" + strings.Join(items, ", ") + "]"
 		// Truncate if too long
 		maxLen := maxWidth - (indent * 2)
-		if maxLen < 30 {
-			maxLen = 30
+		if maxLen < DefaultMaxStringLength {
+			maxLen = DefaultMaxStringLength
 		}
 		if len(result) > maxLen {
 			return style.Render(result[:maxLen-3] + "...")
@@ -67,9 +67,9 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 			return OpUpdateStyle.Render("~[computed]")
 		}
 		// Truncate long strings
-		maxLen := maxWidth - (indent * 2) - 20
-		if maxLen < 20 {
-			maxLen = 20
+		maxLen := maxWidth - (indent * 2) - MinFormattedStringLength
+		if maxLen < MinFormattedStringLength {
+			maxLen = MinFormattedStringLength
 		}
 		if len(v) > maxLen {
 			return style.Render(fmt.Sprintf("%q...", v[:maxLen-3]))
@@ -109,8 +109,8 @@ func formatArrayItem(item interface{}) string {
 		return fmt.Sprintf("[...%d items]", len(v))
 	case string:
 		// Truncate long strings in arrays
-		if len(v) > 30 {
-			return fmt.Sprintf("%q...", v[:27])
+		if len(v) > ArrayItemTruncateLength {
+			return fmt.Sprintf("%q...", v[:ArrayItemTruncateDisplay])
 		}
 		return fmt.Sprintf("%q", v)
 	case bool:

@@ -126,7 +126,7 @@ func (m *ModalBase) RenderScrollableDialog(params ScrollableDialogContent) Scrol
 	totalLines := len(contentLines)
 	maxHeight := params.MaxHeight
 	if maxHeight <= 0 {
-		maxHeight = 20 // default max height
+		maxHeight = DefaultModalMaxHeight
 	}
 
 	// Determine if we need scrolling

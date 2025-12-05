@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+                                                                                
+          ╭─────────────────────────────────────────────────────────╮           
+          │                                                         │           
+          │  Import Resource                                        │           
+          │                                                         │           
+          │  Type: aws:s3/bucket:Bucket                             │           
+          │  Name: my-bucket                                        │           
+          │                                                         │           
+          │  Suggestions                                            │           
+          │  > bucket-123 - Production bucket [aws]                 │           
+          │    bucket-456 - Staging bucket [aws]                    │           
+          │    bucket-789 - Dev bucket [aws]                        │           
+          │                                                         │           
+          │  Import ID                                              │           
+          │  > Enter import ID...                                   │           
+          │                                                         │           
+          │  tab suggestions  enter select/confirm  esc cancel      │           
+          │                                                         │           
+          ╰─────────────────────────────────────────────────────────╯           
+                                                                                
+                                                                                
+                                                                                

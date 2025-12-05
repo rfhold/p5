@@ -7,7 +7,7 @@
 [plugins.env.config]
 # Static source - define env vars directly
 type = "static"
-vars = '{"PULUMI_BACKEND_URL": "file:///Users/rfhold/repos/rfhold/p5", "PULUMI_CONFIG_PASSPHRASE": ""}'
+vars = '{"PULUMI_BACKEND_URL": "file://.", "PULUMI_CONFIG_PASSPHRASE": ""}'
 
 [plugins.env.refresh]
 # These are static values, no need to refresh on context changes

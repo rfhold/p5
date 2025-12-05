@@ -161,9 +161,11 @@ config:
   aws:region: us-west-2
   
   # Plugin config for this specific stack
-  p5:plugins:okta-aws:
-    awsAccountId: "123456789012"
-    roleArn: "arn:aws:iam::123456789012:role/PulumiRole"
+  p5:plugins:
+    okta-aws:
+      config:
+        awsAccountId: "123456789012"
+        roleArn: "arn:aws:iam::123456789012:role/PulumiRole"
 ```
 
 ### Configuration Precedence

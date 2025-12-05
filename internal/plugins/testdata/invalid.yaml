@@ -1,0 +1,7 @@
+name: test-project
+runtime: go
+p5:
+  plugins:
+    aws:
+      cmd: [this is invalid yaml
+        - missing closing bracket

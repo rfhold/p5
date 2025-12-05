@@ -10,94 +10,201 @@ import (
 	"github.com/rfhold/p5/internal/ui"
 )
 
-// handleKeyPress handles all keyboard events
+// handleKeyPress routes keyboard events to the appropriate handler based on focus stack
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Handle error modal first if visible
-	if m.errorModal.Visible() {
-		dismissed, cmd := m.errorModal.Update(msg)
-		if dismissed {
-			m.errorModal.Hide()
-		}
-		return m, cmd
+	// Route to current focus owner - O(1) lookup
+	switch m.ui.Focus.Current() {
+	case ui.FocusErrorModal:
+		return m.updateErrorModal(msg)
+	case ui.FocusConfirmModal:
+		return m.updateConfirmModal(msg)
+	case ui.FocusImportModal:
+		return m.updateImportModal(msg)
+	case ui.FocusStackInitModal:
+		return m.updateStackInitModal(msg)
+	case ui.FocusWorkspaceSelector:
+		return m.updateWorkspaceSelector(msg)
+	case ui.FocusStackSelector:
+		return m.updateStackSelector(msg)
+	case ui.FocusHelp:
+		return m.updateHelp(msg)
+	case ui.FocusDetailsPanel:
+		return m.updateDetailsPanel(msg)
+	case ui.FocusMain:
+		return m.updateMain(msg)
 	}
+	return m, nil
+}
 
-	// Handle confirm modal first if visible
-	if m.confirmModal.Visible() {
-		confirmed, cancelled, cmd := m.confirmModal.Update(msg)
-		if confirmed {
-			// Check if this is a pending operation confirmation
-			if m.pendingOperation != nil {
-				op := *m.pendingOperation
-				m.pendingOperation = nil
-				m.confirmModal.Hide()
-				return m, m.startExecution(op)
+// updateErrorModal handles keys when error modal has focus
+func (m Model) updateErrorModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	dismissed, cmd := m.ui.ErrorModal.Update(msg)
+	if dismissed {
+		m.hideErrorModal()
+	}
+	return m, cmd
+}
+
+// updateConfirmModal handles keys when confirm modal has focus
+func (m Model) updateConfirmModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	confirmed, cancelled, cmd := m.ui.ConfirmModal.Update(msg)
+	if confirmed {
+		// Check if this is a pending operation confirmation
+		if m.state.PendingOperation != nil {
+			op := *m.state.PendingOperation
+			m.state.PendingOperation = nil
+			m.hideConfirmModal()
+			return m, m.startExecution(op)
+		}
+		// Otherwise it's a state delete confirmation
+		return m, m.executeStateDelete()
+	}
+	if cancelled {
+		m.state.PendingOperation = nil
+		m.hideConfirmModal()
+	}
+	return m, cmd
+}
+
+// updateImportModal handles keys when import modal has focus
+func (m Model) updateImportModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	confirmed, cmd := m.ui.ImportModal.Update(msg)
+	if confirmed {
+		// User confirmed import, execute it
+		return m, m.executeImport()
+	}
+	return m, cmd
+}
+
+// updateStackInitModal handles keys when stack init modal has focus
+func (m Model) updateStackInitModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	action, cmd := m.ui.StackInitModal.Update(msg)
+	switch action {
+	case ui.StepModalActionConfirm:
+		// User completed all configured steps, init the stack
+		name := m.ui.StackInitModal.GetStackName()
+		provider := m.ui.StackInitModal.GetSecretsProvider()
+		passphrase := m.ui.StackInitModal.GetPassphrase()
+		return m, m.initStack(name, provider, passphrase)
+	case ui.StepModalActionNext:
+		// After secrets provider step (step 1 -> step 2), check if we should skip passphrase
+		currentStep := m.ui.StackInitModal.CurrentStep()
+		if currentStep == 2 && m.ui.StackInitModal.ShouldSkipPassphrase() {
+			// Skip passphrase step, init directly
+			name := m.ui.StackInitModal.GetStackName()
+			provider := m.ui.StackInitModal.GetSecretsProvider()
+			return m, m.initStack(name, provider, "")
+		}
+	case ui.StepModalActionCancel:
+		m.hideStackInitModal()
+	}
+	return m, cmd
+}
+
+// updateWorkspaceSelector handles keys when workspace selector has focus
+func (m Model) updateWorkspaceSelector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	selected, cmd := m.ui.WorkspaceSelector.Update(msg)
+	if selected {
+		// Workspace was selected, update and reload
+		selectedWs := m.ui.WorkspaceSelector.SelectedWorkspace()
+		if selectedWs != nil {
+			return m, selectWorkspace(selectedWs.Path)
+		}
+	}
+	return m, cmd
+}
+
+// updateStackSelector handles keys when stack selector has focus
+func (m Model) updateStackSelector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	selected, cmd := m.ui.StackSelector.Update(msg)
+	if selected {
+		// Check if "new stack" was selected
+		if m.ui.StackSelector.IsNewStackSelected() {
+			m.hideStackSelector()
+			m.showStackInitModal()
+			// Pass auth env from plugins for passphrase detection
+			if m.deps != nil && m.deps.PluginProvider != nil {
+				m.ui.StackInitModal.SetAuthEnv(m.deps.PluginProvider.GetMergedAuthEnv())
 			}
-			// Otherwise it's a state delete confirmation
-			return m, m.executeStateDelete()
+			return m, tea.Batch(m.fetchWhoAmI(), m.fetchStackFiles())
 		}
-		if cancelled {
-			m.pendingOperation = nil
-			m.confirmModal.Hide()
+		// Stack was selected, update and reload
+		selectedStack := m.ui.StackSelector.SelectedStack()
+		if selectedStack != "" {
+			return m, m.selectStack(selectedStack)
 		}
-		return m, cmd
+	}
+	return m, cmd
+}
+
+// updateHelp handles keys when help dialog has focus
+func (m Model) updateHelp(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Allow scrolling keys
+	if key.Matches(msg, ui.Keys.Up) || key.Matches(msg, ui.Keys.Down) ||
+		key.Matches(msg, ui.Keys.PageUp) || key.Matches(msg, ui.Keys.PageDown) {
+		m.ui.Help.Update(msg)
+		return m, nil
+	}
+	// Esc, q, or ? closes help
+	if key.Matches(msg, ui.Keys.Escape) || key.Matches(msg, ui.Keys.Quit) || key.Matches(msg, ui.Keys.Help) {
+		m.hideHelp()
+		return m, nil
+	}
+	// Any other key is ignored while help is open
+	return m, nil
+}
+
+// updateDetailsPanel handles keys when details panel has focus
+func (m Model) updateDetailsPanel(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Get the appropriate panel based on view mode
+	var panel scrollablePanel
+	if m.ui.ViewMode == ui.ViewHistory {
+		panel = m.ui.HistoryDetails
+	} else {
+		panel = m.ui.Details
 	}
 
-	// Handle import modal if visible
-	if m.importModal.Visible() {
-		confirmed, cmd := m.importModal.Update(msg)
-		if confirmed {
-			// User confirmed import, execute it
-			return m, m.executeImport()
-		}
-		return m, cmd
-	}
-
-	// Handle workspace selector first if visible
-	if m.workspaceSelector.Visible() {
-		selected, cmd := m.workspaceSelector.Update(msg)
-		if selected {
-			// Workspace was selected, update and reload
-			selectedWs := m.workspaceSelector.SelectedWorkspace()
-			if selectedWs != nil {
-				return m, selectWorkspace(selectedWs.Path)
-			}
-		}
-		return m, cmd
-	}
-
-	// Handle stack selector if visible
-	if m.stackSelector.Visible() {
-		selected, cmd := m.stackSelector.Update(msg)
-		if selected {
-			// Stack was selected, update and reload
-			selectedStack := m.stackSelector.SelectedStack()
-			if selectedStack != "" {
-				return m, selectStack(selectedStack)
-			}
-		}
-		return m, cmd
-	}
-
-	// Handle help toggle first
-	if key.Matches(msg, ui.Keys.Help) {
-		m.showHelp = !m.showHelp
+	// Handle scroll keys
+	switch {
+	case key.Matches(msg, ui.Keys.Up):
+		panel.ScrollUp(1)
+		return m, nil
+	case key.Matches(msg, ui.Keys.Down):
+		panel.ScrollDown(1)
+		return m, nil
+	case key.Matches(msg, ui.Keys.PageUp):
+		panel.ScrollUp(10)
+		return m, nil
+	case key.Matches(msg, ui.Keys.PageDown):
+		panel.ScrollDown(10)
+		return m, nil
+	case key.Matches(msg, ui.Keys.Home):
+		panel.SetScrollOffset(0)
+		return m, nil
+	case key.Matches(msg, ui.Keys.End):
+		// Set to a large value - the render will clamp it
+		panel.SetScrollOffset(9999)
+		return m, nil
+	case key.Matches(msg, ui.Keys.Escape), key.Matches(msg, ui.Keys.ToggleDetails):
+		// Close details panel
+		m.hideDetailsPanel()
+		return m, nil
+	case key.Matches(msg, ui.Keys.Help):
+		// Help can open on top of details
+		m.showHelp()
 		return m, nil
 	}
 
-	// If help is showing, handle scrolling or close on other keys
-	if m.showHelp {
-		// Allow scrolling keys
-		if key.Matches(msg, ui.Keys.Up) || key.Matches(msg, ui.Keys.Down) ||
-			key.Matches(msg, ui.Keys.PageUp) || key.Matches(msg, ui.Keys.PageDown) {
-			m.help.Update(msg)
-			return m, nil
-		}
-		// Esc or q closes help
-		if key.Matches(msg, ui.Keys.Escape) || key.Matches(msg, ui.Keys.Quit) {
-			m.showHelp = false
-			return m, nil
-		}
-		// Any other key is ignored while help is open
+	// Other keys close the panel and fall through to main
+	m.hideDetailsPanel()
+	return m.updateMain(msg)
+}
+
+// updateMain handles keys when no modal is active
+func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Help toggle
+	if key.Matches(msg, ui.Keys.Help) {
+		m.showHelp()
 		return m, nil
 	}
 
@@ -114,21 +221,20 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Details panel toggle
 	if key.Matches(msg, ui.Keys.ToggleDetails) {
-		return m.handleToggleDetails()
+		m.toggleDetailsPanel()
+		return m, nil
 	}
 
 	// Stack selector toggle
 	if key.Matches(msg, ui.Keys.SelectStack) {
-		m.stackSelector.SetLoading(true)
-		m.stackSelector.Show()
-		return m, fetchStacksList
+		m.showStackSelector()
+		return m, m.fetchStacksList()
 	}
 
 	// Workspace selector toggle
 	if key.Matches(msg, ui.Keys.SelectWorkspace) {
-		m.workspaceSelector.SetLoading(true)
-		m.workspaceSelector.Show()
-		return m, fetchWorkspacesList
+		m.showWorkspaceSelector()
+		return m, m.fetchWorkspacesList()
 	}
 
 	// History view toggle
@@ -138,32 +244,29 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Import resource (only in preview view for create operations)
 	if key.Matches(msg, ui.Keys.Import) {
-		if m.viewMode == ui.ViewPreview {
-			item := m.resourceList.SelectedItem()
-			if item != nil && item.Op == ui.OpCreate {
-				m.importModal.Show(item.Type, item.Name, item.URN, item.Parent)
-				// Fetch import suggestions from plugins
-				return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Inputs)
-			}
+		item := m.ui.ResourceList.SelectedItem()
+		if CanImportResource(m.ui.ViewMode, item) {
+			m.showImportModal(item.Type, item.Name, item.URN, item.Parent)
+			// Fetch import suggestions from plugins
+			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Inputs)
 		}
 	}
 
 	// Delete from state (only in stack view, not for pulumi:pulumi:Stack)
 	if key.Matches(msg, ui.Keys.DeleteFromState) {
-		if m.viewMode == ui.ViewStack {
-			item := m.resourceList.SelectedItem()
-			if item != nil && item.Type != "pulumi:pulumi:Stack" {
-				m.confirmModal.SetLabels("Cancel", "Delete")
-				m.confirmModal.ShowWithContext(
-					"Delete from State",
-					fmt.Sprintf("Remove '%s' from Pulumi state?\n\nType: %s", item.Name, item.Type),
-					"This will NOT delete the actual resource.\nThe resource will become unmanaged by Pulumi.",
-					item.URN,
-					item.Name,
-					item.Type,
-				)
-				return m, nil
-			}
+		item := m.ui.ResourceList.SelectedItem()
+		if CanDeleteFromState(m.ui.ViewMode, item) {
+			m.ui.ConfirmModal.SetLabels("Cancel", "Delete")
+			m.ui.ConfirmModal.ShowWithContext(
+				"Delete from State",
+				fmt.Sprintf("Remove '%s' from Pulumi state?\n\nType: %s", item.Name, item.Type),
+				"This will NOT delete the actual resource.\nThe resource will become unmanaged by Pulumi.",
+				item.URN,
+				item.Name,
+				item.Type,
+			)
+			m.showConfirmModal()
+			return m, nil
 		}
 	}
 
@@ -195,83 +298,38 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleEscape handles escape key presses based on current state
 func (m Model) handleEscape() (tea.Model, tea.Cmd) {
-	// Clear text selection first if active (details panel)
-	if m.details.HasSelection() {
-		m.details.ClearSelection()
-		return m, nil
-	}
-	// Cancel visual mode
-	if m.resourceList.VisualMode() {
-		cmd := m.resourceList.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	// Determine action using pure function
+	action := DetermineEscapeAction(m.ui.ViewMode, m.state.OpState, m.ui.ResourceList.VisualMode())
+
+	switch action {
+	case EscapeActionExitVisualMode:
+		cmd := m.ui.ResourceList.Update(tea.KeyMsg{Type: tea.KeyEscape})
 		return m, cmd
-	}
-	// Close details panel if visible
-	if m.viewMode == ui.ViewHistory && m.historyDetails.Visible() {
-		m.historyDetails.Hide()
+	case EscapeActionCancelOp:
+		m.cancelOperation()
 		return m, nil
-	}
-	if m.details.Visible() {
-		m.details.Hide()
-		return m, nil
-	}
-	// Cancel running operation
-	if m.viewMode == ui.ViewExecute && m.operationCancel != nil {
-		m.operationCancel()
-		return m, nil
-	}
-	// Go back to stack view from preview, history, or completed execution
-	if m.viewMode == ui.ViewPreview || m.viewMode == ui.ViewExecute || m.viewMode == ui.ViewHistory {
+	case EscapeActionNavigateBack:
 		return m, m.switchToStackView()
 	}
-	return m, nil
-}
 
-// handleToggleDetails toggles the appropriate details panel based on view mode
-func (m Model) handleToggleDetails() (tea.Model, tea.Cmd) {
-	if m.viewMode == ui.ViewHistory {
-		// Toggle history details panel
-		m.historyDetails.Toggle()
-		if m.historyDetails.Visible() {
-			m.historyDetails.SetItem(m.historyList.SelectedItem())
-		}
-	} else {
-		// Toggle resource details panel
-		m.details.Toggle()
-		if m.details.Visible() {
-			m.details.SetResource(m.resourceList.SelectedItem())
-		}
-	}
 	return m, nil
 }
 
 // handleListNavigation forwards keys to the appropriate list component
 func (m Model) handleListNavigation(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.viewMode == ui.ViewHistory {
-		// Handle scrolling in history details panel
-		if m.historyDetails.Visible() {
-			if m.handleDetailsPanelScroll(msg, m.historyDetails) {
-				return m, nil
-			}
-		}
-		cmd := m.historyList.Update(msg)
-		// Update history details panel with newly selected item
-		if m.historyDetails.Visible() {
-			m.historyDetails.SetItem(m.historyList.SelectedItem())
+	if m.ui.ViewMode == ui.ViewHistory {
+		cmd := m.ui.HistoryList.Update(msg)
+		// Update history details panel with newly selected item if visible
+		if m.ui.Focus.Has(ui.FocusDetailsPanel) {
+			m.ui.HistoryDetails.SetItem(m.ui.HistoryList.SelectedItem())
 		}
 		return m, cmd
 	}
 
-	// Handle scrolling in details panel
-	if m.details.Visible() {
-		if m.handleDetailsPanelScroll(msg, m.details) {
-			return m, nil
-		}
-	}
-
-	cmd := m.resourceList.Update(msg)
-	// Update details panel with newly selected resource
-	if m.details.Visible() {
-		m.details.SetResource(m.resourceList.SelectedItem())
+	cmd := m.ui.ResourceList.Update(msg)
+	// Update details panel with newly selected resource if visible
+	if m.ui.Focus.Has(ui.FocusDetailsPanel) {
+		m.ui.Details.SetResource(m.ui.ResourceList.SelectedItem())
 	}
 	return m, cmd
 }
@@ -282,31 +340,4 @@ type scrollablePanel interface {
 	ScrollDown(lines int)
 	SetScrollOffset(offset int)
 	ScrollOffset() int
-}
-
-// handleDetailsPanelScroll handles scroll keys for detail panels
-// Returns true if the key was handled (consumed for scrolling)
-func (m Model) handleDetailsPanelScroll(msg tea.KeyMsg, panel scrollablePanel) bool {
-	switch {
-	case key.Matches(msg, ui.Keys.Up):
-		panel.ScrollUp(1)
-		return true
-	case key.Matches(msg, ui.Keys.Down):
-		panel.ScrollDown(1)
-		return true
-	case key.Matches(msg, ui.Keys.PageUp):
-		panel.ScrollUp(10)
-		return true
-	case key.Matches(msg, ui.Keys.PageDown):
-		panel.ScrollDown(10)
-		return true
-	case key.Matches(msg, ui.Keys.Home):
-		panel.SetScrollOffset(0)
-		return true
-	case key.Matches(msg, ui.Keys.End):
-		// Set to a large value - the render will clamp it
-		panel.SetScrollOffset(9999)
-		return true
-	}
-	return false
 }

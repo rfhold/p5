@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+          ╭─────────────────────────────────────────────────────────╮           
+          │                                                         │           
+          │  Configure Resource                                     │           
+          │                                                         │           
+          │  Select Option                                          │           
+          │                                                         │           
+          │  Resource: my-bucket                                    │           
+          │  Type: aws:s3/bucket:Bucket                             │           
+          │                                                         │           
+          │  Option                                                 │           
+          │  > Enter option...                                      │           
+          │                                                         │           
+          │  enter confirm  esc cancel                              │           
+          │                                                         │           
+          ╰─────────────────────────────────────────────────────────╯           
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

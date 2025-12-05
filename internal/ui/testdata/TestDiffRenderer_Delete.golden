@@ -1,0 +1,6 @@
+- name: "my-bucket"
+- region: "us-west-2"
+
+── Computed ──
+- arn: "arn:aws:s3:::my-bucket"
+- id: "bucket-12345"

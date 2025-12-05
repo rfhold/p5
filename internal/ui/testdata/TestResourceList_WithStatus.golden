@@ -1,0 +1,7 @@
+                                                    
+  > [+] aws:s3/bucket:Bucket  bucket-1 created      
+    [~] aws:s3/bucket:Bucket  bucket-2 updating...  
+    [-] aws:s3/bucket:Bucket  bucket-3 pending      
+    [+] aws:s3/bucket:Bucket  bucket-4 failed       
+                                                    
+                                                    

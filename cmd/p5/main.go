@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,10 +12,11 @@ import (
 	_ "github.com/rfhold/p5/internal/plugins/builtins" // Register builtin plugins
 )
 
-// Package-level variables for CLI arguments
-var workDir string
-var stackName string
-var startView string
+// Package-level variables for CLI argument parsing.
+// These are required by the flag package and are transferred to AppContext at startup.
+var argWorkDir string
+var argStackName string
+var argDebug bool
 
 // Update handles messages
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -30,10 +33,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func main() {
-	flag.StringVar(&workDir, "C", "", "Run as if p5 was started in `path`")
-	flag.StringVar(&workDir, "cwd", "", "Run as if p5 was started in `path`")
-	flag.StringVar(&stackName, "s", "", "Select the Pulumi `stack` to use")
-	flag.StringVar(&stackName, "stack", "", "Select the Pulumi `stack` to use")
+	flag.StringVar(&argWorkDir, "C", "", "Run as if p5 was started in `path`")
+	flag.StringVar(&argWorkDir, "cwd", "", "Run as if p5 was started in `path`")
+	flag.StringVar(&argStackName, "s", "", "Select the Pulumi `stack` to use")
+	flag.StringVar(&argStackName, "stack", "", "Select the Pulumi `stack` to use")
+	flag.BoolVar(&argDebug, "debug", false, "Enable debug logging")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: p5 [flags] [command]\n\n")
 		fmt.Fprintf(os.Stderr, "Commands:\n")
@@ -45,25 +49,46 @@ func main() {
 	}
 	flag.Parse()
 
+	// Disable logging by default, enable with -debug flag
+	if !argDebug {
+		log.SetOutput(io.Discard)
+	}
+
+	// Get current working directory (where app was launched from)
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Build AppContext from CLI arguments
+	ctx := AppContext{
+		Cwd:       cwd,
+		StackName: argStackName,
+		StartView: "stack",
+	}
+
 	// Get command from positional argument
 	args := flag.Args()
 	if len(args) > 0 {
-		startView = args[0]
-	} else {
-		startView = "stack"
+		ctx.StartView = args[0]
 	}
 
 	// Default to current directory if not specified
-	if workDir == "" {
-		var err error
-		workDir, err = os.Getwd()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+	if argWorkDir == "" {
+		ctx.WorkDir = cwd
+	} else {
+		ctx.WorkDir = argWorkDir
 	}
 
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
+	// Create production dependencies
+	deps, err := NewProductionDependencies(ctx.WorkDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing dependencies: %v\n", err)
+		os.Exit(1)
+	}
+
+	p := tea.NewProgram(initialModel(ctx, deps), tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

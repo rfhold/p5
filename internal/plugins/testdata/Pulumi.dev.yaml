@@ -1,0 +1,8 @@
+config:
+  p5:plugins:
+    aws:
+      config:
+        region: us-west-2
+        account: "123456789"
+    kubernetes:
+      namespace: production

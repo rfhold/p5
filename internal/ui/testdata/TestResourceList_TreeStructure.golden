@@ -1,0 +1,7 @@
+                                             
+  > [ ] pulumi:pulumi:Stack  my-stack        
+    └─ [ ] my:component:Component  parent    
+       ├─ [+] aws:s3/bucket:Bucket  child-1  
+       └─ [~] aws:s3/bucket:Bucket  child-2  
+                                             
+                                             

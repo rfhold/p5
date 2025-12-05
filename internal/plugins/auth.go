@@ -262,8 +262,10 @@ func (m *Manager) GetCredentialsSummary() []CredentialsSummary {
 
 // LoadAndAuthenticate is a convenience method that loads plugins and authenticates
 func (m *Manager) LoadAndAuthenticate(ctx context.Context, workDir, programName, stackName string) ([]AuthenticateResult, error) {
-	// Load global config from p5.toml (git root or launch dir)
-	globalConfig, globalPath, err := LoadGlobalConfig(m.launchDir)
+	// Load global config from p5.toml (git root or workDir)
+	// Use workDir instead of launchDir so that when a workspace is selected via UI,
+	// we find p5.toml relative to that workspace rather than where p5 was launched
+	globalConfig, globalPath, err := LoadGlobalConfig(workDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load global config: %w", err)
 	}

@@ -3,8 +3,12 @@ package pulumi
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"gopkg.in/yaml.v3"
 )
 
 // FetchProjectInfo loads project info from the specified directory
@@ -133,4 +137,127 @@ func resolveStackName(ctx context.Context, workDir string, stackName string) (st
 		return stacks[0].Name, nil
 	}
 	return "", fmt.Errorf("no stacks found")
+}
+
+// WhoAmIInfo contains backend connection information
+type WhoAmIInfo struct {
+	User string
+	URL  string
+}
+
+// GetWhoAmI returns the current backend user and URL
+func GetWhoAmI(ctx context.Context, workDir string) (*WhoAmIInfo, error) {
+	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(workDir))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	whoami, err := ws.WhoAmIDetails(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get whoami: %w", err)
+	}
+
+	return &WhoAmIInfo{
+		User: whoami.User,
+		URL:  whoami.URL,
+	}, nil
+}
+
+// StackFileInfo describes a stack config file
+type StackFileInfo struct {
+	Name            string
+	FilePath        string
+	SecretsProvider string
+	HasEncryption   bool
+}
+
+// ListStackFiles finds all Pulumi.<stack>.yaml files in the workspace
+// and extracts secrets provider configuration from each
+func ListStackFiles(workDir string) ([]StackFileInfo, error) {
+	pattern := filepath.Join(workDir, "Pulumi.*.yaml")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to glob stack files: %w", err)
+	}
+
+	var files []StackFileInfo
+	for _, match := range matches {
+		filename := filepath.Base(match)
+		// Extract stack name from Pulumi.<stack>.yaml
+		if !strings.HasPrefix(filename, "Pulumi.") || !strings.HasSuffix(filename, ".yaml") {
+			continue
+		}
+		stackName := strings.TrimPrefix(filename, "Pulumi.")
+		stackName = strings.TrimSuffix(stackName, ".yaml")
+
+		// Parse the YAML to extract secrets provider info
+		info := StackFileInfo{
+			Name:     stackName,
+			FilePath: match,
+		}
+
+		data, err := os.ReadFile(match)
+		if err == nil {
+			var config map[string]interface{}
+			if yaml.Unmarshal(data, &config) == nil {
+				// Check for secretsprovider
+				if sp, ok := config["secretsprovider"]; ok {
+					if spStr, ok := sp.(string); ok {
+						info.SecretsProvider = spStr
+					}
+				}
+				// Check for encryptionsalt or encryptedkey (indicates existing encryption)
+				if _, ok := config["encryptionsalt"]; ok {
+					info.HasEncryption = true
+				}
+				if _, ok := config["encryptedkey"]; ok {
+					info.HasEncryption = true
+				}
+			}
+		}
+
+		files = append(files, info)
+	}
+
+	return files, nil
+}
+
+// InitStackOptions contains options for stack initialization
+type InitStackOptions struct {
+	SecretsProvider string
+	Passphrase      string            // For passphrase-based secrets provider
+	Env             map[string]string // Additional environment variables
+}
+
+// InitStack creates a new stack with the given configuration
+func InitStack(ctx context.Context, workDir, stackName string, opts InitStackOptions) error {
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+
+	// Build env vars
+	env := make(map[string]string)
+	for k, v := range opts.Env {
+		env[k] = v
+	}
+
+	// Set passphrase if provided
+	if opts.Passphrase != "" {
+		env["PULUMI_CONFIG_PASSPHRASE"] = opts.Passphrase
+	}
+
+	// Set secrets provider if provided
+	if opts.SecretsProvider != "" {
+		wsOpts = append(wsOpts, auto.SecretsProvider(opts.SecretsProvider))
+	}
+
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+
+	// Create the stack
+	_, err := auto.NewStackLocalSource(ctx, stackName, workDir, wsOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to create stack: %w", err)
+	}
+
+	return nil
 }

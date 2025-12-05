@@ -57,7 +57,7 @@ func runPulumiCommand(ctx context.Context, workDir string, env map[string]string
 // resourceName is the logical name for the resource in Pulumi
 // importID is the provider-specific ID of the existing resource to import
 // parentURN is optional - if provided, the resource will be imported as a child of this resource
-func ImportResource(ctx context.Context, workDir, stackName string, resourceType, resourceName, importID, parentURN string, opts ImportOptions) (*ImportResult, error) {
+func ImportResource(ctx context.Context, workDir, stackName string, resourceType, resourceName, importID, parentURN string, opts ImportOptions) (*CommandResult, error) {
 	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
 	if err != nil {
 		return nil, err
@@ -84,14 +84,14 @@ func ImportResource(ctx context.Context, workDir, stackName string, resourceType
 
 	output, err := runPulumiCommand(ctx, workDir, opts.Env, args...)
 	if err != nil {
-		return &ImportResult{
+		return &CommandResult{
 			Success: false,
 			Output:  output,
 			Error:   fmt.Errorf("import failed: %w\n%s", err, output),
 		}, nil
 	}
 
-	return &ImportResult{
+	return &CommandResult{
 		Success: true,
 		Output:  output,
 	}, nil
@@ -99,7 +99,7 @@ func ImportResource(ctx context.Context, workDir, stackName string, resourceType
 
 // DeleteFromState removes a resource from the Pulumi state without deleting the actual resource
 // urn is the full URN of the resource to remove from state
-func DeleteFromState(ctx context.Context, workDir, stackName string, urn string, opts StateDeleteOptions) (*StateDeleteResult, error) {
+func DeleteFromState(ctx context.Context, workDir, stackName string, urn string, opts StateDeleteOptions) (*CommandResult, error) {
 	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
 	if err != nil {
 		return nil, err
@@ -117,14 +117,14 @@ func DeleteFromState(ctx context.Context, workDir, stackName string, urn string,
 
 	output, err := runPulumiCommand(ctx, workDir, opts.Env, args...)
 	if err != nil {
-		return &StateDeleteResult{
+		return &CommandResult{
 			Success: false,
 			Output:  output,
 			Error:   fmt.Errorf("state delete failed: %w\n%s", err, output),
 		}, nil
 	}
 
-	return &StateDeleteResult{
+	return &CommandResult{
 		Success: true,
 		Output:  output,
 	}, nil

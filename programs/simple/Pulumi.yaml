@@ -1,0 +1,8 @@
+name: p5-test-project
+runtime: go
+description: A test Pulumi project for development
+p5:
+  plugins:
+    env:
+      config:
+        sources: '[{"type":"static","vars":{"BASE_VAR":"from-pulumi-yaml","OVERRIDE_VAR":"base-value"}}]'

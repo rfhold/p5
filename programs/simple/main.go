@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/local"
@@ -72,11 +73,19 @@ func main() {
 			"static": pulumi.String("this value does not change"),
 		}
 
+		// Export env vars to confirm they get set and merged correctly
+		envVars := pulumi.Map{
+			"BASE_VAR":     pulumi.String(os.Getenv("BASE_VAR")),
+			"STACK_VAR":    pulumi.String(os.Getenv("STACK_VAR")),
+			"OVERRIDE_VAR": pulumi.String(os.Getenv("OVERRIDE_VAR")),
+		}
+
 		ctx.Export("petName", pet.ID())
 		ctx.Export("sleepOutput", sleepCmd.Stdout)
 		ctx.Export("replaceOutput", replaceCmd.Stdout)
 		ctx.Export("message", pulumi.String("Hello from p5 test project!"))
 		ctx.Export("metadata", metadata)
+		ctx.Export("envVars", envVars)
 		return nil
 	})
 }

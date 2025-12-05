@@ -1,0 +1,4 @@
+~ name: "my-bucket" > "my-bucket-renamed"
++ newField: "just-added"
+- oldField: "will-be-removed"
+  unchanged: "stays-same"

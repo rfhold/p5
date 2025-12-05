@@ -1,0 +1,17 @@
+name: test-project
+runtime: go
+p5:
+  plugins:
+    aws:
+      cmd: /usr/bin/aws-plugin
+      args:
+        - "--verbose"
+      config:
+        region: us-east-1
+        profile: default
+      refresh:
+        onWorkspaceChange: true
+        onStackChange: false
+    kubernetes:
+      cmd: /usr/bin/k8s-plugin
+      import_helper: true

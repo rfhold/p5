@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -13,30 +12,32 @@ import (
 	"github.com/rfhold/p5/internal/ui"
 )
 
-// checkWorkspace verifies if the current working directory is a Pulumi workspace
-func checkWorkspace() tea.Msg {
-	return workspaceCheckMsg(pulumi.IsWorkspace(workDir))
-}
-
-// continueInit continues initialization after workspace check passes
-// First authenticates plugins, then proceeds with normal init
-func (m Model) continueInit() tea.Cmd {
-	// Authenticate plugins first - they may set env vars needed for Pulumi operations
-	return m.authenticatePluginsForInit()
+// checkWorkspace returns a command to verify if the working directory is a Pulumi workspace
+func (m *Model) checkWorkspace() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	workspaceReader := m.deps.WorkspaceReader
+	return func() tea.Msg {
+		return workspaceCheckMsg(workspaceReader.IsWorkspace(workDir))
+	}
 }
 
 // authenticatePluginsForInit authenticates plugins during initialization
-// This runs before any Pulumi operations to ensure env vars are set
+// This runs before any Pulumi operations to ensure env vars are set.
+// Returns pluginInitDoneMsg which is handled by the init state machine.
 func (m *Model) authenticatePluginsForInit() tea.Cmd {
-	if m.pluginManager == nil {
-		// No plugin manager, continue with normal init
-		return m.continueInitAfterPlugins()
+	if m.deps == nil || m.deps.PluginProvider == nil {
+		// No plugin provider, return empty result to continue init flow
+		return func() tea.Msg {
+			return pluginInitDoneMsg{results: nil, err: nil}
+		}
 	}
 
+	workDir := m.ctx.WorkDir
+	pluginProvider := m.deps.PluginProvider
 	return func() tea.Msg {
 		// Load and authenticate plugins with minimal context
 		// We don't have stack name yet, but plugins can still load from p5.toml
-		results, err := m.pluginManager.LoadAndAuthenticate(
+		results, err := pluginProvider.Initialize(
 			context.Background(),
 			workDir,
 			"", // program name not known yet
@@ -50,28 +51,25 @@ func (m *Model) authenticatePluginsForInit() tea.Cmd {
 	}
 }
 
-// continueInitAfterPlugins continues initialization after plugins are authenticated
-func (m Model) continueInitAfterPlugins() tea.Cmd {
-	// If no stack name specified, we need to check if there's a current stack
-	// or show the stack selector
-	if stackName == "" {
-		// Fetch stacks first to determine if we need to show selector
-		return fetchStacksList
-	}
-	// Stack specified, proceed normally
-	cmds := []tea.Cmd{fetchProjectInfo}
-	if m.viewMode == ui.ViewPreview {
-		cmds = append(cmds, m.initPreview(m.operation))
-	} else {
-		cmds = append(cmds, m.initLoadStackResources())
-	}
-	return tea.Batch(cmds...)
+// authenticatePluginsForWorkspace authenticates plugins after a workspace is selected
+// This reuses the same pluginInitDoneMsg flow as initial authentication, ensuring
+// that env vars are set before any Pulumi operations (like fetching stacks)
+func (m *Model) authenticatePluginsForWorkspace() tea.Cmd {
+	// Reuse the same authentication flow - it will:
+	// 1. Load p5.toml from the new workDir
+	// 2. Authenticate plugins
+	// 3. Return pluginInitDoneMsg
+	// 4. handlePluginInitDone in the state machine handles the rest
+	return m.authenticatePluginsForInit()
 }
 
 // initLoadStackResources returns a command to load stack resources (for use in Init)
 func (m Model) initLoadStackResources() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	stackReader := m.deps.StackReader
 	return func() tea.Msg {
-		resources, err := pulumi.GetStackResources(context.Background(), workDir, stackName)
+		resources, err := stackReader.GetResources(context.Background(), workDir, stackName)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -81,25 +79,18 @@ func (m Model) initLoadStackResources() tea.Cmd {
 
 // initPreview returns a command to start a preview (for use in Init)
 func (m Model) initPreview(op pulumi.OperationType) tea.Cmd {
-	ch := make(chan pulumi.PreviewEvent)
-
 	// Build options from flags
 	opts := pulumi.OperationOptions{
-		Targets:  m.resourceList.GetTargetURNs(),
-		Replaces: m.resourceList.GetReplaceURNs(),
+		Targets:  m.ui.ResourceList.GetTargetURNs(),
+		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
 
-	// Start preview in background
-	go func() {
-		switch op {
-		case pulumi.OperationUp:
-			pulumi.RunUpPreview(context.Background(), workDir, stackName, opts, ch)
-		case pulumi.OperationRefresh:
-			pulumi.RunRefreshPreview(context.Background(), workDir, stackName, opts, ch)
-		case pulumi.OperationDestroy:
-			pulumi.RunDestroyPreview(context.Background(), workDir, stackName, opts, ch)
-		}
-	}()
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	stackOperator := m.deps.StackOperator
+
+	// Use injected StackOperator - it owns the channel and returns receive-only
+	ch := stackOperator.Preview(context.Background(), workDir, stackName, op, opts)
 
 	return func() tea.Msg {
 		return initPreviewMsg{op: op, ch: ch}
@@ -108,10 +99,13 @@ func (m Model) initPreview(op pulumi.OperationType) tea.Cmd {
 
 // loadStackResources fetches stack resources
 func (m *Model) loadStackResources() tea.Cmd {
-	m.resourceList.SetLoading(true, "Loading stack resources...")
-	m.resourceList.SetShowAllOps(true)
+	m.ui.ResourceList.SetLoading(true, "Loading stack resources...")
+	m.ui.ResourceList.SetShowAllOps(true)
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	stackReader := m.deps.StackReader
 	return func() tea.Msg {
-		resources, err := pulumi.GetStackResources(context.Background(), workDir, stackName)
+		resources, err := stackReader.GetResources(context.Background(), workDir, stackName)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -121,39 +115,34 @@ func (m *Model) loadStackResources() tea.Cmd {
 
 // startPreview starts a preview operation
 func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
-	m.viewMode = ui.ViewPreview
-	m.operation = op
-	m.header.SetViewMode(m.viewMode)
-	m.header.SetOperation(m.operation)
-	m.details.Hide() // Close details panel when view changes
-	m.resourceList.Clear()
-	m.resourceList.SetShowAllOps(false) // Hide unchanged resources
-	m.resourceList.SetLoading(true, fmt.Sprintf("Running %s preview...", op.String()))
+	// Transition operation state
+	m.transitionOpTo(OpStarting)
+
+	m.ui.ViewMode = ui.ViewPreview
+	m.state.Operation = op
+	m.ui.Header.SetViewMode(m.ui.ViewMode)
+	m.ui.Header.SetOperation(m.state.Operation)
+	m.ui.Details.Hide() // Close details panel when view changes
+	m.ui.ResourceList.Clear()
+	m.ui.ResourceList.SetShowAllOps(false) // Hide unchanged resources
+	m.ui.ResourceList.SetLoading(true, fmt.Sprintf("Running %s preview...", op.String()))
 
 	// Build options from flags
 	opts := pulumi.OperationOptions{
-		Targets:  m.resourceList.GetTargetURNs(),
-		Replaces: m.resourceList.GetReplaceURNs(),
+		Targets:  m.ui.ResourceList.GetTargetURNs(),
+		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
 
 	// Add plugin credentials as env vars
-	if m.pluginManager != nil {
-		opts.Env = m.pluginManager.GetAllEnv()
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
 	}
 
-	m.previewCh = make(chan pulumi.PreviewEvent)
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
 
-	// Start preview in background
-	go func() {
-		switch op {
-		case pulumi.OperationUp:
-			pulumi.RunUpPreview(context.Background(), workDir, stackName, opts, m.previewCh)
-		case pulumi.OperationRefresh:
-			pulumi.RunRefreshPreview(context.Background(), workDir, stackName, opts, m.previewCh)
-		case pulumi.OperationDestroy:
-			pulumi.RunDestroyPreview(context.Background(), workDir, stackName, opts, m.previewCh)
-		}
-	}()
+	// Use injected StackOperator - it owns the channel and returns receive-only
+	m.previewCh = m.deps.StackOperator.Preview(context.Background(), workDir, stackName, op, opts)
 
 	return waitForPreviewEvent(m.previewCh)
 }
@@ -162,97 +151,109 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 // Confirmation is needed if the user is not on the preview screen for the requested operation
 func (m *Model) maybeConfirmExecution(op pulumi.OperationType) tea.Cmd {
 	// If we're on the preview screen for this exact operation, execute directly
-	if m.viewMode == ui.ViewPreview && m.operation == op {
+	if m.ui.ViewMode == ui.ViewPreview && m.state.Operation == op {
 		return m.startExecution(op)
 	}
 
 	// Otherwise, show confirmation modal
-	m.pendingOperation = &op
-	m.confirmModal.SetLabels("Cancel", "Execute")
-	m.confirmModal.SetKeys("n", "y")
-	m.confirmModal.Show(
+	m.state.PendingOperation = &op
+	m.ui.ConfirmModal.SetLabels("Cancel", "Execute")
+	m.ui.ConfirmModal.SetKeys("n", "y")
+	m.ui.ConfirmModal.Show(
 		fmt.Sprintf("Execute %s", op.String()),
 		fmt.Sprintf("Run %s without previewing changes first?", op.String()),
 		"This will apply changes to your infrastructure.",
 	)
+	m.showConfirmModal()
 	return nil
 }
 
 // startExecution starts an execution operation
 func (m *Model) startExecution(op pulumi.OperationType) tea.Cmd {
-	m.viewMode = ui.ViewExecute
-	m.operation = op
-	m.header.SetViewMode(m.viewMode)
-	m.header.SetOperation(m.operation)
-	m.details.Hide() // Close details panel when view changes
+	// Transition operation state
+	m.transitionOpTo(OpStarting)
+
+	m.ui.ViewMode = ui.ViewExecute
+	m.state.Operation = op
+	m.ui.Header.SetViewMode(m.ui.ViewMode)
+	m.ui.Header.SetOperation(m.state.Operation)
+	m.ui.Details.Hide() // Close details panel when view changes
 
 	// Clear the list and show events as they stream in
-	m.resourceList.Clear()
-	m.resourceList.SetShowAllOps(false)
-	m.resourceList.SetLoading(true, fmt.Sprintf("Executing %s...", op.String()))
+	m.ui.ResourceList.Clear()
+	m.ui.ResourceList.SetShowAllOps(false)
+	m.ui.ResourceList.SetLoading(true, fmt.Sprintf("Executing %s...", op.String()))
 
 	// Build options from flags
 	opts := pulumi.OperationOptions{
-		Targets:  m.resourceList.GetTargetURNs(),
-		Replaces: m.resourceList.GetReplaceURNs(),
+		Targets:  m.ui.ResourceList.GetTargetURNs(),
+		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
 
 	// Add plugin credentials as env vars
-	if m.pluginManager != nil {
-		opts.Env = m.pluginManager.GetAllEnv()
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
 	}
 
 	// Create cancellable context
 	m.operationCtx, m.operationCancel = context.WithCancel(context.Background())
-	m.operationCh = make(chan pulumi.OperationEvent)
 
-	// Start execution in background
-	go func() {
-		switch op {
-		case pulumi.OperationUp:
-			pulumi.RunUp(m.operationCtx, workDir, stackName, opts, m.operationCh)
-		case pulumi.OperationRefresh:
-			pulumi.RunRefresh(m.operationCtx, workDir, stackName, opts, m.operationCh)
-		case pulumi.OperationDestroy:
-			pulumi.RunDestroy(m.operationCtx, workDir, stackName, opts, m.operationCh)
-		}
-	}()
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	stackOperator := m.deps.StackOperator
+
+	// Use injected StackOperator - it owns the channel and returns receive-only
+	switch op {
+	case pulumi.OperationUp:
+		m.operationCh = stackOperator.Up(m.operationCtx, workDir, stackName, opts)
+	case pulumi.OperationRefresh:
+		m.operationCh = stackOperator.Refresh(m.operationCtx, workDir, stackName, opts)
+	case pulumi.OperationDestroy:
+		m.operationCh = stackOperator.Destroy(m.operationCtx, workDir, stackName, opts)
+	}
 
 	return waitForOperationEvent(m.operationCh)
 }
 
 // switchToStackView switches back to stack view
 func (m *Model) switchToStackView() tea.Cmd {
-	m.viewMode = ui.ViewStack
-	m.header.SetViewMode(m.viewMode)
-	m.details.Hide() // Close details panel when view changes
-	m.resourceList.Clear()
-	m.resourceList.SetShowAllOps(true)
+	// Reset operation state when leaving preview/execute views
+	m.resetOperation()
+
+	m.ui.ViewMode = ui.ViewStack
+	m.ui.Header.SetViewMode(m.ui.ViewMode)
+	m.ui.Details.Hide() // Close details panel when view changes
+	m.ui.ResourceList.Clear()
+	m.ui.ResourceList.SetShowAllOps(true)
 	return m.loadStackResources()
 }
 
 // switchToHistoryView switches to history view
 func (m *Model) switchToHistoryView() tea.Cmd {
-	m.viewMode = ui.ViewHistory
-	m.header.SetViewMode(m.viewMode)
-	m.details.Hide() // Close resource details panel when switching views
-	m.historyList.Clear()
-	m.historyList.SetLoading(true, "Loading stack history...")
-	return fetchStackHistory
+	m.ui.ViewMode = ui.ViewHistory
+	m.ui.Header.SetViewMode(m.ui.ViewMode)
+	m.ui.Details.Hide() // Close resource details panel when switching views
+	m.ui.HistoryList.Clear()
+	m.ui.HistoryList.SetLoading(true, "Loading stack history...")
+	return m.fetchStackHistory()
 }
 
 // executeStateDelete runs the pulumi state delete command
 func (m *Model) executeStateDelete() tea.Cmd {
-	urn := m.confirmModal.GetContextURN()
+	urn := m.ui.ConfirmModal.GetContextURN()
 
 	// Build options with plugin env vars
 	opts := pulumi.StateDeleteOptions{}
-	if m.pluginManager != nil {
-		opts.Env = m.pluginManager.GetAllEnv()
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
 	}
 
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	resourceImporter := m.deps.ResourceImporter
+
 	return func() tea.Msg {
-		result, err := pulumi.DeleteFromState(
+		result, err := resourceImporter.StateDelete(
 			context.Background(),
 			workDir,
 			stackName,
@@ -260,7 +261,7 @@ func (m *Model) executeStateDelete() tea.Cmd {
 			opts,
 		)
 		if err != nil {
-			return stateDeleteResultMsg(&pulumi.StateDeleteResult{
+			return stateDeleteResultMsg(&pulumi.CommandResult{
 				Success: false,
 				Error:   err,
 			})
@@ -271,19 +272,23 @@ func (m *Model) executeStateDelete() tea.Cmd {
 
 // executeImport runs the pulumi import command
 func (m *Model) executeImport() tea.Cmd {
-	resourceType := m.importModal.GetResourceType()
-	resourceName := m.importModal.GetResourceName()
-	importID := m.importModal.GetImportID()
-	parentURN := m.importModal.GetParentURN()
+	resourceType := m.ui.ImportModal.GetResourceType()
+	resourceName := m.ui.ImportModal.GetResourceName()
+	importID := m.ui.ImportModal.GetImportID()
+	parentURN := m.ui.ImportModal.GetParentURN()
 
 	// Build import options with plugin env vars
 	opts := pulumi.ImportOptions{}
-	if m.pluginManager != nil {
-		opts.Env = m.pluginManager.GetAllEnv()
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
 	}
 
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	resourceImporter := m.deps.ResourceImporter
+
 	return func() tea.Msg {
-		result, err := pulumi.ImportResource(
+		result, err := resourceImporter.Import(
 			context.Background(),
 			workDir,
 			stackName,
@@ -294,7 +299,7 @@ func (m *Model) executeImport() tea.Cmd {
 			opts,
 		)
 		if err != nil {
-			return importResultMsg(&pulumi.ImportResult{
+			return importResultMsg(&pulumi.CommandResult{
 				Success: false,
 				Error:   err,
 			})
@@ -303,18 +308,23 @@ func (m *Model) executeImport() tea.Cmd {
 	}
 }
 
-// fetchStackHistory loads the stack history
-func fetchStackHistory() tea.Msg {
-	history, err := pulumi.GetStackHistory(context.Background(), workDir, stackName, 50, 1)
-	if err != nil {
-		return errMsg(err)
+// fetchStackHistory returns a command to load the stack history
+func (m *Model) fetchStackHistory() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	stackReader := m.deps.StackReader
+	return func() tea.Msg {
+		history, err := stackReader.GetHistory(context.Background(), workDir, stackName, pulumi.DefaultHistoryPageSize, pulumi.DefaultHistoryPage)
+		if err != nil {
+			return errMsg(err)
+		}
+		return stackHistoryMsg(history)
 	}
-	return stackHistoryMsg(history)
 }
 
 // fetchImportSuggestions queries plugins for import suggestions
 func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, parentURN string, inputs map[string]interface{}) tea.Cmd {
-	if m.pluginManager == nil {
+	if m.deps == nil || m.deps.PluginProvider == nil {
 		return func() tea.Msg {
 			return importSuggestionsMsg(nil)
 		}
@@ -343,7 +353,7 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 			Inputs:       inputStrings,
 		}
 
-		suggestions, err := m.pluginManager.GetImportSuggestions(context.Background(), req)
+		suggestions, err := m.deps.PluginProvider.GetImportSuggestions(context.Background(), req)
 		if err != nil {
 			return importSuggestionsErrMsg(err)
 		}
@@ -353,18 +363,22 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 
 // authenticatePlugins triggers plugin authentication for the current workspace/stack
 func (m *Model) authenticatePlugins() tea.Cmd {
-	if m.pluginManager == nil {
+	if m.deps == nil || m.deps.PluginProvider == nil {
 		return nil
 	}
 
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	pluginProvider := m.deps.PluginProvider
+	workspaceReader := m.deps.WorkspaceReader
 	return func() tea.Msg {
 		// Get project info for the program name
-		info, err := pulumi.FetchProjectInfo(context.Background(), workDir, stackName)
+		info, err := workspaceReader.GetProjectInfo(context.Background(), workDir, stackName)
 		if err != nil {
 			return pluginAuthErrorMsg(err)
 		}
 
-		results, err := m.pluginManager.LoadAndAuthenticate(
+		results, err := pluginProvider.Initialize(
 			context.Background(),
 			workDir,
 			info.ProgramName,
@@ -379,7 +393,7 @@ func (m *Model) authenticatePlugins() tea.Cmd {
 }
 
 // waitForPreviewEvent waits for the next preview event
-func waitForPreviewEvent(ch chan pulumi.PreviewEvent) tea.Cmd {
+func waitForPreviewEvent(ch <-chan pulumi.PreviewEvent) tea.Cmd {
 	return func() tea.Msg {
 		event, ok := <-ch
 		if !ok {
@@ -390,7 +404,7 @@ func waitForPreviewEvent(ch chan pulumi.PreviewEvent) tea.Cmd {
 }
 
 // waitForOperationEvent waits for the next operation event
-func waitForOperationEvent(ch chan pulumi.OperationEvent) tea.Cmd {
+func waitForOperationEvent(ch <-chan pulumi.OperationEvent) tea.Cmd {
 	return func() tea.Msg {
 		event, ok := <-ch
 		if !ok {
@@ -400,28 +414,39 @@ func waitForOperationEvent(ch chan pulumi.OperationEvent) tea.Cmd {
 	}
 }
 
-// fetchProjectInfo loads project info using Pulumi Automation API
-func fetchProjectInfo() tea.Msg {
-	info, err := pulumi.FetchProjectInfo(context.Background(), workDir, stackName)
-	if err != nil {
-		return errMsg(err)
+// fetchProjectInfo returns a command to load project info using Pulumi Automation API
+func (m *Model) fetchProjectInfo() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	workspaceReader := m.deps.WorkspaceReader
+	return func() tea.Msg {
+		info, err := workspaceReader.GetProjectInfo(context.Background(), workDir, stackName)
+		if err != nil {
+			return errMsg(err)
+		}
+		return projectInfoMsg(info)
 	}
-	return projectInfoMsg(info)
 }
 
-// fetchStacksList loads the list of available stacks
-func fetchStacksList() tea.Msg {
-	stacks, err := pulumi.ListStacks(context.Background(), workDir)
-	if err != nil {
-		return errMsg(err)
+// fetchStacksList returns a command to load the list of available stacks
+func (m *Model) fetchStacksList() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackReader := m.deps.StackReader
+	return func() tea.Msg {
+		stacks, err := stackReader.GetStacks(context.Background(), workDir)
+		if err != nil {
+			return errMsg(err)
+		}
+		return stacksListMsg(stacks)
 	}
-	return stacksListMsg(stacks)
 }
 
 // selectStack sets the current stack and reloads data
-func selectStack(name string) tea.Cmd {
+func (m *Model) selectStack(name string) tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackReader := m.deps.StackReader
 	return func() tea.Msg {
-		err := pulumi.SelectStack(context.Background(), workDir, name)
+		err := stackReader.SelectStack(context.Background(), workDir, name)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -429,23 +454,75 @@ func selectStack(name string) tea.Cmd {
 	}
 }
 
-// fetchWorkspacesList searches for Pulumi workspaces in the current directory tree
-func fetchWorkspacesList() tea.Msg {
-	// Search from current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return errMsg(err)
+// fetchWorkspacesList returns a command to search for Pulumi workspaces in the current directory tree
+func (m *Model) fetchWorkspacesList() tea.Cmd {
+	cwd := m.ctx.Cwd
+	workDir := m.ctx.WorkDir
+	workspaceReader := m.deps.WorkspaceReader
+	return func() tea.Msg {
+		workspaces, err := workspaceReader.FindWorkspaces(cwd, workDir)
+		if err != nil {
+			return errMsg(err)
+		}
+		return workspacesListMsg(workspaces)
 	}
-	workspaces, err := pulumi.FindWorkspaces(cwd, workDir)
-	if err != nil {
-		return errMsg(err)
-	}
-	return workspacesListMsg(workspaces)
 }
 
 // selectWorkspace changes the current workspace directory
 func selectWorkspace(path string) tea.Cmd {
 	return func() tea.Msg {
 		return workspaceSelectedMsg(path)
+	}
+}
+
+// fetchWhoAmI returns a command to get backend connection info
+func (m *Model) fetchWhoAmI() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	workspaceReader := m.deps.WorkspaceReader
+	return func() tea.Msg {
+		info, err := workspaceReader.GetWhoAmI(context.Background(), workDir)
+		if err != nil {
+			// Non-fatal - return empty info
+			return whoAmIMsg(&pulumi.WhoAmIInfo{})
+		}
+		return whoAmIMsg(info)
+	}
+}
+
+// fetchStackFiles returns a command to list stack config files in workspace
+func (m *Model) fetchStackFiles() tea.Cmd {
+	workDir := m.ctx.WorkDir
+	workspaceReader := m.deps.WorkspaceReader
+	return func() tea.Msg {
+		files, err := workspaceReader.ListStackFiles(workDir)
+		if err != nil {
+			// Non-fatal - return empty list
+			return stackFilesMsg(nil)
+		}
+		return stackFilesMsg(files)
+	}
+}
+
+// initStack creates a new stack
+func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
+	workDir := m.ctx.WorkDir
+	stackInitializer := m.deps.StackInitializer
+	// Add plugin credentials as env vars
+	var pluginEnv map[string]string
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		pluginEnv = m.deps.PluginProvider.GetAllEnv()
+	}
+	return func() tea.Msg {
+		opts := pulumi.InitStackOptions{
+			SecretsProvider: secretsProvider,
+			Passphrase:      passphrase,
+			Env:             pluginEnv,
+		}
+
+		err := stackInitializer.InitStack(context.Background(), workDir, name, opts)
+		if err != nil {
+			return stackInitResultMsg{StackName: name, Error: err}
+		}
+		return stackInitResultMsg{StackName: name, Error: nil}
 	}
 }

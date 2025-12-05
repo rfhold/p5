@@ -1,0 +1,25 @@
+╭───────────────────────────────────────────────────────────────────────────────╮
+│                                                                               │
+│  Multiple Errors                                                              │
+│                                                                               │
+│  Several errors occurred during operation                                     │
+│                                                                               │
+│                                                                               │
+│  Details:                                                                     │
+│  ╭────────────────────────────────────────────────────────────────────────╮   │
+│  │ Line 1: Error detail information                                       │   │
+│  │ Line 2: Error detail information                                       │   │
+│  │ Line 3: Error detail information                                       │   │
+│  │ Line 4: Error detail information                                       │   │
+│  │ Line 5: Error detail information                                       │   │
+│  │ Line 6: Error detail information                                       │   │
+│  │ Line 7: Error detail information                                       │   │
+│  │ Line 8: Error detail information                                       │   │
+│  │ Line 9: Error detail information                                       │   │
+│  │ Line 10: Error detail information                                      │   │
+│  ╰────────────────────────────────────────────────────────────────────────╯   │
+│                                                              [j/k scroll 0%]  │
+│                                                                               │
+│  enter/esc dismiss  j/k scroll  g/G top/bottom                                │
+│                                                                               │
+╰───────────────────────────────────────────────────────────────────────────────╯

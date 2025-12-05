@@ -1,0 +1,3 @@
+name: simple-project
+runtime: go
+description: A project without p5 configuration

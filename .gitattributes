@@ -1,0 +1,2 @@
+# Golden files for integration tests - prevent line ending modification
+*.golden -text

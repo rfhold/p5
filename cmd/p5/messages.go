@@ -17,8 +17,8 @@ type workspacesListMsg []pulumi.WorkspaceInfo
 type workspaceSelectedMsg string
 type workspaceCheckMsg bool // true if current dir is a valid workspace
 type stackHistoryMsg []pulumi.UpdateSummary
-type importResultMsg *pulumi.ImportResult
-type stateDeleteResultMsg *pulumi.StateDeleteResult
+type importResultMsg *pulumi.CommandResult
+type stateDeleteResultMsg *pulumi.CommandResult
 
 // Plugin-related messages
 type pluginAuthResultMsg []plugins.AuthenticateResult
@@ -33,9 +33,17 @@ type pluginInitDoneMsg struct {
 // initPreviewMsg is sent to start a preview from Init
 type initPreviewMsg struct {
 	op pulumi.OperationType
-	ch chan pulumi.PreviewEvent
+	ch <-chan pulumi.PreviewEvent
 }
 
 // Import suggestion messages
 type importSuggestionsMsg []*plugins.AggregatedImportSuggestion
 type importSuggestionsErrMsg error
+
+// Stack init messages
+type whoAmIMsg *pulumi.WhoAmIInfo
+type stackFilesMsg []pulumi.StackFileInfo
+type stackInitResultMsg struct {
+	StackName string
+	Error     error
+}

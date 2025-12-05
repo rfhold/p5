@@ -1,0 +1,7 @@
+  name: "my-bucket"
+  region: "us-west-2"
+~ tags:
+  ~ env: "dev" > "prod"
+
+── Computed ──
+  id: "bucket-12345"

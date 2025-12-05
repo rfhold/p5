@@ -79,10 +79,19 @@ func (e *EnvPlugin) Authenticate(ctx context.Context, req *proto.AuthenticateReq
 }
 
 // parseSources extracts EnvSource configs from program and stack config
+// Sources are processed in order: simple format first, then sources array
+// This allows global config (p5.toml) using simple format to be extended by
+// program config (Pulumi.yaml) using sources array format
 func (e *EnvPlugin) parseSources(programConfig, stackConfig map[string]string) ([]EnvSource, error) {
 	var sources []EnvSource
 
-	// Try to parse "sources" array from program config first
+	// First, check for simple single-source config at top level (type/vars/path/cmd)
+	// This is typically from p5.toml global config
+	if src := e.parseSimpleSource(programConfig); src != nil {
+		sources = append(sources, *src)
+	}
+
+	// Then parse "sources" array from program config (extends simple format)
 	if sourcesJSON, ok := programConfig["sources"]; ok {
 		var parsed []EnvSource
 		if err := json.Unmarshal([]byte(sourcesJSON), &parsed); err != nil {
@@ -91,24 +100,18 @@ func (e *EnvPlugin) parseSources(programConfig, stackConfig map[string]string) (
 		sources = append(sources, parsed...)
 	}
 
-	// Parse stack config sources (override/extend program sources)
+	// Stack config simple format
+	if src := e.parseSimpleSource(stackConfig); src != nil {
+		sources = append(sources, *src)
+	}
+
+	// Stack config sources array (override/extend program sources)
 	if sourcesJSON, ok := stackConfig["sources"]; ok {
 		var parsed []EnvSource
 		if err := json.Unmarshal([]byte(sourcesJSON), &parsed); err != nil {
 			return nil, fmt.Errorf("invalid stack sources config: %w", err)
 		}
 		sources = append(sources, parsed...)
-	}
-
-	// Support simple single-source config at top level
-	// Check program config for simple format
-	if len(sources) == 0 {
-		if src := e.parseSimpleSource(programConfig); src != nil {
-			sources = append(sources, *src)
-		}
-		if src := e.parseSimpleSource(stackConfig); src != nil {
-			sources = append(sources, *src)
-		}
 	}
 
 	return sources, nil

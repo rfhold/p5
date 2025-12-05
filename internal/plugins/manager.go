@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+// Compile-time check that Manager implements PluginProvider
+var _ PluginProvider = (*Manager)(nil)
+
 // Manager handles plugin lifecycle and credential management
 type Manager struct {
 	mu          sync.RWMutex
@@ -91,7 +94,7 @@ func (m *Manager) GetImportSuggestions(ctx context.Context, req *ImportSuggestio
 				StackConfig:   req.StackConfig,
 				StackName:     req.StackName,
 				ProgramName:   req.ProgramName,
-				AuthEnv:       m.getMergedAuthEnv(),
+				AuthEnv:       m.getMergedAuthEnvLocked(),
 			}
 		}
 
@@ -123,8 +126,15 @@ func (m *Manager) GetImportSuggestions(ctx context.Context, req *ImportSuggestio
 	return results, nil
 }
 
-// getMergedAuthEnv returns all auth environment variables from all plugins
-func (m *Manager) getMergedAuthEnv() map[string]string {
+// GetMergedAuthEnv returns all auth environment variables from all plugins
+func (m *Manager) GetMergedAuthEnv() map[string]string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.getMergedAuthEnvLocked()
+}
+
+// getMergedAuthEnvLocked returns all auth environment variables from all plugins (must hold lock)
+func (m *Manager) getMergedAuthEnvLocked() map[string]string {
 	env := make(map[string]string)
 	for _, creds := range m.credentials {
 		if creds != nil && creds.Env != nil {
@@ -147,4 +157,10 @@ func (m *Manager) HasImportHelpers() bool {
 		}
 	}
 	return false
+}
+
+// Initialize loads and authenticates plugins based on the current context.
+// This is an alias for LoadAndAuthenticate to satisfy the PluginProvider interface.
+func (m *Manager) Initialize(ctx context.Context, workDir, programName, stackName string) ([]AuthenticateResult, error) {
+	return m.LoadAndAuthenticate(ctx, workDir, programName, stackName)
 }

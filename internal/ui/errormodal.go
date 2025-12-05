@@ -40,16 +40,16 @@ func (m *ErrorModal) SetSize(width, height int) {
 
 	// Size the viewport to fit within the dialog
 	// Account for dialog padding, title, summary, and footer
-	dialogWidth := min(width-4, 80)    // Max 80 chars wide
-	dialogHeight := min(height-4, 30)  // Max 30 lines tall
-	contentWidth := dialogWidth - 6    // Account for padding
-	contentHeight := dialogHeight - 10 // Account for title, summary, footer
+	dialogWidth := min(width-4, DefaultDialogMaxWidth)
+	dialogHeight := min(height-4, DefaultDialogMaxHeight)
+	contentWidth := dialogWidth - DialogPaddingAllowance
+	contentHeight := dialogHeight - DialogChromeAllowance
 
-	if contentWidth < 20 {
-		contentWidth = 20
+	if contentWidth < MinContentWidth {
+		contentWidth = MinContentWidth
 	}
-	if contentHeight < 5 {
-		contentHeight = 5
+	if contentHeight < MinContentHeight {
+		contentHeight = MinContentHeight
 	}
 
 	m.viewport.Width = contentWidth

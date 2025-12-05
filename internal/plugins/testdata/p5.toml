@@ -1,0 +1,10 @@
+[plugins.aws]
+cmd = "/global/aws-plugin"
+args = ["--global-flag"]
+import_helper = true
+
+[plugins.aws.config]
+region = "eu-west-1"
+
+[plugins.cloudflare]
+cmd = "cloudflare-plugin"

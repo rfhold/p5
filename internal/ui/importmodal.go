@@ -46,7 +46,7 @@ func NewImportModal() *ImportModal {
 	ti := textinput.New()
 	ti.Placeholder = "Enter import ID..."
 	ti.CharLimit = 256
-	ti.Width = 50
+	ti.Width = DefaultInputWidth
 
 	return &ImportModal{
 		input: ti,

@@ -5,7 +5,7 @@
 This is a Go TUI app using Bubble Tea and Pulumi Automation API. To check compilation and run it:
 
 ```bash
-go build -o /dev/null ./cmd/p5 && ./scripts/dev.sh -C tests/simple # builds and runs the app
+go build -o /dev/null ./cmd/p5 && ./scripts/dev.sh -C programs/simple # builds and runs the app
 ```
 
 ## Development Scripts

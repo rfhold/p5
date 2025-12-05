@@ -1,0 +1,39 @@
+[38A
+
+
+
+
+
+
+
+    ├─ [ ] aws:lambda:Function  api-handler                 │                                                          │
+  > └─ [ ] aws:apigateway:RestApi  api                      │  ─── Properties ───                                      │
+
+                                                            │    description: "MyApp REST API"                         │
+                                                            │    name: "myapp-api"                                     │
+                                                            │                                                          │
+                                                            │  ── Computed ──                                          │
+                                                            │  + executionArn: "arn:aws:execute-api:us-east-1"...      │
+                                                            │  + id: "abc123"                                          │
+                                                            │  + rootResourceId: "xyz789"                              │
+                                                            │                                                          │
+                                                            │                                                          │
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

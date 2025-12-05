@@ -135,37 +135,11 @@ func (d *HistoryDetailPanel) renderContent() string {
 // renderResourceChanges renders detailed resource change information
 func (d *HistoryDetailPanel) renderResourceChanges(b *strings.Builder) {
 	changes := d.item.ResourceChanges
-
-	// Display counts in a structured way
-	create := changes["create"]
-	update := changes["update"]
-	del := changes["delete"]
-	replace := changes["replace"]
-	same := changes["same"]
-
-	if create > 0 {
-		b.WriteString(OpCreateStyle.Render(fmt.Sprintf("  + %d created", create)))
-		b.WriteString("\n")
-	}
-	if update > 0 {
-		b.WriteString(OpUpdateStyle.Render(fmt.Sprintf("  ~ %d updated", update)))
-		b.WriteString("\n")
-	}
-	if replace > 0 {
-		b.WriteString(OpReplaceStyle.Render(fmt.Sprintf("  ± %d replaced", replace)))
-		b.WriteString("\n")
-	}
-	if del > 0 {
-		b.WriteString(OpDeleteStyle.Render(fmt.Sprintf("  - %d deleted", del)))
-		b.WriteString("\n")
-	}
-	if same > 0 {
-		b.WriteString(DimStyle.Render(fmt.Sprintf("  = %d unchanged", same)))
-		b.WriteString("\n")
-	}
+	b.WriteString(RenderResourceChanges(changes, ResourceChangesExpanded))
+	b.WriteString("\n")
 
 	// Total
-	total := create + update + del + replace + same
+	total := changes["create"] + changes["update"] + changes["delete"] + changes["replace"] + changes["same"]
 	b.WriteString("\n")
 	b.WriteString(DimStyle.Render(fmt.Sprintf("Total: %d resources", total)))
 }

@@ -1,0 +1,8 @@
++ name: "my-bucket"
++ region: "us-west-2"
++ tags:
+  + env: "dev"
+
+── Computed ──
++ arn: "arn:aws:s3:::my-bucket"
++ id: "bucket-12345"

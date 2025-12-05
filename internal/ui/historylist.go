@@ -71,58 +71,17 @@ func (h *HistoryList) Clear() {
 
 // visibleHeight returns the number of lines available for items
 func (h *HistoryList) visibleHeight() int {
-	// Account for padding (1 top, 1 bottom)
-	height := h.Height() - 2
-
-	// If content is scrollable, reserve 2 lines for scroll indicators
-	if h.isScrollable() {
-		height -= 2
-	}
-
-	if height < 1 {
-		height = 1
-	}
-	return height
+	return CalculateVisibleHeight(h.Height(), len(h.items), 2) // 2 = padding (1 top, 1 bottom)
 }
 
 // isScrollable returns true if there are more items than can fit
 func (h *HistoryList) isScrollable() bool {
-	baseHeight := h.Height() - 2
-	if baseHeight < 1 {
-		baseHeight = 1
-	}
-	return len(h.items) > baseHeight
+	return IsScrollable(h.Height(), len(h.items), 2)
 }
 
 // ensureCursorVisible adjusts scroll offset to keep cursor visible
 func (h *HistoryList) ensureCursorVisible() {
-	if len(h.items) == 0 {
-		return
-	}
-
-	visible := h.visibleHeight()
-
-	// Scroll up if cursor is above visible area
-	if h.cursor < h.scrollOffset {
-		h.scrollOffset = h.cursor
-	}
-
-	// Scroll down if cursor is below visible area
-	if h.cursor >= h.scrollOffset+visible {
-		h.scrollOffset = h.cursor - visible + 1
-	}
-
-	// Clamp scroll offset
-	maxScroll := len(h.items) - visible
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if h.scrollOffset > maxScroll {
-		h.scrollOffset = maxScroll
-	}
-	if h.scrollOffset < 0 {
-		h.scrollOffset = 0
-	}
+	h.scrollOffset = EnsureCursorVisible(h.cursor, h.scrollOffset, len(h.items), h.visibleHeight())
 }
 
 // Update handles key events
@@ -156,13 +115,7 @@ func (h *HistoryList) Update(msg tea.Msg) tea.Cmd {
 
 // moveCursor moves the cursor by delta, clamping to valid range
 func (h *HistoryList) moveCursor(delta int) {
-	h.cursor += delta
-	if h.cursor < 0 {
-		h.cursor = 0
-	}
-	if h.cursor >= len(h.items) {
-		h.cursor = len(h.items) - 1
-	}
+	h.cursor = MoveCursor(h.cursor, delta, len(h.items))
 	h.ensureCursorVisible()
 }
 
@@ -303,38 +256,5 @@ func (h *HistoryList) formatTime(timeStr string) string {
 }
 
 func (h *HistoryList) renderChanges(changes map[string]int) string {
-	if changes == nil || len(changes) == 0 {
-		return DimStyle.Render("no changes")
-	}
-
-	var parts []string
-
-	create := changes["create"]
-	update := changes["update"]
-	del := changes["delete"]
-	replace := changes["replace"]
-	same := changes["same"]
-
-	if create > 0 {
-		parts = append(parts, OpCreateStyle.Render(fmt.Sprintf("+%d", create)))
-	}
-	if update > 0 {
-		parts = append(parts, OpUpdateStyle.Render(fmt.Sprintf("~%d", update)))
-	}
-	if replace > 0 {
-		parts = append(parts, OpReplaceStyle.Render(fmt.Sprintf("±%d", replace)))
-	}
-	if del > 0 {
-		parts = append(parts, OpDeleteStyle.Render(fmt.Sprintf("-%d", del)))
-	}
-
-	if len(parts) == 0 {
-		// Only "same" resources
-		if same > 0 {
-			return DimStyle.Render(fmt.Sprintf("%d unchanged", same))
-		}
-		return DimStyle.Render("no changes")
-	}
-
-	return strings.Join(parts, " ")
+	return RenderResourceChanges(changes, ResourceChangesCompact)
 }

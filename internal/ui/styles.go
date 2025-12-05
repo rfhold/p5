@@ -130,6 +130,31 @@ const (
 	IconFailed  = "✗"
 )
 
+// Layout constants for UI components
+const (
+	// Text input widths
+	DefaultInputWidth = 50
+
+	// Modal and dialog dimensions
+	DefaultModalMaxHeight  = 20
+	DefaultDialogMaxWidth  = 80
+	DefaultDialogMaxHeight = 30
+	MinContentWidth        = 20
+	MinContentHeight       = 5
+	DialogPaddingAllowance = 6  // Padding around dialog content
+	DialogChromeAllowance  = 10 // Title, summary, footer space
+
+	// Resource list rendering
+	DefaultMaxTypeLength = 50
+	MinTypeLength        = 20
+
+	// Text formatting
+	DefaultMaxStringLength   = 30
+	MinFormattedStringLength = 20
+	ArrayItemTruncateLength  = 30
+	ArrayItemTruncateDisplay = 27 // Length to show before "..."
+)
+
 // RenderOp renders a resource operation with appropriate styling
 func RenderOp(op ResourceOp) string {
 	switch op {

@@ -225,59 +225,17 @@ func (r *ResourceList) VisualMode() bool {
 
 // visibleHeight returns the number of lines available for resource items
 func (r *ResourceList) visibleHeight() int {
-	// Account for padding (1 top, 1 bottom)
-	h := r.Height() - 2
-
-	// If content is scrollable, reserve 2 lines for scroll indicators
-	if r.isScrollable() {
-		h -= 2
-	}
-
-	if h < 1 {
-		h = 1
-	}
-	return h
+	return CalculateVisibleHeight(r.Height(), len(r.visibleIdx), 2) // 2 = padding (1 top, 1 bottom)
 }
 
 // isScrollable returns true if there are more items than can fit without indicators
 func (r *ResourceList) isScrollable() bool {
-	// Base height without scroll indicators
-	baseHeight := r.Height() - 2
-	if baseHeight < 1 {
-		baseHeight = 1
-	}
-	return len(r.visibleIdx) > baseHeight
+	return IsScrollable(r.Height(), len(r.visibleIdx), 2)
 }
 
 // ensureCursorVisible adjusts scroll offset to keep cursor visible
 func (r *ResourceList) ensureCursorVisible() {
-	if len(r.visibleIdx) == 0 {
-		return
-	}
-
-	visible := r.visibleHeight()
-
-	// Scroll up if cursor is above visible area
-	if r.cursor < r.scrollOffset {
-		r.scrollOffset = r.cursor
-	}
-
-	// Scroll down if cursor is below visible area
-	if r.cursor >= r.scrollOffset+visible {
-		r.scrollOffset = r.cursor - visible + 1
-	}
-
-	// Clamp scroll offset
-	maxScroll := len(r.visibleIdx) - visible
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if r.scrollOffset > maxScroll {
-		r.scrollOffset = maxScroll
-	}
-	if r.scrollOffset < 0 {
-		r.scrollOffset = 0
-	}
+	r.scrollOffset = EnsureCursorVisible(r.cursor, r.scrollOffset, len(r.visibleIdx), r.visibleHeight())
 }
 
 // Update handles key events and returns any commands
@@ -347,13 +305,7 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 
 // moveCursor moves the cursor by delta, clamping to valid range
 func (r *ResourceList) moveCursor(delta int) {
-	r.cursor += delta
-	if r.cursor < 0 {
-		r.cursor = 0
-	}
-	if r.cursor >= len(r.visibleIdx) {
-		r.cursor = len(r.visibleIdx) - 1
-	}
+	r.cursor = MoveCursor(r.cursor, delta, len(r.visibleIdx))
 	r.ensureCursorVisible()
 }
 

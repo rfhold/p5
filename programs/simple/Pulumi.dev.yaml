@@ -1,0 +1,6 @@
+encryptionsalt: v1:HycCbz8RFKA=:v1:kqym1DVqE+STv+Ac:a5wFMX9B1SOK9OApN/8t8OaxH+8TYw==
+config:
+  p5:plugins:
+    env:
+      config:
+        sources: '[{"type":"static","vars":{"STACK_VAR":"from-dev-yaml","OVERRIDE_VAR":"overridden-by-stack"}}]'

@@ -2,109 +2,165 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/rfhold/p5/internal/plugins"
 	"github.com/rfhold/p5/internal/pulumi"
 	"github.com/rfhold/p5/internal/ui"
 )
 
-// Model is the main application model
+// InitState tracks progress through the initialization state machine.
+// This makes the initialization flow explicit and traceable.
+type InitState int
+
+const (
+	// InitCheckingWorkspace - checking if we're in a valid Pulumi workspace
+	InitCheckingWorkspace InitState = iota
+	// InitLoadingPlugins - loading and authenticating plugins
+	InitLoadingPlugins
+	// InitLoadingStacks - fetching available stacks
+	InitLoadingStacks
+	// InitSelectingStack - user must select or create a stack
+	InitSelectingStack
+	// InitLoadingResources - loading stack resources or starting preview
+	InitLoadingResources
+	// InitComplete - initialization is done, app is ready
+	InitComplete
+)
+
+// String returns a human-readable name for the init state
+func (s InitState) String() string {
+	switch s {
+	case InitCheckingWorkspace:
+		return "CheckingWorkspace"
+	case InitLoadingPlugins:
+		return "LoadingPlugins"
+	case InitLoadingStacks:
+		return "LoadingStacks"
+	case InitSelectingStack:
+		return "SelectingStack"
+	case InitLoadingResources:
+		return "LoadingResources"
+	case InitComplete:
+		return "Complete"
+	default:
+		return "Unknown"
+	}
+}
+
+// OperationState tracks the lifecycle of preview and execute operations.
+// This makes operation handling explicit and easier to reason about.
+type OperationState int
+
+const (
+	// OpIdle - no operation is running
+	OpIdle OperationState = iota
+	// OpStarting - operation is being initialized
+	OpStarting
+	// OpRunning - operation is in progress, receiving events
+	OpRunning
+	// OpCancelling - cancel was requested, waiting for operation to stop
+	OpCancelling
+	// OpComplete - operation finished successfully
+	OpComplete
+	// OpError - operation finished with an error
+	OpError
+)
+
+// String returns a human-readable name for the operation state
+func (s OperationState) String() string {
+	switch s {
+	case OpIdle:
+		return "Idle"
+	case OpStarting:
+		return "Starting"
+	case OpRunning:
+		return "Running"
+	case OpCancelling:
+		return "Cancelling"
+	case OpComplete:
+		return "Complete"
+	case OpError:
+		return "Error"
+	default:
+		return "Unknown"
+	}
+}
+
+// IsActive returns true if the operation is currently running or starting
+func (s OperationState) IsActive() bool {
+	return s == OpStarting || s == OpRunning || s == OpCancelling
+}
+
+// AppContext holds application-level configuration that was previously stored in globals.
+// This improves testability and makes data flow explicit.
+type AppContext struct {
+	Cwd       string // Current working directory (where app was launched from)
+	WorkDir   string // Working directory (Pulumi project root)
+	StackName string // Currently selected stack name
+	StartView string // Initial view mode ("stack", "up", "refresh", "destroy")
+}
+
+// Model is the main application model.
+// It coordinates between pure application state (AppState), UI state (UIState),
+// and async operations. This separation enables easier testing.
 type Model struct {
-	// Shared persistent state
-	flags map[string]ui.ResourceFlags // Persists across all views
+	// App context (configuration, replaces globals)
+	ctx AppContext
 
-	// Current view state
-	viewMode  ui.ViewMode
-	operation pulumi.OperationType
+	// Injected dependencies (enables testing)
+	deps *Dependencies
 
-	// Pending operation confirmation
-	pendingOperation *pulumi.OperationType // Operation awaiting confirmation
+	// Pure application state (testable without UI)
+	state *AppState
 
-	// Components
-	header            ui.Header
-	resourceList      *ui.ResourceList
-	historyList       *ui.HistoryList
-	help              *ui.HelpDialog
-	details           *ui.DetailPanel
-	historyDetails    *ui.HistoryDetailPanel
-	stackSelector     *ui.StackSelector
-	workspaceSelector *ui.WorkspaceSelector
-	importModal       *ui.ImportModal
-	confirmModal      *ui.ConfirmModal
-	errorModal        *ui.ErrorModal
-	toast             *ui.Toast
-	showHelp          bool
+	// UI component state (layout, focus, components)
+	ui *UIState
 
-	// Plugin system
-	pluginManager *plugins.Manager
-
-	// Error state
-	err      error
+	// Control flags
 	quitting bool
 
-	// Dimensions
-	width  int
-	height int
-
-	// Event channels
-	previewCh   chan pulumi.PreviewEvent
-	operationCh chan pulumi.OperationEvent
+	// Event channels for async operations (receive-only from StackOperator)
+	previewCh   <-chan pulumi.PreviewEvent
+	operationCh <-chan pulumi.OperationEvent
 
 	// Operation context for cancellation
 	operationCtx    context.Context
 	operationCancel context.CancelFunc
 }
 
-func initialModel() Model {
-	flags := make(map[string]ui.ResourceFlags)
+func initialModel(ctx AppContext, deps *Dependencies) Model {
+	// Create shared state
+	state := NewAppState()
 
-	// Initialize plugin manager with launch directory for p5.toml discovery
-	pluginMgr, err := plugins.NewManager(workDir)
-	if err != nil {
-		// Log but don't fail - plugins are optional
-		fmt.Fprintf(os.Stderr, "Warning: failed to initialize plugin manager: %v\n", err)
-	}
+	// Create UI state with shared flags reference
+	uiState := NewUIState(state.Flags)
 
 	m := Model{
-		flags:             flags,
-		viewMode:          ui.ViewStack,
-		header:            ui.NewHeader(),
-		resourceList:      ui.NewResourceList(flags),
-		historyList:       ui.NewHistoryList(),
-		help:              ui.NewHelpDialog(),
-		details:           ui.NewDetailPanel(),
-		historyDetails:    ui.NewHistoryDetailPanel(),
-		stackSelector:     ui.NewStackSelector(),
-		toast:             ui.NewToast(),
-		workspaceSelector: ui.NewWorkspaceSelector(),
-		importModal:       ui.NewImportModal(),
-		confirmModal:      ui.NewConfirmModal(),
-		errorModal:        ui.NewErrorModal(),
-		pluginManager:     pluginMgr,
+		ctx:   ctx,
+		deps:  deps,
+		state: state,
+		ui:    uiState,
 	}
 
 	// Set initial view based on command argument
-	switch startView {
+	switch ctx.StartView {
 	case "up":
-		m.viewMode = ui.ViewPreview
-		m.operation = pulumi.OperationUp
-		m.resourceList.SetShowAllOps(false)
+		m.ui.ViewMode = ui.ViewPreview
+		m.state.Operation = pulumi.OperationUp
+		m.ui.ResourceList.SetShowAllOps(false)
 	case "refresh":
-		m.viewMode = ui.ViewPreview
-		m.operation = pulumi.OperationRefresh
-		m.resourceList.SetShowAllOps(false)
+		m.ui.ViewMode = ui.ViewPreview
+		m.state.Operation = pulumi.OperationRefresh
+		m.ui.ResourceList.SetShowAllOps(false)
 	case "destroy":
-		m.viewMode = ui.ViewPreview
-		m.operation = pulumi.OperationDestroy
-		m.resourceList.SetShowAllOps(false)
+		m.ui.ViewMode = ui.ViewPreview
+		m.state.Operation = pulumi.OperationDestroy
+		m.ui.ResourceList.SetShowAllOps(false)
 	}
 
-	m.header.SetViewMode(m.viewMode)
-	m.header.SetOperation(m.operation)
+	m.ui.Header.SetViewMode(m.ui.ViewMode)
+	m.ui.Header.SetOperation(m.state.Operation)
 
 	return m
 }
@@ -112,13 +168,13 @@ func initialModel() Model {
 // Init starts the initial data fetch
 func (m Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
-		m.header.Spinner().Tick,
-		m.resourceList.Spinner().Tick,
-		m.historyList.Spinner().Tick,
+		m.ui.Header.Spinner().Tick,
+		m.ui.ResourceList.Spinner().Tick,
+		m.ui.HistoryList.Spinner().Tick,
 	}
 
 	// First check if we're in a valid Pulumi workspace
-	cmds = append(cmds, checkWorkspace)
+	cmds = append(cmds, m.checkWorkspace())
 
 	return tea.Batch(cmds...)
 }
