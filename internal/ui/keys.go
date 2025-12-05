@@ -49,6 +49,12 @@ type KeyMap struct {
 	// History view
 	ViewHistory key.Binding
 
+	// Import
+	Import key.Binding
+
+	// Delete from state
+	DeleteFromState key.Binding
+
 	// General
 	Help key.Binding
 	Quit key.Binding
@@ -176,6 +182,18 @@ var Keys = KeyMap{
 		key.WithHelp("h", "view history"),
 	),
 
+	// Import
+	Import: key.NewBinding(
+		key.WithKeys("I"),
+		key.WithHelp("I", "import resource"),
+	),
+
+	// Delete from state
+	DeleteFromState: key.NewBinding(
+		key.WithKeys("x"),
+		key.WithHelp("x", "delete from state"),
+	),
+
 	// General
 	Help: key.NewBinding(
 		key.WithKeys("?"),
@@ -201,6 +219,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.PreviewUp, k.PreviewRefresh, k.PreviewDestroy},
 		{k.ExecuteUp, k.ExecuteRefresh, k.ExecuteDestroy},
 		{k.CopyResource, k.ToggleDetails, k.SelectStack, k.SelectWorkspace, k.ViewHistory},
+		{k.Import, k.DeleteFromState},
 		{k.Help, k.Quit},
 	}
 }

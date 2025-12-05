@@ -56,6 +56,7 @@ func NewHelpDialog() *HelpDialog {
 			{Key: "ctrl+u", Desc: "Execute up"},
 			{Key: "ctrl+r", Desc: "Execute refresh"},
 			{Key: "ctrl+d", Desc: "Execute destroy"},
+			{Key: "I", Desc: "Import resource (in preview)"},
 			{Key: "", Desc: ""},
 
 			// General
@@ -165,7 +166,7 @@ func (h *HelpDialog) GotoBottom() {
 
 // View renders the help dialog centered on screen
 func (h *HelpDialog) View() string {
-	title := DialogTitleStyle.Render("Keyboard Shortcuts")
+	titleText := "Keyboard Shortcuts"
 
 	var content string
 	if h.ready {
@@ -174,26 +175,25 @@ func (h *HelpDialog) View() string {
 		canScrollUp := h.viewport.YOffset > 0
 		canScrollDown := h.viewport.YOffset < h.viewport.TotalLineCount()-h.viewport.Height
 
-		// Build content with scroll indicators
-		var parts []string
-
-		// Always reserve space for up arrow when scrollable to prevent layout jumps
+		// Add line count hint to title if scrollable
 		if isScrollable {
-			if canScrollUp {
-				parts = append(parts, ScrollIndicatorStyle.Render("      ▲"))
-			} else {
-				parts = append(parts, "       ") // Empty space to maintain layout
+			startLine := h.viewport.YOffset + 1
+			endLine := h.viewport.YOffset + h.viewport.Height
+			if endLine > h.viewport.TotalLineCount() {
+				endLine = h.viewport.TotalLineCount()
 			}
+			titleText += DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", startLine, endLine, h.viewport.TotalLineCount()))
 		}
 
+		// Build content with scroll hint at bottom only
+		var parts []string
 		parts = append(parts, h.viewport.View())
 
-		// Always reserve space for down arrow when scrollable to prevent layout jumps
+		// Add scroll hint at bottom (import modal style)
 		if isScrollable {
-			if canScrollDown {
-				parts = append(parts, ScrollIndicatorStyle.Render("      ▼"))
-			} else {
-				parts = append(parts, "       ") // Empty space to maintain layout
+			hint := RenderScrollHint(canScrollUp, canScrollDown, "      ")
+			if hint != "" {
+				parts = append(parts, hint)
 			}
 		}
 
@@ -202,6 +202,7 @@ func (h *HelpDialog) View() string {
 		content = h.buildContent()
 	}
 
+	title := DialogTitleStyle.Render(titleText)
 	dialog := DialogStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, content))
 
 	return lipgloss.Place(h.width, h.height, lipgloss.Center, lipgloss.Center,

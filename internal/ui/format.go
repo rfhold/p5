@@ -7,26 +7,23 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// isComputedPlaceholder checks if a string looks like a Pulumi computed value placeholder (UUID)
+// Pulumi uses specific sentinel UUIDs to represent unknown/computed values.
+// These are defined in github.com/pulumi/pulumi/sdk/v3/go/common/resource/plugin/rpc.go
+var pulumiUnknownSentinels = map[string]bool{
+	"1c4a061d-8072-4f0a-a4cb-0ff528b18fe7": true, // UnknownBoolValue
+	"3eeb2bf0-c639-47a8-9e75-3b44932eb421": true, // UnknownNumberValue
+	"04da6b54-80e4-46f7-96ec-b56ff0331ba9": true, // UnknownStringValue
+	"6a19a0b0-7e62-4c92-b797-7f8e31da9cc2": true, // UnknownArrayValue
+	"030794c1-ac77-496b-92df-f27374a8bd58": true, // UnknownAssetValue
+	"e48ece36-62e2-4504-bad9-02848725956a": true, // UnknownArchiveValue
+	"dd056dcd-154b-4c76-9bd3-c8f88648b5ff": true, // UnknownObjectValue
+}
+
+// isComputedPlaceholder checks if a string is a Pulumi sentinel value for unknown/computed values.
+// Unlike the previous implementation that treated any UUID as a computed placeholder,
+// this only matches the specific sentinel UUIDs that Pulumi uses internally.
 func isComputedPlaceholder(s string) bool {
-	// Pulumi uses UUID v4 format for computed placeholders: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if len(s) != 36 {
-		return false
-	}
-	// Check format: 8-4-4-4-12 with hyphens at positions 8, 13, 18, 23
-	if s[8] != '-' || s[13] != '-' || s[18] != '-' || s[23] != '-' {
-		return false
-	}
-	// Check all other chars are hex digits
-	for i, c := range s {
-		if i == 8 || i == 13 || i == 18 || i == 23 {
-			continue
-		}
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
+	return pulumiUnknownSentinels[s]
 }
 
 // formatDiffValue formats a value for display in the diff view

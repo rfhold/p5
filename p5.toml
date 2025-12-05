@@ -1,18 +1,26 @@
 # p5 Global Configuration
 # This file configures plugins that apply to all Pulumi programs in this repository
 
-[plugins.dev-env]
-# Use local plugin for development testing
-source = "./plugins/dev-env"
+[plugins.env]
+# Using the builtin "env" plugin to set development environment variables
 
-[plugins.dev-env.config]
-# Local file backend in the repo root
-backendUrl = "file:///Users/rfhold/repos/rfhold/p5"
-# Empty passphrase for local dev (no encryption)
-passphrase = ""
+[plugins.env.config]
+# Static source - define env vars directly
+type = "static"
+vars = '{"PULUMI_BACKEND_URL": "file:///Users/rfhold/repos/rfhold/p5", "PULUMI_CONFIG_PASSPHRASE": ""}'
 
-[plugins.dev-env.refresh]
+[plugins.env.refresh]
 # These are static values, no need to refresh on context changes
 onWorkspaceChange = false
 onStackChange = false
 onConfigChange = false
+
+[plugins.cloudflare]
+# Using the builtin "cloudflare" plugin to provide import suggestions
+import_helper = true
+use_auth_env = true
+
+[plugins.kubernetes]
+# Using the builtin "kubernetes" plugin to provide import suggestions via kubectl
+import_helper = true
+use_auth_env = true

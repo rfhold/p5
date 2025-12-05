@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package p5.plugin.v0;
+
+option go_package = "github.com/rfhold/p5/internal/plugins/proto";
+
+// AuthPlugin provides authentication capabilities
+service AuthPlugin {
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+}
+
+// ImportHelperPlugin provides import ID suggestions (optional capability)
+service ImportHelperPlugin {
+  rpc GetImportSuggestions(ImportSuggestionsRequest) returns (ImportSuggestionsResponse);
+}
+
+message AuthenticateRequest {
+  map<string, string> program_config = 1;
+  map<string, string> stack_config = 2;
+  string stack_name = 3;
+  string program_name = 4;
+}
+
+message AuthenticateResponse {
+  bool success = 1;
+  map<string, string> env = 2;
+  int32 ttl_seconds = 3;  // -1 = always call, 0 = never expires, >0 = TTL
+  string error = 4;
+}
+
+// Import helper messages
+message ImportSuggestionsRequest {
+  // Resource information
+  string resource_type = 1;     // e.g., "aws:s3/bucket:Bucket"
+  string resource_name = 2;     // Logical name in Pulumi program
+  string resource_urn = 3;      // Full Pulumi URN
+  string parent_urn = 4;        // Parent URN for component hierarchy
+  
+  // Resource inputs (serialized as JSON strings for complex values)
+  map<string, string> inputs = 5;
+  
+  // Context
+  map<string, string> program_config = 6;
+  map<string, string> stack_config = 7;
+  string stack_name = 8;
+  string program_name = 9;
+  
+  // Auth environment (only populated if use_auth_env: true)
+  map<string, string> auth_env = 10;
+}
+
+message ImportSuggestion {
+  string id = 1;            // The import ID to use (e.g., "arn:aws:s3:::my-bucket")
+  string label = 2;         // Short display label (e.g., "my-bucket")
+  string description = 3;   // Optional longer description (e.g., "us-east-1 • Created 2024-01-15")
+}
+
+message ImportSuggestionsResponse {
+  bool can_provide = 1;                       // False if plugin doesn't handle this resource type
+  repeated ImportSuggestion suggestions = 2;  // List of suggestions (can be empty)
+  string error = 3;                           // Error message if something went wrong
+}

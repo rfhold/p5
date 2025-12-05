@@ -86,10 +86,10 @@ var (
 	StatusSuccessStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
 	StatusFailedStyle  = lipgloss.NewStyle().Foreground(ColorError)
 
-	// Scroll indicator styles
+	// Scroll indicator styles - bright cyan for high visibility
 	ScrollIndicatorStyle = lipgloss.NewStyle().
 				Bold(true).
-				Foreground(ColorPrimary)
+				Foreground(ColorRefresh) // Use bright cyan for better visibility
 
 	// Cursor and selection styles
 	CursorStyle = lipgloss.NewStyle().
@@ -169,5 +169,35 @@ func RenderStatus(status ItemStatus) string {
 		return StatusFailedStyle.Render("failed")
 	default:
 		return DimStyle.Render("unknown")
+	}
+}
+
+// RenderHistoryKind renders a history operation kind with appropriate styling
+func RenderHistoryKind(kind string) string {
+	switch kind {
+	case "update":
+		return OpCreateStyle.Render("update")
+	case "refresh":
+		return OpRefreshStyle.Render("refresh")
+	case "destroy":
+		return OpDeleteStyle.Render("destroy")
+	case "preview":
+		return DimStyle.Render("preview")
+	default:
+		return DimStyle.Render(kind)
+	}
+}
+
+// RenderHistoryResult renders a history operation result with appropriate styling
+func RenderHistoryResult(result string) string {
+	switch result {
+	case "succeeded":
+		return StatusSuccessStyle.Render("succeeded")
+	case "failed":
+		return StatusFailedStyle.Render("failed")
+	case "in-progress":
+		return StatusRunningStyle.Render("in-progress")
+	default:
+		return DimStyle.Render(result)
 	}
 }

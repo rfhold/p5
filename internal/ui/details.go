@@ -1,24 +1,17 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // DetailPanel is a floating panel showing resource details
 type DetailPanel struct {
-	visible bool
-	width   int
-	height  int
+	PanelBase // Embed common panel functionality
 
 	// Position of panel in terminal (for mouse coordinate mapping)
 	posX, posY int
-
-	// Scroll state
-	scrollOffset int
 
 	// Current resource being displayed
 	resource *ResourceItem
@@ -33,37 +26,8 @@ type DetailPanel struct {
 // NewDetailPanel creates a new detail panel component
 func NewDetailPanel() *DetailPanel {
 	return &DetailPanel{
-		visible:   false,
 		selection: NewTextSelection(),
 	}
-}
-
-// Visible returns whether the panel is visible
-func (d *DetailPanel) Visible() bool {
-	return d.visible
-}
-
-// Toggle toggles the panel visibility
-func (d *DetailPanel) Toggle() {
-	d.visible = !d.visible
-	d.scrollOffset = 0
-}
-
-// Show shows the panel
-func (d *DetailPanel) Show() {
-	d.visible = true
-	d.scrollOffset = 0
-}
-
-// Hide hides the panel
-func (d *DetailPanel) Hide() {
-	d.visible = false
-}
-
-// SetSize sets the dimensions for the panel
-func (d *DetailPanel) SetSize(width, height int) {
-	d.width = width
-	d.height = height
 }
 
 // SetPosition sets the position of the panel in terminal coordinates
@@ -72,23 +36,23 @@ func (d *DetailPanel) SetPosition(x, y int) {
 	d.posY = y
 	// Update selection bounds - content area is inside border and padding
 	// Border: 1, Padding: 1 top/bottom, 2 left/right
-	contentX := x + 3             // 1 border + 2 padding
-	contentY := y + 2             // 1 border + 1 padding
-	contentWidth := d.width - 6   // subtract both sides
-	contentHeight := d.height - 4 // subtract top and bottom
+	contentX := x + 3               // 1 border + 2 padding
+	contentY := y + 2               // 1 border + 1 padding
+	contentWidth := d.Width() - 6   // subtract both sides
+	contentHeight := d.Height() - 4 // subtract top and bottom
 	d.selection.SetBounds(contentX, contentY, contentWidth, contentHeight)
 }
 
 // HandleMouseEvent handles mouse events for text selection
 // Returns a command if text was copied to clipboard
 func (d *DetailPanel) HandleMouseEvent(msg tea.MouseMsg) tea.Cmd {
-	if !d.visible {
+	if !d.Visible() {
 		return nil
 	}
 
 	// Check if click is within panel bounds
-	inBounds := msg.X >= d.posX && msg.X < d.posX+d.width &&
-		msg.Y >= d.posY && msg.Y < d.posY+d.height
+	inBounds := msg.X >= d.posX && msg.X < d.posX+d.Width() &&
+		msg.Y >= d.posY && msg.Y < d.posY+d.Height()
 
 	switch msg.Action {
 	case tea.MouseActionPress:
@@ -140,38 +104,19 @@ func (d *DetailPanel) getSelectedText() string {
 // SetResource sets the resource to display details for
 func (d *DetailPanel) SetResource(resource *ResourceItem) {
 	d.resource = resource
-	d.scrollOffset = 0
-}
-
-// ScrollUp scrolls the content up
-func (d *DetailPanel) ScrollUp(lines int) {
-	d.scrollOffset -= lines
-	if d.scrollOffset < 0 {
-		d.scrollOffset = 0
-	}
-}
-
-// ScrollDown scrolls the content down
-func (d *DetailPanel) ScrollDown(lines int) {
-	d.scrollOffset += lines
+	d.ResetScroll()
 }
 
 // View renders the detail panel
 func (d *DetailPanel) View() string {
-	if !d.visible || d.width == 0 || d.height == 0 {
+	if !d.Visible() || d.Width() == 0 || d.Height() == 0 {
 		return ""
 	}
 
-	// Panel takes up the right half of the screen
-	panelWidth := d.width
-	panelHeight := d.height
-
 	// Build header with resource name
-	var header string
+	header := "Details"
 	if d.resource != nil {
-		header = LabelStyle.Render(d.resource.Name)
-	} else {
-		header = LabelStyle.Render("Details")
+		header = d.resource.Name
 	}
 
 	// Build unified content
@@ -182,63 +127,45 @@ func (d *DetailPanel) View() string {
 		content = d.renderUnified()
 	}
 
-	// Calculate content height (subtract header, border, padding)
-	headerHeight := lipgloss.Height(header)
-	contentHeight := panelHeight - headerHeight - 4 // border + padding
-	if contentHeight < 1 {
-		contentHeight = 1
-	}
+	// Use shared helper for common panel rendering
+	result := RenderDetailPanel(DetailPanelContent{
+		Header:       header,
+		Content:      content,
+		Width:        d.Width(),
+		Height:       d.Height(),
+		ScrollOffset: d.ScrollOffset(),
+	})
 
-	// Apply scrolling to content
-	contentLines := strings.Split(content, "\n")
-	if d.scrollOffset >= len(contentLines) {
-		d.scrollOffset = len(contentLines) - 1
-		if d.scrollOffset < 0 {
-			d.scrollOffset = 0
-		}
+	// Update scroll offset if it was clamped
+	if result.NewScrollOffset != d.ScrollOffset() {
+		d.SetScrollOffset(result.NewScrollOffset)
 	}
-
-	// Get visible portion
-	endIdx := d.scrollOffset + contentHeight
-	if endIdx > len(contentLines) {
-		endIdx = len(contentLines)
-	}
-	visibleLines := contentLines[d.scrollOffset:endIdx]
 
 	// Cache plain text lines for selection extraction
 	// Strip ANSI codes for accurate text extraction
-	d.plainTextLines = make([]string, len(visibleLines))
-	for i, line := range visibleLines {
+	d.plainTextLines = make([]string, len(result.VisibleLines))
+	for i, line := range result.VisibleLines {
 		d.plainTextLines[i] = stripAnsi(line)
 	}
 
-	// Apply selection highlighting if there's an active selection
+	// If there's a selection, we need to re-render with highlighting applied
 	if d.selection.HasSelection() || d.selection.Active() {
-		for i, line := range visibleLines {
-			visibleLines[i] = d.applySelectionToLine(line, i)
+		highlightedLines := make([]string, len(result.VisibleLines))
+		for i, line := range result.VisibleLines {
+			highlightedLines[i] = d.applySelectionToLine(line, i)
 		}
+		// Re-render with highlighted content
+		highlightedContent := strings.Join(highlightedLines, "\n")
+		result = RenderDetailPanel(DetailPanelContent{
+			Header:       header,
+			Content:      highlightedContent,
+			Width:        d.Width(),
+			Height:       d.Height(),
+			ScrollOffset: 0, // Content is already the visible portion
+		})
 	}
 
-	visibleContent := strings.Join(visibleLines, "\n")
-
-	// Add scroll indicator if needed
-	if len(contentLines) > contentHeight {
-		scrollInfo := DimStyle.Render(fmt.Sprintf(" [%d/%d]", d.scrollOffset+1, len(contentLines)))
-		header = header + scrollInfo
-	}
-
-	// Combine header and content
-	body := lipgloss.JoinVertical(lipgloss.Left, header, "", visibleContent)
-
-	// Style the panel with border
-	panelStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorPrimary).
-		Padding(1, 2).
-		Width(panelWidth - 2).
-		Height(panelHeight - 2)
-
-	return panelStyle.Render(body)
+	return result.Rendered
 }
 
 // applySelectionToLine applies selection highlighting to a single line
@@ -290,7 +217,7 @@ func (d *DetailPanel) renderUnified() string {
 	}
 
 	var b strings.Builder
-	maxWidth := d.width - 8
+	maxWidth := d.Width() - 8
 
 	// Compact metadata header
 	b.WriteString(DimStyle.Render("Type: "))

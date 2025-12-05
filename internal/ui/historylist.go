@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -26,24 +25,13 @@ type HistoryItem struct {
 
 // HistoryList is a scrollable list of stack history updates
 type HistoryList struct {
+	ListBase // Embed common list functionality for loading/error state
+
 	items []HistoryItem
 
 	// Cursor & scrolling
 	cursor       int
 	scrollOffset int
-
-	// Configuration
-	width  int
-	height int
-	ready  bool
-
-	// Loading state
-	loading    bool
-	loadingMsg string
-	spinner    spinner.Model
-
-	// Error state
-	err error
 }
 
 // NewHistoryList creates a new HistoryList component
@@ -51,45 +39,17 @@ func NewHistoryList() *HistoryList {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(ColorPrimary)
-	return &HistoryList{
-		items:   make([]HistoryItem, 0),
-		spinner: s,
+	h := &HistoryList{
+		items: make([]HistoryItem, 0),
 	}
+	h.SetSpinner(s)
+	return h
 }
 
-// Spinner returns the spinner model for tick updates
-func (h *HistoryList) Spinner() spinner.Model {
-	return h.spinner
-}
-
-// SetSpinner updates the spinner model
-func (h *HistoryList) SetSpinner(s spinner.Model) {
-	h.spinner = s
-}
-
-// SetSize sets the dimensions for the list
+// SetSize sets the dimensions for the list and ensures cursor is visible
 func (h *HistoryList) SetSize(width, height int) {
-	h.width = width
-	h.height = height
-	h.ready = true
+	h.ListBase.SetSize(width, height)
 	h.ensureCursorVisible()
-}
-
-// SetLoading sets the loading state
-func (h *HistoryList) SetLoading(loading bool, msg string) {
-	h.loading = loading
-	h.loadingMsg = msg
-}
-
-// SetError sets an error state
-func (h *HistoryList) SetError(err error) {
-	h.err = err
-	h.loading = false
-}
-
-// IsLoading returns true if loading
-func (h *HistoryList) IsLoading() bool {
-	return h.loading
 }
 
 // SetItems replaces all items
@@ -97,8 +57,8 @@ func (h *HistoryList) SetItems(items []HistoryItem) {
 	h.items = items
 	h.cursor = 0
 	h.scrollOffset = 0
-	h.loading = false
-	h.err = nil
+	h.SetLoading(false, "")
+	h.ClearError()
 }
 
 // Clear resets the list
@@ -106,13 +66,13 @@ func (h *HistoryList) Clear() {
 	h.items = make([]HistoryItem, 0)
 	h.cursor = 0
 	h.scrollOffset = 0
-	h.err = nil
+	h.ClearError()
 }
 
 // visibleHeight returns the number of lines available for items
 func (h *HistoryList) visibleHeight() int {
 	// Account for padding (1 top, 1 bottom)
-	height := h.height - 2
+	height := h.Height() - 2
 
 	// If content is scrollable, reserve 2 lines for scroll indicators
 	if h.isScrollable() {
@@ -127,7 +87,7 @@ func (h *HistoryList) visibleHeight() int {
 
 // isScrollable returns true if there are more items than can fit
 func (h *HistoryList) isScrollable() bool {
-	baseHeight := h.height - 2
+	baseHeight := h.Height() - 2
 	if baseHeight < 1 {
 		baseHeight = 1
 	}
@@ -167,7 +127,7 @@ func (h *HistoryList) ensureCursorVisible() {
 
 // Update handles key events
 func (h *HistoryList) Update(msg tea.Msg) tea.Cmd {
-	if !h.ready || len(h.items) == 0 {
+	if !h.IsReady() || len(h.items) == 0 {
 		return nil
 	}
 
@@ -231,34 +191,15 @@ func (h *HistoryList) AtBottom() bool {
 
 // View renders the history list
 func (h *HistoryList) View() string {
-	if h.loading {
-		return h.renderLoading()
-	}
-	if h.err != nil {
-		return h.renderError()
+	if rendered, handled := h.RenderLoadingState(); handled {
+		return rendered
 	}
 	return h.renderItems()
 }
 
-func (h *HistoryList) renderLoading() string {
-	msg := h.loadingMsg
-	if msg == "" {
-		msg = "Loading..."
-	}
-	content := fmt.Sprintf("%s %s", h.spinner.View(), msg)
-	return lipgloss.Place(h.width, h.height, lipgloss.Center, lipgloss.Center, content)
-}
-
-func (h *HistoryList) renderError() string {
-	paddedStyle := lipgloss.NewStyle().Padding(1, 2)
-	errMsg := ErrorStyle.Render(fmt.Sprintf("Error: %v", h.err))
-	return paddedStyle.Render(errMsg)
-}
-
 func (h *HistoryList) renderItems() string {
 	if len(h.items) == 0 {
-		msg := DimStyle.Render("No history")
-		return lipgloss.Place(h.width, h.height, lipgloss.Center, lipgloss.Center, msg)
+		return RenderCenteredMessage("No history", h.Width(), h.Height())
 	}
 
 	var b strings.Builder
@@ -275,12 +216,7 @@ func (h *HistoryList) renderItems() string {
 
 	// Up arrow indicator
 	if scrollable {
-		if canScrollUp {
-			b.WriteString(ScrollIndicatorStyle.Render("  ▲"))
-		} else {
-			b.WriteString("   ")
-		}
-		b.WriteString("\n")
+		b.WriteString(RenderScrollUpIndicator(canScrollUp))
 	}
 
 	// Render items
@@ -294,12 +230,7 @@ func (h *HistoryList) renderItems() string {
 
 	// Down arrow indicator
 	if scrollable {
-		if canScrollDown {
-			b.WriteString(ScrollIndicatorStyle.Render("  ▼"))
-		} else {
-			b.WriteString("   ")
-		}
-		b.WriteString("\n")
+		b.WriteString(RenderScrollDownIndicator(canScrollDown))
 	}
 
 	paddedStyle := lipgloss.NewStyle().Padding(1, 2)
@@ -317,10 +248,10 @@ func (h *HistoryList) renderItem(item HistoryItem, isCursor bool) string {
 	versionStr := DimStyle.Render(fmt.Sprintf("#%d", item.Version))
 
 	// Kind with appropriate color
-	kindStr := h.renderKind(item.Kind)
+	kindStr := RenderHistoryKind(item.Kind)
 
 	// Result status
-	resultStr := h.renderResult(item.Result)
+	resultStr := RenderHistoryResult(item.Result)
 
 	// Timestamp - try to format it nicely
 	timeStr := h.formatTime(item.StartTime)
@@ -363,48 +294,12 @@ func (h *HistoryList) renderItem(item HistoryItem, isCursor bool) string {
 	return line
 }
 
-func (h *HistoryList) renderKind(kind string) string {
-	// Match the kind to operation colors
-	switch kind {
-	case "update":
-		return OpCreateStyle.Render("update")
-	case "refresh":
-		return OpRefreshStyle.Render("refresh")
-	case "destroy":
-		return OpDeleteStyle.Render("destroy")
-	case "preview":
-		return DimStyle.Render("preview")
-	default:
-		return DimStyle.Render(kind)
-	}
-}
-
-func (h *HistoryList) renderResult(result string) string {
-	switch result {
-	case "succeeded":
-		return StatusSuccessStyle.Render("succeeded")
-	case "failed":
-		return StatusFailedStyle.Render("failed")
-	case "in-progress":
-		return StatusRunningStyle.Render("in-progress")
-	default:
-		return DimStyle.Render(result)
-	}
-}
+// renderKind and renderResult are now shared functions in styles.go:
+// - RenderHistoryKind(kind string) string
+// - RenderHistoryResult(result string) string
 
 func (h *HistoryList) formatTime(timeStr string) string {
-	// Try to parse the time string (Pulumi uses RFC3339)
-	t, err := time.Parse(time.RFC3339, timeStr)
-	if err != nil {
-		// Fall back to original string, truncated
-		if len(timeStr) > 16 {
-			return DimStyle.Render(timeStr[:16])
-		}
-		return DimStyle.Render(timeStr)
-	}
-
-	// Format as "2006-01-02 15:04"
-	return DimStyle.Render(t.Format("2006-01-02 15:04"))
+	return FormatTimeStyled(timeStr, "2006-01-02 15:04", 16, DimStyle)
 }
 
 func (h *HistoryList) renderChanges(changes map[string]int) string {

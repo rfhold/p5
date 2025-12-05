@@ -3,19 +3,11 @@ package ui
 import (
 	"fmt"
 	"strings"
-	"time"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 // HistoryDetailPanel is a floating panel showing history update details
 type HistoryDetailPanel struct {
-	visible bool
-	width   int
-	height  int
-
-	// Scroll state
-	scrollOffset int
+	PanelBase // Embed common panel functionality
 
 	// Current history item being displayed
 	item *HistoryItem
@@ -23,74 +15,25 @@ type HistoryDetailPanel struct {
 
 // NewHistoryDetailPanel creates a new history detail panel component
 func NewHistoryDetailPanel() *HistoryDetailPanel {
-	return &HistoryDetailPanel{
-		visible: false,
-	}
-}
-
-// Visible returns whether the panel is visible
-func (d *HistoryDetailPanel) Visible() bool {
-	return d.visible
-}
-
-// Toggle toggles the panel visibility
-func (d *HistoryDetailPanel) Toggle() {
-	d.visible = !d.visible
-	d.scrollOffset = 0
-}
-
-// Show shows the panel
-func (d *HistoryDetailPanel) Show() {
-	d.visible = true
-	d.scrollOffset = 0
-}
-
-// Hide hides the panel
-func (d *HistoryDetailPanel) Hide() {
-	d.visible = false
-}
-
-// SetSize sets the dimensions for the panel
-func (d *HistoryDetailPanel) SetSize(width, height int) {
-	d.width = width
-	d.height = height
+	return &HistoryDetailPanel{}
 }
 
 // SetItem sets the history item to display details for
 func (d *HistoryDetailPanel) SetItem(item *HistoryItem) {
 	d.item = item
-	d.scrollOffset = 0
-}
-
-// ScrollUp scrolls the content up
-func (d *HistoryDetailPanel) ScrollUp(lines int) {
-	d.scrollOffset -= lines
-	if d.scrollOffset < 0 {
-		d.scrollOffset = 0
-	}
-}
-
-// ScrollDown scrolls the content down
-func (d *HistoryDetailPanel) ScrollDown(lines int) {
-	d.scrollOffset += lines
+	d.ResetScroll()
 }
 
 // View renders the history detail panel
 func (d *HistoryDetailPanel) View() string {
-	if !d.visible || d.width == 0 || d.height == 0 {
+	if !d.Visible() || d.Width() == 0 || d.Height() == 0 {
 		return ""
 	}
 
-	// Panel takes up the right half of the screen
-	panelWidth := d.width
-	panelHeight := d.height
-
 	// Build header
-	var header string
+	header := "Update Details"
 	if d.item != nil {
-		header = LabelStyle.Render(fmt.Sprintf("Update #%d", d.item.Version))
-	} else {
-		header = LabelStyle.Render("Update Details")
+		header = fmt.Sprintf("Update #%d", d.item.Version)
 	}
 
 	// Build content
@@ -101,48 +44,21 @@ func (d *HistoryDetailPanel) View() string {
 		content = d.renderContent()
 	}
 
-	// Calculate content height (subtract header, border, padding)
-	headerHeight := lipgloss.Height(header)
-	contentHeight := panelHeight - headerHeight - 4 // border + padding
-	if contentHeight < 1 {
-		contentHeight = 1
+	// Use shared helper for common panel rendering
+	result := RenderDetailPanel(DetailPanelContent{
+		Header:       header,
+		Content:      content,
+		Width:        d.Width(),
+		Height:       d.Height(),
+		ScrollOffset: d.ScrollOffset(),
+	})
+
+	// Update scroll offset if it was clamped
+	if result.NewScrollOffset != d.ScrollOffset() {
+		d.SetScrollOffset(result.NewScrollOffset)
 	}
 
-	// Apply scrolling to content
-	contentLines := strings.Split(content, "\n")
-	if d.scrollOffset >= len(contentLines) {
-		d.scrollOffset = len(contentLines) - 1
-		if d.scrollOffset < 0 {
-			d.scrollOffset = 0
-		}
-	}
-
-	// Get visible portion
-	endIdx := d.scrollOffset + contentHeight
-	if endIdx > len(contentLines) {
-		endIdx = len(contentLines)
-	}
-	visibleLines := contentLines[d.scrollOffset:endIdx]
-	visibleContent := strings.Join(visibleLines, "\n")
-
-	// Add scroll indicator if needed
-	if len(contentLines) > contentHeight {
-		scrollInfo := DimStyle.Render(fmt.Sprintf(" [%d/%d]", d.scrollOffset+1, len(contentLines)))
-		header = header + scrollInfo
-	}
-
-	// Combine header and content
-	body := lipgloss.JoinVertical(lipgloss.Left, header, "", visibleContent)
-
-	// Style the panel with border
-	panelStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorPrimary).
-		Padding(1, 2).
-		Width(panelWidth - 2).
-		Height(panelHeight - 2)
-
-	return panelStyle.Render(body)
+	return result.Rendered
 }
 
 // renderContent renders the main content for the history item
@@ -155,12 +71,12 @@ func (d *HistoryDetailPanel) renderContent() string {
 
 	// Operation kind with color
 	b.WriteString(DimStyle.Render("Kind: "))
-	b.WriteString(d.renderKind(d.item.Kind))
+	b.WriteString(RenderHistoryKind(d.item.Kind))
 	b.WriteString("\n")
 
 	// Result status
 	b.WriteString(DimStyle.Render("Result: "))
-	b.WriteString(d.renderResult(d.item.Result))
+	b.WriteString(RenderHistoryResult(d.item.Result))
 	b.WriteString("\n")
 
 	// User who ran the update
@@ -254,67 +170,14 @@ func (d *HistoryDetailPanel) renderResourceChanges(b *strings.Builder) {
 	b.WriteString(DimStyle.Render(fmt.Sprintf("Total: %d resources", total)))
 }
 
-func (d *HistoryDetailPanel) renderKind(kind string) string {
-	switch kind {
-	case "update":
-		return OpCreateStyle.Render("update")
-	case "refresh":
-		return OpRefreshStyle.Render("refresh")
-	case "destroy":
-		return OpDeleteStyle.Render("destroy")
-	case "preview":
-		return DimStyle.Render("preview")
-	default:
-		return DimStyle.Render(kind)
-	}
-}
-
-func (d *HistoryDetailPanel) renderResult(result string) string {
-	switch result {
-	case "succeeded":
-		return StatusSuccessStyle.Render("succeeded")
-	case "failed":
-		return StatusFailedStyle.Render("failed")
-	case "in-progress":
-		return StatusRunningStyle.Render("in-progress")
-	default:
-		return DimStyle.Render(result)
-	}
-}
+// renderKind and renderResult are now shared functions in styles.go:
+// - RenderHistoryKind(kind string) string
+// - RenderHistoryResult(result string) string
 
 func (d *HistoryDetailPanel) formatTime(timeStr string) string {
-	t, err := time.Parse(time.RFC3339, timeStr)
-	if err != nil {
-		return timeStr
-	}
-	return t.Format("2006-01-02 15:04:05")
+	return FormatTime(timeStr, "2006-01-02 15:04:05")
 }
 
 func (d *HistoryDetailPanel) calculateDuration(startStr, endStr string) string {
-	start, err := time.Parse(time.RFC3339, startStr)
-	if err != nil {
-		return ""
-	}
-	end, err := time.Parse(time.RFC3339, endStr)
-	if err != nil {
-		return ""
-	}
-
-	duration := end.Sub(start)
-
-	if duration < time.Second {
-		return fmt.Sprintf("%dms", duration.Milliseconds())
-	}
-	if duration < time.Minute {
-		return fmt.Sprintf("%.1fs", duration.Seconds())
-	}
-	if duration < time.Hour {
-		mins := int(duration.Minutes())
-		secs := int(duration.Seconds()) % 60
-		return fmt.Sprintf("%dm %ds", mins, secs)
-	}
-
-	hours := int(duration.Hours())
-	mins := int(duration.Minutes()) % 60
-	return fmt.Sprintf("%dh %dm", hours, mins)
+	return CalculateDuration(startStr, endStr)
 }
