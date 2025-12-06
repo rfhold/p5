@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -152,6 +153,126 @@ func withPluginProvider(provider plugins.PluginProvider) testModelOption {
 	}
 }
 
+// outputCapture wraps a TestModel's output to track all written bytes
+// This is needed because teatest's WaitFor consumes bytes from the buffer.
+// The capture stores all bytes that flow through the Read method.
+type outputCapture struct {
+	tm       *teatest.TestModel
+	captured bytes.Buffer
+	mu       sync.Mutex
+}
+
+// newOutputCapture creates a new output capture wrapper for a TestModel
+func newOutputCapture(tm *teatest.TestModel) *outputCapture {
+	return &outputCapture{tm: tm}
+}
+
+// Read reads from the underlying output and captures all bytes
+func (oc *outputCapture) Read(p []byte) (n int, err error) {
+	n, err = oc.tm.Output().Read(p)
+	if n > 0 {
+		oc.mu.Lock()
+		oc.captured.Write(p[:n])
+		oc.mu.Unlock()
+	}
+	return n, err
+}
+
+// AllOutput returns all captured output bytes, including any remaining unread bytes
+func (oc *outputCapture) AllOutput() []byte {
+	// Read any remaining output from the buffer
+	remaining, _ := io.ReadAll(oc.tm.Output())
+	if len(remaining) > 0 {
+		oc.mu.Lock()
+		oc.captured.Write(remaining)
+		oc.mu.Unlock()
+	}
+	oc.mu.Lock()
+	defer oc.mu.Unlock()
+	return oc.captured.Bytes()
+}
+
+// testHarness wraps a TestModel with persistent output capture for golden tests.
+// Use this for tests that need to take multiple snapshots.
+type testHarness struct {
+	t       *testing.T
+	tm      *teatest.TestModel
+	capture *outputCapture
+}
+
+// newTestHarness creates a new test harness with persistent output capture
+func newTestHarness(t *testing.T, m Model) *testHarness {
+	t.Helper()
+	tm := teatest.NewTestModel(t, m,
+		teatest.WithInitialTermSize(goldenWidth, goldenHeight),
+	)
+	oc := newOutputCapture(tm)
+	return &testHarness{t: t, tm: tm, capture: oc}
+}
+
+// Send sends a message to the test model
+func (h *testHarness) Send(msg tea.Msg) {
+	h.tm.Send(msg)
+}
+
+// WaitFor waits for content through the persistent capture
+func (h *testHarness) WaitFor(content string, timeout time.Duration) {
+	h.t.Helper()
+	teatest.WaitFor(h.t, h.capture,
+		func(bts []byte) bool {
+			return bytes.Contains(bts, []byte(content))
+		},
+		teatest.WithCheckInterval(50*time.Millisecond),
+		teatest.WithDuration(timeout),
+	)
+}
+
+// WaitForAny waits for any of the specified content strings
+func (h *testHarness) WaitForAny(contents []string, timeout time.Duration) {
+	h.t.Helper()
+	teatest.WaitFor(h.t, h.capture,
+		func(bts []byte) bool {
+			for _, content := range contents {
+				if bytes.Contains(bts, []byte(content)) {
+					return true
+				}
+			}
+			return false
+		},
+		teatest.WithCheckInterval(50*time.Millisecond),
+		teatest.WithDuration(timeout),
+	)
+}
+
+// Snapshot takes a golden snapshot of all output so far
+func (h *testHarness) Snapshot(name string) {
+	h.t.Helper()
+	time.Sleep(100 * time.Millisecond)
+	out := h.capture.AllOutput()
+	h.t.Run(name, func(t *testing.T) {
+		golden.RequireEqual(t, out)
+	})
+}
+
+// WaitAndSnapshot waits for content then takes a snapshot
+func (h *testHarness) WaitAndSnapshot(content string, name string, timeout time.Duration) {
+	h.t.Helper()
+	h.WaitFor(content, timeout)
+	h.Snapshot(name)
+}
+
+// Quit sends quit and waits for finish
+func (h *testHarness) Quit(timeout time.Duration) {
+	h.tm.Send(tea.Quit())
+	h.tm.WaitFinished(h.t, teatest.WithFinalTimeout(timeout))
+}
+
+// QuitWithKey sends q key to quit
+func (h *testHarness) QuitWithKey(timeout time.Duration) {
+	h.tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	h.tm.WaitFinished(h.t, teatest.WithFinalTimeout(timeout))
+}
+
 // waitForContent waits for specific content to appear in output
 func waitForContent(t *testing.T, tm *teatest.TestModel, content string, timeout time.Duration) {
 	t.Helper()
@@ -162,6 +283,20 @@ func waitForContent(t *testing.T, tm *teatest.TestModel, content string, timeout
 		teatest.WithCheckInterval(50*time.Millisecond),
 		teatest.WithDuration(timeout),
 	)
+}
+
+// waitForContentWithCapture waits for content and returns an outputCapture with all output
+func waitForContentWithCapture(t *testing.T, tm *teatest.TestModel, content string, timeout time.Duration) *outputCapture {
+	t.Helper()
+	oc := newOutputCapture(tm)
+	teatest.WaitFor(t, oc,
+		func(bts []byte) bool {
+			return bytes.Contains(bts, []byte(content))
+		},
+		teatest.WithCheckInterval(50*time.Millisecond),
+		teatest.WithDuration(timeout),
+	)
+	return oc
 }
 
 // waitForAnyContent waits for any of the specified content strings
@@ -179,6 +314,25 @@ func waitForAnyContent(t *testing.T, tm *teatest.TestModel, contents []string, t
 		teatest.WithCheckInterval(50*time.Millisecond),
 		teatest.WithDuration(timeout),
 	)
+}
+
+// waitForAnyContentWithCapture waits for any content and returns an outputCapture
+func waitForAnyContentWithCapture(t *testing.T, tm *teatest.TestModel, contents []string, timeout time.Duration) *outputCapture {
+	t.Helper()
+	oc := newOutputCapture(tm)
+	teatest.WaitFor(t, oc,
+		func(bts []byte) bool {
+			for _, content := range contents {
+				if bytes.Contains(bts, []byte(content)) {
+					return true
+				}
+			}
+			return false
+		},
+		teatest.WithCheckInterval(50*time.Millisecond),
+		teatest.WithDuration(timeout),
+	)
+	return oc
 }
 
 // testResources creates a simple set of test resources
@@ -271,7 +425,6 @@ func TestInitializationFlow_WorkspaceInvalid(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-
 // TestNavigation_ResourceList tests keyboard navigation through the resource list.
 func TestNavigation_ResourceList(t *testing.T) {
 	resources := testResources()
@@ -330,7 +483,6 @@ func TestNavigation_ToggleDetails(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-
 // TestHelpModal_ToggleWithQuestionMark tests opening and closing the help modal.
 func TestHelpModal_ToggleWithQuestionMark(t *testing.T) {
 	m := createTestModel(t,
@@ -358,7 +510,6 @@ func TestHelpModal_ToggleWithQuestionMark(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
-
 
 // TestVisualMode_SelectResources tests entering and exiting visual selection mode.
 func TestVisualMode_SelectResources(t *testing.T) {
@@ -395,7 +546,6 @@ func TestVisualMode_SelectResources(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
-
 
 // TestResize_DuringDisplay tests that the app handles terminal resize gracefully.
 func TestResize_DuringDisplay(t *testing.T) {
@@ -473,9 +623,10 @@ func TestRapidKeyPresses(t *testing.T) {
 
 // Note: itoa helper is defined in logic.go and reused here
 
-
 // takeSnapshot captures the current TUI state and compares against golden file.
 // The snapshot name is appended to the test name to allow multiple snapshots per test.
+// Note: This reads whatever output is available now - if waitForContent was called
+// before this, most output may have been consumed. Use takeSnapshotFromCapture instead.
 func takeSnapshot(t *testing.T, tm *teatest.TestModel, snapshotName string) {
 	t.Helper()
 	// Give UI time to stabilize
@@ -493,13 +644,28 @@ func takeSnapshot(t *testing.T, tm *teatest.TestModel, snapshotName string) {
 	})
 }
 
-// waitAndSnapshot waits for content then takes a golden snapshot
-func waitAndSnapshot(t *testing.T, tm *teatest.TestModel, content string, snapshotName string, timeout time.Duration) {
+// takeSnapshotFromCapture takes a golden snapshot using previously captured output
+func takeSnapshotFromCapture(t *testing.T, oc *outputCapture, snapshotName string) {
 	t.Helper()
-	waitForContent(t, tm, content, timeout)
-	takeSnapshot(t, tm, snapshotName)
+	// Give UI time to stabilize
+	time.Sleep(100 * time.Millisecond)
+
+	// Get all captured output
+	out := oc.AllOutput()
+
+	// Use golden.RequireEqualSub for sub-test naming
+	t.Run(snapshotName, func(t *testing.T) {
+		golden.RequireEqual(t, out)
+	})
 }
 
+// waitAndSnapshot waits for content then takes a golden snapshot
+// This properly captures all output from the beginning of the wait
+func waitAndSnapshot(t *testing.T, tm *teatest.TestModel, content string, snapshotName string, timeout time.Duration) {
+	t.Helper()
+	oc := waitForContentWithCapture(t, tm, content, timeout)
+	takeSnapshotFromCapture(t, oc, snapshotName)
+}
 
 // testResourcesWithHierarchy creates a realistic resource tree with parent-child relationships
 func testResourcesWithHierarchy() []pulumi.ResourceInfo {
@@ -685,7 +851,6 @@ func makeOperationEvents(steps []struct {
 	return events
 }
 
-
 // TestPreviewFlow_UpWithChanges tests the complete up preview flow with multiple
 // resource changes and captures golden snapshots at key points.
 func TestPreviewFlow_UpWithChanges(t *testing.T) {
@@ -767,16 +932,13 @@ func TestPreviewFlow_RefreshNoChanges(t *testing.T) {
 		withStartView("refresh"),
 	)
 
-	tm := teatest.NewTestModel(t, m,
-		teatest.WithInitialTermSize(goldenWidth, goldenHeight),
-	)
+	h := newTestHarness(t, m)
 
 	// Wait for preview to complete - should show "no changes"
-	waitForAnyContent(t, tm, []string{"No changes", "0 resources"}, 5*time.Second)
-	takeSnapshot(t, tm, "no_changes")
+	h.WaitForAny([]string{"No changes", "0 resources"}, 5*time.Second)
+	h.Snapshot("no_changes")
 
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
+	h.QuitWithKey(2 * time.Second)
 }
 
 // TestPreviewFlow_WithError tests error handling during preview
@@ -806,7 +968,6 @@ func TestPreviewFlow_WithError(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
-
 
 // TestExecuteFlow_UpSuccess tests executing an up operation after preview
 func TestExecuteFlow_UpSuccess(t *testing.T) {
@@ -924,7 +1085,6 @@ func TestExecuteFlow_WithConfirmation(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-
 // TestDestroyFlow_PreviewAndCancel tests destroy preview and cancel
 func TestDestroyFlow_PreviewAndCancel(t *testing.T) {
 	// Destroy preview - all resources will be deleted
@@ -959,22 +1119,18 @@ func TestDestroyFlow_PreviewAndCancel(t *testing.T) {
 		withStartView("destroy"),
 	)
 
-	tm := teatest.NewTestModel(t, m,
-		teatest.WithInitialTermSize(goldenWidth, goldenHeight),
-	)
+	h := newTestHarness(t, m)
 
 	// Wait for destroy preview to complete
-	waitAndSnapshot(t, tm, "data-bucket", "destroy_preview", 5*time.Second)
+	h.WaitAndSnapshot("data-bucket", "destroy_preview", 5*time.Second)
 
 	// Press Escape to cancel and go back to stack view
-	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
-	waitForContent(t, tm, "data-bucket", 3*time.Second)
-	takeSnapshot(t, tm, "back_to_stack")
+	h.Send(tea.KeyMsg{Type: tea.KeyEsc})
+	h.WaitFor("data-bucket", 3*time.Second)
+	h.Snapshot("back_to_stack")
 
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
+	h.QuitWithKey(2 * time.Second)
 }
-
 
 // TestStackSwitching_OpenSelectorAndSwitch tests opening stack selector and switching
 func TestStackSwitching_OpenSelectorAndSwitch(t *testing.T) {
@@ -1017,7 +1173,6 @@ func TestStackSwitching_OpenSelectorAndSwitch(t *testing.T) {
 	tm.Send(tea.Quit())
 	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
 }
-
 
 // TestHistoryView_NavigateAndDetails tests history view navigation and details
 func TestHistoryView_NavigateAndDetails(t *testing.T) {
@@ -1063,7 +1218,6 @@ func TestHistoryView_NavigateAndDetails(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
-
 
 // TestImportModal_OpenAndFill tests import modal workflow
 func TestImportModal_OpenAndFill(t *testing.T) {
@@ -1128,7 +1282,6 @@ func TestImportModal_OpenAndFill(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
 }
 
-
 // TestDetailsPanel_ResourceInspection tests viewing resource details
 func TestDetailsPanel_ResourceInspection(t *testing.T) {
 	m := createTestModel(t,
@@ -1171,7 +1324,6 @@ func TestDetailsPanel_ResourceInspection(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-
 // TestVisualMode_MultiSelectResources tests selecting multiple resources
 func TestVisualMode_MultiSelectResources(t *testing.T) {
 	m := createTestModel(t,
@@ -1179,42 +1331,38 @@ func TestVisualMode_MultiSelectResources(t *testing.T) {
 		withStacks(testStacks()),
 	)
 
-	tm := teatest.NewTestModel(t, m,
-		teatest.WithInitialTermSize(goldenWidth, goldenHeight),
-	)
+	h := newTestHarness(t, m)
 
 	// Wait for resources to load
-	waitForContent(t, tm, "data-bucket", 3*time.Second)
+	h.WaitFor("data-bucket", 3*time.Second)
 
 	// Navigate to first real resource (skip stack)
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(50 * time.Millisecond)
 
 	// Enter visual mode
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
-	waitAndSnapshot(t, tm, "VISUAL", "visual_mode_entered", 2*time.Second)
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	h.WaitAndSnapshot("VISUAL", "visual_mode_entered", 2*time.Second)
 
 	// Extend selection down
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(50 * time.Millisecond)
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(100 * time.Millisecond)
-	takeSnapshot(t, tm, "visual_extended")
+	h.Snapshot("visual_extended")
 
 	// Toggle target flag on selection (t key)
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
 	time.Sleep(100 * time.Millisecond)
-	takeSnapshot(t, tm, "visual_targeted")
+	h.Snapshot("visual_targeted")
 
 	// Exit visual mode
-	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
+	h.Send(tea.KeyMsg{Type: tea.KeyEsc})
 	time.Sleep(100 * time.Millisecond)
-	takeSnapshot(t, tm, "after_visual")
+	h.Snapshot("after_visual")
 
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
+	h.QuitWithKey(2 * time.Second)
 }
-
 
 // TestScenario_CompleteDeploymentCycle tests a realistic deployment workflow:
 // 1. View stack resources
@@ -1279,38 +1427,35 @@ func TestScenario_CompleteDeploymentCycle(t *testing.T) {
 		withStacks(testStacks()),
 	)
 
-	tm := teatest.NewTestModel(t, m,
-		teatest.WithInitialTermSize(goldenWidth, goldenHeight),
-	)
+	h := newTestHarness(t, m)
 
 	// Step 1: View initial stack resources
-	waitAndSnapshot(t, tm, "data-bucket", "step1_stack_view", 3*time.Second)
+	h.WaitAndSnapshot("data-bucket", "step1_stack_view", 3*time.Second)
 
 	// Step 2: Start up preview
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})
-	waitAndSnapshot(t, tm, "users-table", "step2_preview_complete", 5*time.Second)
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})
+	h.WaitAndSnapshot("users-table", "step2_preview_complete", 5*time.Second)
 
 	// Step 3: Open details panel to review the change
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
 	time.Sleep(100 * time.Millisecond)
-	takeSnapshot(t, tm, "step3_reviewing_details")
+	h.Snapshot("step3_reviewing_details")
 
 	// Close details
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
 	time.Sleep(100 * time.Millisecond)
 
 	// Step 4: Execute the deployment
-	tm.Send(tea.KeyMsg{Type: tea.KeyCtrlU})
+	h.Send(tea.KeyMsg{Type: tea.KeyCtrlU})
 	time.Sleep(500 * time.Millisecond)
-	takeSnapshot(t, tm, "step4_execution_complete")
+	h.Snapshot("step4_execution_complete")
 
 	// Step 5: Go back to stack view
-	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
-	waitForContent(t, tm, "data-bucket", 3*time.Second)
-	takeSnapshot(t, tm, "step5_back_to_stack")
+	h.Send(tea.KeyMsg{Type: tea.KeyEsc})
+	h.WaitFor("data-bucket", 3*time.Second)
+	h.Snapshot("step5_back_to_stack")
 
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
+	h.QuitWithKey(2 * time.Second)
 }
 
 // TestScenario_InvestigateFailedDeployment tests investigating a failed update
