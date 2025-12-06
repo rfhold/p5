@@ -11,7 +11,7 @@ Set WaitTimeout 5s
 
 # Clean any existing state and initialize a fresh stack
 Hide
-Type "rm -rf test/simple/.pulumi && cd test/simple && pulumi stack init dev && cd /app"
+Type "rm -rf programs/simple/.pulumi && cd programs/simple && pulumi stack init dev && cd /app"
 Enter
 Sleep 2000ms
 Type "clear"
@@ -20,7 +20,7 @@ Sleep 500ms
 Show
 
 # Run p5 with up command directly (shows preview first)
-Type "p5 -C test/simple up"
+Type "p5 -C programs/simple up"
 Enter
 
 # Wait for preview to complete (shows [+] for creates)

@@ -49,10 +49,10 @@ RUN go build -o /usr/bin/p5 ./cmd/p5
 FROM build AS test-deps
 
 # Copy test project
-COPY test/simple/ ./test/simple/
+COPY programs/simple/ ./programs/simple/
 
 # Pre-download Pulumi providers and pre-compile the Go program
-WORKDIR /app/test/simple
+WORKDIR /app/programs/simple
 
 # Environment for Pulumi
 ENV PULUMI_BACKEND_URL=file://.

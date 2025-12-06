@@ -239,11 +239,12 @@ go build -o /dev/null ./cmd/p5 && ./scripts/dev.sh -C programs/simple
 The demo GIF is recorded using [VHS](https://github.com/charmbracelet/vhs). To regenerate it:
 
 ```bash
-# Build the VHS Docker image
-docker build -f Dockerfile.vhs -t p5-vhs .
+# Build and run VHS to generate demo.gif
+./scripts/vhs.sh
 
-# Run VHS to generate demo.gif
-docker run --rm -v "$(pwd)":/app p5-vhs
+# Or run steps separately:
+./scripts/vhs.sh --build-only  # Only build the Docker image
+./scripts/vhs.sh --run-only    # Only run VHS (image must exist)
 ```
 
 ## License
