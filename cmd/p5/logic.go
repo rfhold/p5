@@ -8,14 +8,6 @@ import (
 	"github.com/rfhold/p5/internal/ui"
 )
 
-// This file contains pure business logic functions extracted from Update handlers.
-// These functions have no side effects (no UI mutations, no logging, no channels)
-// and are easily testable.
-
-// =============================================================================
-// Preview Event Processing
-// =============================================================================
-
 // PreviewEventResult holds the result of processing a preview event
 type PreviewEventResult struct {
 	// State changes
@@ -102,10 +94,6 @@ func convertPreviewStepToItem(step *pulumi.PreviewStep) *ui.ResourceItem {
 	}
 }
 
-// =============================================================================
-// Operation Event Processing
-// =============================================================================
-
 // OperationEventResult holds the result of processing an operation event
 type OperationEventResult struct {
 	// State changes
@@ -180,10 +168,6 @@ func convertOperationEventToItem(event pulumi.OperationEvent) *ui.ResourceItem {
 	}
 }
 
-// =============================================================================
-// Resource Conversion
-// =============================================================================
-
 // ConvertResourcesToItems converts pulumi ResourceInfo slice to UI ResourceItems.
 // This is used when loading stack resources.
 func ConvertResourcesToItems(resources []pulumi.ResourceInfo) []ui.ResourceItem {
@@ -202,10 +186,6 @@ func ConvertResourcesToItems(resources []pulumi.ResourceInfo) []ui.ResourceItem 
 	}
 	return items
 }
-
-// =============================================================================
-// History Conversion
-// =============================================================================
 
 // ConvertHistoryToItems converts pulumi UpdateSummary slice to UI HistoryItems.
 // For local backends where Version may be 0, it calculates version from index.
@@ -233,10 +213,6 @@ func ConvertHistoryToItems(history []pulumi.UpdateSummary) []ui.HistoryItem {
 	return items
 }
 
-// =============================================================================
-// Import Suggestions Conversion
-// =============================================================================
-
 // ConvertImportSuggestions converts plugin import suggestions to UI format.
 func ConvertImportSuggestions(suggestions []*plugins.AggregatedImportSuggestion) []ui.ImportSuggestion {
 	items := make([]ui.ImportSuggestion, 0, len(suggestions))
@@ -250,10 +226,6 @@ func ConvertImportSuggestions(suggestions []*plugins.AggregatedImportSuggestion)
 	}
 	return items
 }
-
-// =============================================================================
-// Stack and Workspace Conversion
-// =============================================================================
 
 // StacksConversionResult holds the result of converting stacks
 type StacksConversionResult struct {
@@ -300,10 +272,6 @@ func ConvertWorkspacesToItems(workspaces []pulumi.WorkspaceInfo, cwd string) []u
 	return items
 }
 
-// =============================================================================
-// Action Validation
-// =============================================================================
-
 // CanImportResource determines if the current selection can be imported.
 // Import is only valid for create operations in preview view.
 func CanImportResource(viewMode ui.ViewMode, selectedItem *ui.ResourceItem) bool {
@@ -328,10 +296,6 @@ func CanDeleteFromState(viewMode ui.ViewMode, selectedItem *ui.ResourceItem) boo
 	// Cannot delete the root stack resource
 	return selectedItem.Type != "pulumi:pulumi:Stack"
 }
-
-// =============================================================================
-// Escape Key Decision Logic
-// =============================================================================
 
 // EscapeAction represents the action to take when escape is pressed
 type EscapeAction int
@@ -382,10 +346,6 @@ func DetermineEscapeAction(viewMode ui.ViewMode, opState OperationState, visualM
 	return EscapeActionNone
 }
 
-// =============================================================================
-// Stack Initialization Logic
-// =============================================================================
-
 // StackInitAction represents the action to take after loading stacks
 type StackInitAction int
 
@@ -430,10 +390,6 @@ func DetermineStackInitAction(initState InitState, stackCount int, currentStackN
 	return StackInitActionProceed
 }
 
-// =============================================================================
-// Plugin Auth Result Processing
-// =============================================================================
-
 // PluginAuthSummary summarizes the results of plugin authentication
 type PluginAuthSummary struct {
 	// AuthenticatedPlugins is the list of plugins that provided credentials
@@ -459,10 +415,6 @@ func SummarizePluginAuthResults(results []plugins.AuthenticateResult) PluginAuth
 
 	return summary
 }
-
-// =============================================================================
-// Clipboard Message Formatting
-// =============================================================================
 
 // FormatClipboardMessage formats a toast message for clipboard operations.
 // count is the number of resources copied:

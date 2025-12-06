@@ -33,10 +33,6 @@ const (
 	goldenHeight = 40
 )
 
-// =============================================================================
-// Test Helper Functions
-// =============================================================================
-
 // testModelOption is a function that configures test dependencies or context
 type testModelOption func(*Dependencies, *AppContext)
 
@@ -185,10 +181,6 @@ func waitForAnyContent(t *testing.T, tm *teatest.TestModel, contents []string, t
 	)
 }
 
-// =============================================================================
-// Sample Test Data
-// =============================================================================
-
 // testResources creates a simple set of test resources
 func testResources() []pulumi.ResourceInfo {
 	return []pulumi.ResourceInfo{
@@ -227,10 +219,6 @@ func testStacks() []pulumi.StackInfo {
 		{Name: "prod", Current: false},
 	}
 }
-
-// =============================================================================
-// Initialization Flow Tests
-// =============================================================================
 
 // TestInitializationFlow_Success tests the complete initialization sequence
 // when everything works correctly.
@@ -283,9 +271,6 @@ func TestInitializationFlow_WorkspaceInvalid(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Navigation Tests
-// =============================================================================
 
 // TestNavigation_ResourceList tests keyboard navigation through the resource list.
 func TestNavigation_ResourceList(t *testing.T) {
@@ -345,9 +330,6 @@ func TestNavigation_ToggleDetails(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Help Modal Tests
-// =============================================================================
 
 // TestHelpModal_ToggleWithQuestionMark tests opening and closing the help modal.
 func TestHelpModal_ToggleWithQuestionMark(t *testing.T) {
@@ -377,9 +359,6 @@ func TestHelpModal_ToggleWithQuestionMark(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Visual Mode Tests
-// =============================================================================
 
 // TestVisualMode_SelectResources tests entering and exiting visual selection mode.
 func TestVisualMode_SelectResources(t *testing.T) {
@@ -417,9 +396,6 @@ func TestVisualMode_SelectResources(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Edge Case Tests
-// =============================================================================
 
 // TestResize_DuringDisplay tests that the app handles terminal resize gracefully.
 func TestResize_DuringDisplay(t *testing.T) {
@@ -497,9 +473,6 @@ func TestRapidKeyPresses(t *testing.T) {
 
 // Note: itoa helper is defined in logic.go and reused here
 
-// =============================================================================
-// Golden Snapshot Helper Functions
-// =============================================================================
 
 // takeSnapshot captures the current TUI state and compares against golden file.
 // The snapshot name is appended to the test name to allow multiple snapshots per test.
@@ -527,9 +500,6 @@ func waitAndSnapshot(t *testing.T, tm *teatest.TestModel, content string, snapsh
 	takeSnapshot(t, tm, snapshotName)
 }
 
-// =============================================================================
-// Enhanced Test Data Builders
-// =============================================================================
 
 // testResourcesWithHierarchy creates a realistic resource tree with parent-child relationships
 func testResourcesWithHierarchy() []pulumi.ResourceInfo {
@@ -715,9 +685,6 @@ func makeOperationEvents(steps []struct {
 	return events
 }
 
-// =============================================================================
-// Complex Preview Flow Tests with Golden Snapshots
-// =============================================================================
 
 // TestPreviewFlow_UpWithChanges tests the complete up preview flow with multiple
 // resource changes and captures golden snapshots at key points.
@@ -840,9 +807,6 @@ func TestPreviewFlow_WithError(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Execute Operation Flow Tests with Golden Snapshots
-// =============================================================================
 
 // TestExecuteFlow_UpSuccess tests executing an up operation after preview
 func TestExecuteFlow_UpSuccess(t *testing.T) {
@@ -960,9 +924,6 @@ func TestExecuteFlow_WithConfirmation(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Destroy Flow Tests with Golden Snapshots
-// =============================================================================
 
 // TestDestroyFlow_PreviewAndCancel tests destroy preview and cancel
 func TestDestroyFlow_PreviewAndCancel(t *testing.T) {
@@ -1014,9 +975,6 @@ func TestDestroyFlow_PreviewAndCancel(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Stack Switching Tests with Golden Snapshots
-// =============================================================================
 
 // TestStackSwitching_OpenSelectorAndSwitch tests opening stack selector and switching
 func TestStackSwitching_OpenSelectorAndSwitch(t *testing.T) {
@@ -1060,9 +1018,6 @@ func TestStackSwitching_OpenSelectorAndSwitch(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
 }
 
-// =============================================================================
-// History View Tests with Golden Snapshots
-// =============================================================================
 
 // TestHistoryView_NavigateAndDetails tests history view navigation and details
 func TestHistoryView_NavigateAndDetails(t *testing.T) {
@@ -1109,9 +1064,6 @@ func TestHistoryView_NavigateAndDetails(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Import Modal Tests with Golden Snapshots
-// =============================================================================
 
 // TestImportModal_OpenAndFill tests import modal workflow
 func TestImportModal_OpenAndFill(t *testing.T) {
@@ -1176,9 +1128,6 @@ func TestImportModal_OpenAndFill(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
 }
 
-// =============================================================================
-// Details Panel Tests with Golden Snapshots
-// =============================================================================
 
 // TestDetailsPanel_ResourceInspection tests viewing resource details
 func TestDetailsPanel_ResourceInspection(t *testing.T) {
@@ -1222,9 +1171,6 @@ func TestDetailsPanel_ResourceInspection(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Visual Selection Mode Tests with Golden Snapshots
-// =============================================================================
 
 // TestVisualMode_MultiSelectResources tests selecting multiple resources
 func TestVisualMode_MultiSelectResources(t *testing.T) {
@@ -1269,9 +1215,6 @@ func TestVisualMode_MultiSelectResources(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 }
 
-// =============================================================================
-// Complex Multi-Step Scenario Tests
-// =============================================================================
 
 // TestScenario_CompleteDeploymentCycle tests a realistic deployment workflow:
 // 1. View stack resources

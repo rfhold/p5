@@ -238,9 +238,6 @@ func TestOperationStateString(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// State Transition Tests
-// =============================================================================
 
 // TestTransitionTo verifies the transitionTo method correctly updates InitState.
 func TestTransitionTo(t *testing.T) {
@@ -394,9 +391,6 @@ type errorString string
 
 func (e errorString) Error() string { return string(e) }
 
-// =============================================================================
-// Pure Logic Function Tests (logic.go)
-// =============================================================================
 
 // TestProcessPreviewEvent_AddsStep verifies step events produce ResourceItems.
 func TestProcessPreviewEvent_AddsStep(t *testing.T) {
@@ -560,9 +554,6 @@ func TestProcessPreviewEvent_NotInitLoading(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ProcessOperationEvent Tests
-// =============================================================================
 
 // TestProcessOperationEvent_AddsItem verifies operation events produce ResourceItems.
 func TestProcessOperationEvent_AddsItem(t *testing.T) {
@@ -666,9 +657,6 @@ func TestProcessOperationEvent_TransitionsFromStarting(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ConvertResourcesToItems Tests
-// =============================================================================
 
 // TestConvertResourcesToItems_Basic verifies basic resource conversion.
 func TestConvertResourcesToItems_Basic(t *testing.T) {
@@ -727,9 +715,6 @@ func TestConvertResourcesToItems_Empty(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ConvertHistoryToItems Tests
-// =============================================================================
 
 // TestConvertHistoryToItems_Basic verifies basic history conversion.
 func TestConvertHistoryToItems_Basic(t *testing.T) {
@@ -812,9 +797,6 @@ func TestConvertHistoryToItems_Empty(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ConvertImportSuggestions Tests
-// =============================================================================
 
 // TestConvertImportSuggestions_Basic verifies basic suggestion conversion.
 func TestConvertImportSuggestions_Basic(t *testing.T) {
@@ -866,9 +848,6 @@ func TestConvertImportSuggestions_Empty(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// SummarizePluginAuthResults Tests
-// =============================================================================
 
 // TestSummarizePluginAuthResults_AllSuccess verifies successful auth summary.
 func TestSummarizePluginAuthResults_AllSuccess(t *testing.T) {
@@ -938,9 +917,6 @@ func TestSummarizePluginAuthResults_Empty(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ConvertStacksToItems Tests
-// =============================================================================
 
 // TestConvertStacksToItems_Basic verifies multiple stacks with one current.
 func TestConvertStacksToItems_Basic(t *testing.T) {
@@ -1014,9 +990,6 @@ func TestConvertStacksToItems_AllCurrent(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ConvertWorkspacesToItems Tests
-// =============================================================================
 
 // TestConvertWorkspacesToItems_Basic verifies basic conversion with valid cwd.
 func TestConvertWorkspacesToItems_Basic(t *testing.T) {
@@ -1105,9 +1078,6 @@ func TestConvertWorkspacesToItems_RelativePath(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// DetermineStackInitAction Tests
-// =============================================================================
 
 // TestDetermineStackInitAction_NoStacks verifies returns ShowInit when no stacks exist.
 func TestDetermineStackInitAction_NoStacks(t *testing.T) {
@@ -1191,9 +1161,6 @@ func TestStackInitActionString(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// DetermineEscapeAction Tests
-// =============================================================================
 
 // TestDetermineEscapeAction_VisualMode verifies visual mode exit takes highest priority.
 func TestDetermineEscapeAction_VisualMode(t *testing.T) {
@@ -1324,9 +1291,6 @@ func TestEscapeActionString(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// CanImportResource Tests
-// =============================================================================
 
 // TestCanImportResource_ValidCreate verifies import allowed for create op in preview.
 func TestCanImportResource_ValidCreate(t *testing.T) {
@@ -1381,9 +1345,6 @@ func TestCanImportResource_WrongOp(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// CanDeleteFromState Tests
-// =============================================================================
 
 // TestCanDeleteFromState_ValidResource verifies delete allowed for regular resource in stack view.
 func TestCanDeleteFromState_ValidResource(t *testing.T) {
@@ -1432,9 +1393,6 @@ func TestCanDeleteFromState_RootStack(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// FormatClipboardMessage Tests
-// =============================================================================
 
 // TestFormatClipboardMessage_SingleNamed verifies single resource with name.
 func TestFormatClipboardMessage_SingleNamed(t *testing.T) {
@@ -1490,9 +1448,6 @@ func TestFormatClipboardMessage_Text(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Additional Edge Case Tests (Part 2)
-// =============================================================================
 
 // TestProcessPreviewEvent_ErrorDoesNotSetInitDoneOutsideInit verifies InitDone=false when not InitLoadingResources.
 func TestProcessPreviewEvent_ErrorDoesNotSetInitDoneOutsideInit(t *testing.T) {

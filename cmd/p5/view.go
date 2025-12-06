@@ -15,13 +15,9 @@ func (m Model) View() string {
 		return ""
 	}
 
-	// Build header
 	header := m.ui.Header.View()
-
-	// Build footer with keybind hints
 	footer := m.renderFooter()
 
-	// Calculate available height for main content
 	headerHeight := lipgloss.Height(header)
 	footerHeight := lipgloss.Height(footer)
 	mainHeight := m.ui.Height - headerHeight - footerHeight - 1
@@ -30,7 +26,6 @@ func (m Model) View() string {
 		mainHeight = 1
 	}
 
-	// Build main content area
 	var mainContent string
 	if m.ui.ViewMode == ui.ViewHistory {
 		m.ui.HistoryList.SetSize(m.ui.Width, mainHeight)
@@ -45,7 +40,6 @@ func (m Model) View() string {
 
 	fullView := lipgloss.JoinVertical(lipgloss.Left, header, mainArea, footer)
 
-	// Overlay details panel on right half if visible (resource or history)
 	if m.ui.Focus.Has(ui.FocusDetailsPanel) {
 		detailsWidth := m.ui.Width / 2
 		if m.ui.ViewMode == ui.ViewHistory {
@@ -57,45 +51,36 @@ func (m Model) View() string {
 		}
 	}
 
-	// Overlay help dialog if showing
 	if m.ui.Focus.Has(ui.FocusHelp) {
 		fullView = m.ui.Help.View()
 	}
 
-	// Overlay stack selector if showing
 	if m.ui.StackSelector.Visible() {
 		fullView = m.ui.StackSelector.View()
 	}
 
-	// Overlay workspace selector if showing
 	if m.ui.WorkspaceSelector.Visible() {
 		fullView = m.ui.WorkspaceSelector.View()
 	}
 
-	// Overlay import modal if showing
 	if m.ui.ImportModal.Visible() {
 		fullView = m.ui.ImportModal.View()
 	}
 
-	// Overlay stack init modal if showing
 	if m.ui.StackInitModal.Visible() {
 		fullView = m.ui.StackInitModal.View()
 	}
 
-	// Overlay confirm modal if showing
 	if m.ui.ConfirmModal.Visible() {
 		fullView = m.ui.ConfirmModal.View()
 	}
 
-	// Overlay error modal if showing
 	if m.ui.ErrorModal.Visible() {
 		fullView = m.ui.ErrorModal.View()
 	}
 
-	// Overlay toast notification if showing
 	if m.ui.Toast.Visible() {
 		toastView := m.ui.Toast.View(m.ui.Width)
-		// Place toast near the bottom, above the footer
 		footerHeight := 1
 		toastY := m.ui.Height - footerHeight - 2
 		if toastY < 0 {
@@ -112,12 +97,10 @@ func (m Model) renderFooter() string {
 	var leftParts []string
 	var rightParts []string
 
-	// Show visual mode indicator
 	if m.ui.ResourceList.VisualMode() {
 		leftParts = append(leftParts, ui.LabelStyle.Render("VISUAL"))
 	}
 
-	// Show flag counts if any
 	if m.ui.ResourceList.HasFlags() {
 		targets := len(m.ui.ResourceList.GetTargetURNs())
 		replaces := len(m.ui.ResourceList.GetReplaceURNs())
@@ -139,14 +122,12 @@ func (m Model) renderFooter() string {
 		}
 	}
 
-	// Keybind hints on the right - context sensitive
 	if m.ui.ResourceList.VisualMode() {
 		rightParts = append(rightParts, ui.DimStyle.Render("T target"))
 		rightParts = append(rightParts, ui.DimStyle.Render("R replace"))
 		rightParts = append(rightParts, ui.DimStyle.Render("E exclude"))
 		rightParts = append(rightParts, ui.DimStyle.Render("esc cancel"))
 	} else {
-		// Show operation hints based on view
 		switch m.ui.ViewMode {
 		case ui.ViewStack:
 			rightParts = append(rightParts, ui.DimStyle.Render("u up"))
@@ -174,7 +155,6 @@ func (m Model) renderFooter() string {
 	left := joinWithSeparator(leftParts, "  ")
 	right := joinWithSeparator(rightParts, "  ")
 
-	// Calculate padding between left and right
 	leftWidth := lipgloss.Width(left)
 	rightWidth := lipgloss.Width(right)
 	padding := m.ui.Width - leftWidth - rightWidth - 2 // -2 for margins
