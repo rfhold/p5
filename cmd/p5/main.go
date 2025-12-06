@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -88,7 +91,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	p := tea.NewProgram(initialModel(ctx, deps), tea.WithAltScreen(), tea.WithMouseCellMotion())
+	// Create application-level context with cancellation for graceful shutdown.
+	// This context is passed through to all async operations, enabling them to
+	// be cancelled when the application exits (via signal or user quit).
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	// Handle OS signals for graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		appCancel()
+	}()
+
+	p := tea.NewProgram(initialModel(appCtx, ctx, deps), tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

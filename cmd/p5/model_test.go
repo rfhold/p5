@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/rfhold/p5/internal/plugins"
@@ -30,7 +31,7 @@ func TestInitialModelStartsInCheckingWorkspaceState(t *testing.T) {
 		StartView: "stack",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	if m.state.InitState != InitCheckingWorkspace {
 		t.Errorf("expected InitState=%v, got %v", InitCheckingWorkspace, m.state.InitState)
@@ -53,7 +54,7 @@ func TestInitialModelWithUpView(t *testing.T) {
 		StartView: "up",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	if m.state.Operation != pulumi.OperationUp {
 		t.Errorf("expected Operation=%v, got %v", pulumi.OperationUp, m.state.Operation)
@@ -72,7 +73,7 @@ func TestInitialModelWithRefreshView(t *testing.T) {
 		StartView: "refresh",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	if m.state.Operation != pulumi.OperationRefresh {
 		t.Errorf("expected Operation=%v, got %v", pulumi.OperationRefresh, m.state.Operation)
@@ -91,7 +92,7 @@ func TestInitialModelWithDestroyView(t *testing.T) {
 		StartView: "destroy",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	if m.state.Operation != pulumi.OperationDestroy {
 		t.Errorf("expected Operation=%v, got %v", pulumi.OperationDestroy, m.state.Operation)
@@ -110,7 +111,7 @@ func TestInitialModelSharesFlags(t *testing.T) {
 		StartView: "stack",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	// Add a flag to state
 	testURN := "urn:pulumi:dev::test::aws:s3:Bucket::mybucket"
@@ -132,7 +133,7 @@ func TestInitialModelContextIsSet(t *testing.T) {
 		StartView: "stack",
 	}
 
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	if m.ctx.WorkDir != "/test/workspace" {
 		t.Errorf("expected WorkDir=%q, got %q", "/test/workspace", m.ctx.WorkDir)
@@ -248,7 +249,7 @@ func TestTransitionTo(t *testing.T) {
 		WorkDir:   "/fake/path",
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	// Start at InitCheckingWorkspace
 	if m.state.InitState != InitCheckingWorkspace {
@@ -279,7 +280,7 @@ func TestHandleWorkspaceCheckValid(t *testing.T) {
 		WorkDir:   "/fake/path",
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	// Simulate receiving a valid workspace check message
 	result, _ := m.handleWorkspaceCheck(workspaceCheckMsg(true))
@@ -298,7 +299,7 @@ func TestHandleWorkspaceCheckInvalid(t *testing.T) {
 		WorkDir:   "/fake/path",
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	// Simulate receiving an invalid workspace check message
 	result, _ := m.handleWorkspaceCheck(workspaceCheckMsg(false))
@@ -323,7 +324,7 @@ func TestHandleError(t *testing.T) {
 		WorkDir:   "/fake/path",
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 
 	// Set up model mid-initialization
 	m.transitionTo(InitLoadingPlugins)
@@ -353,7 +354,7 @@ func TestHandlePluginInitDoneWithStackName(t *testing.T) {
 		StackName: "dev", // Stack specified
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 	m.transitionTo(InitLoadingPlugins)
 
 	// Simulate plugin init done
@@ -375,7 +376,7 @@ func TestHandlePluginInitDoneWithoutStackName(t *testing.T) {
 		StackName: "", // No stack specified
 		StartView: "stack",
 	}
-	m := initialModel(ctx, deps)
+	m := initialModel(context.Background(), ctx, deps)
 	m.transitionTo(InitLoadingPlugins)
 
 	// Simulate plugin init done

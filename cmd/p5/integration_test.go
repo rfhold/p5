@@ -90,7 +90,7 @@ func createTestModel(t *testing.T, opts ...testModelOption) Model {
 		opt(deps, &appCtx)
 	}
 
-	return initialModel(appCtx, deps)
+	return initialModel(context.Background(), appCtx, deps)
 }
 
 // withStackOperator sets a custom StackOperator for the test

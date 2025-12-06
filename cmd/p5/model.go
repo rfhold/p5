@@ -105,6 +105,10 @@ type AppContext struct {
 // It coordinates between pure application state (AppState), UI state (UIState),
 // and async operations. This separation enables easier testing.
 type Model struct {
+	// Application lifecycle context - passed to all async operations.
+	// This enables graceful cancellation when the app exits.
+	appCtx context.Context
+
 	// App context (configuration, replaces globals)
 	ctx AppContext
 
@@ -129,7 +133,7 @@ type Model struct {
 	operationCancel context.CancelFunc
 }
 
-func initialModel(ctx AppContext, deps *Dependencies) Model {
+func initialModel(appCtx context.Context, ctx AppContext, deps *Dependencies) Model {
 	// Create shared state
 	state := NewAppState()
 
@@ -137,10 +141,11 @@ func initialModel(ctx AppContext, deps *Dependencies) Model {
 	uiState := NewUIState(state.Flags)
 
 	m := Model{
-		ctx:   ctx,
-		deps:  deps,
-		state: state,
-		ui:    uiState,
+		appCtx: appCtx,
+		ctx:    ctx,
+		deps:   deps,
+		state:  state,
+		ui:     uiState,
 	}
 
 	// Set initial view based on command argument

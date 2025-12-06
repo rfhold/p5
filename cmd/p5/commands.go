@@ -34,11 +34,12 @@ func (m *Model) authenticatePluginsForInit() tea.Cmd {
 
 	workDir := m.ctx.WorkDir
 	pluginProvider := m.deps.PluginProvider
+	appCtx := m.appCtx
 	return func() tea.Msg {
 		// Load and authenticate plugins with minimal context
 		// We don't have stack name yet, but plugins can still load from p5.toml
 		results, err := pluginProvider.Initialize(
-			context.Background(),
+			appCtx,
 			workDir,
 			"", // program name not known yet
 			"", // stack name not known yet
@@ -68,8 +69,9 @@ func (m Model) initLoadStackResources() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		resources, err := stackReader.GetResources(context.Background(), workDir, stackName)
+		resources, err := stackReader.GetResources(appCtx, workDir, stackName)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -88,9 +90,10 @@ func (m Model) initPreview(op pulumi.OperationType) tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	stackOperator := m.deps.StackOperator
+	appCtx := m.appCtx
 
 	// Use injected StackOperator - it owns the channel and returns receive-only
-	ch := stackOperator.Preview(context.Background(), workDir, stackName, op, opts)
+	ch := stackOperator.Preview(appCtx, workDir, stackName, op, opts)
 
 	return func() tea.Msg {
 		return initPreviewMsg{op: op, ch: ch}
@@ -104,8 +107,9 @@ func (m *Model) loadStackResources() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		resources, err := stackReader.GetResources(context.Background(), workDir, stackName)
+		resources, err := stackReader.GetResources(appCtx, workDir, stackName)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -142,7 +146,9 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 	stackName := m.ctx.StackName
 
 	// Use injected StackOperator - it owns the channel and returns receive-only
-	m.previewCh = m.deps.StackOperator.Preview(context.Background(), workDir, stackName, op, opts)
+	// Create a child context for preview so it can be cancelled independently
+	previewCtx, _ := context.WithCancel(m.appCtx)
+	m.previewCh = m.deps.StackOperator.Preview(previewCtx, workDir, stackName, op, opts)
 
 	return waitForPreviewEvent(m.previewCh)
 }
@@ -195,8 +201,8 @@ func (m *Model) startExecution(op pulumi.OperationType) tea.Cmd {
 		opts.Env = m.deps.PluginProvider.GetAllEnv()
 	}
 
-	// Create cancellable context
-	m.operationCtx, m.operationCancel = context.WithCancel(context.Background())
+	// Create cancellable context as child of app context
+	m.operationCtx, m.operationCancel = context.WithCancel(m.appCtx)
 
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
@@ -251,10 +257,11 @@ func (m *Model) executeStateDelete() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	resourceImporter := m.deps.ResourceImporter
+	appCtx := m.appCtx
 
 	return func() tea.Msg {
 		result, err := resourceImporter.StateDelete(
-			context.Background(),
+			appCtx,
 			workDir,
 			stackName,
 			urn,
@@ -286,10 +293,11 @@ func (m *Model) executeImport() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	resourceImporter := m.deps.ResourceImporter
+	appCtx := m.appCtx
 
 	return func() tea.Msg {
 		result, err := resourceImporter.Import(
-			context.Background(),
+			appCtx,
 			workDir,
 			stackName,
 			resourceType,
@@ -313,8 +321,9 @@ func (m *Model) fetchStackHistory() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		history, err := stackReader.GetHistory(context.Background(), workDir, stackName, pulumi.DefaultHistoryPageSize, pulumi.DefaultHistoryPage)
+		history, err := stackReader.GetHistory(appCtx, workDir, stackName, pulumi.DefaultHistoryPageSize, pulumi.DefaultHistoryPage)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -344,6 +353,8 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 		}
 	}
 
+	appCtx := m.appCtx
+	pluginProvider := m.deps.PluginProvider
 	return func() tea.Msg {
 		req := &plugins.ImportSuggestionsRequest{
 			ResourceType: resourceType,
@@ -353,7 +364,7 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 			Inputs:       inputStrings,
 		}
 
-		suggestions, err := m.deps.PluginProvider.GetImportSuggestions(context.Background(), req)
+		suggestions, err := pluginProvider.GetImportSuggestions(appCtx, req)
 		if err != nil {
 			return importSuggestionsErrMsg(err)
 		}
@@ -371,15 +382,16 @@ func (m *Model) authenticatePlugins() tea.Cmd {
 	stackName := m.ctx.StackName
 	pluginProvider := m.deps.PluginProvider
 	workspaceReader := m.deps.WorkspaceReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
 		// Get project info for the program name
-		info, err := workspaceReader.GetProjectInfo(context.Background(), workDir, stackName)
+		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName)
 		if err != nil {
 			return pluginAuthErrorMsg(err)
 		}
 
 		results, err := pluginProvider.Initialize(
-			context.Background(),
+			appCtx,
 			workDir,
 			info.ProgramName,
 			info.StackName,
@@ -419,8 +431,9 @@ func (m *Model) fetchProjectInfo() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
 	workspaceReader := m.deps.WorkspaceReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		info, err := workspaceReader.GetProjectInfo(context.Background(), workDir, stackName)
+		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -432,8 +445,9 @@ func (m *Model) fetchProjectInfo() tea.Cmd {
 func (m *Model) fetchStacksList() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackReader := m.deps.StackReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		stacks, err := stackReader.GetStacks(context.Background(), workDir)
+		stacks, err := stackReader.GetStacks(appCtx, workDir)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -445,8 +459,9 @@ func (m *Model) fetchStacksList() tea.Cmd {
 func (m *Model) selectStack(name string) tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackReader := m.deps.StackReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		err := stackReader.SelectStack(context.Background(), workDir, name)
+		err := stackReader.SelectStack(appCtx, workDir, name)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -479,8 +494,9 @@ func selectWorkspace(path string) tea.Cmd {
 func (m *Model) fetchWhoAmI() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	workspaceReader := m.deps.WorkspaceReader
+	appCtx := m.appCtx
 	return func() tea.Msg {
-		info, err := workspaceReader.GetWhoAmI(context.Background(), workDir)
+		info, err := workspaceReader.GetWhoAmI(appCtx, workDir)
 		if err != nil {
 			// Non-fatal - return empty info
 			return whoAmIMsg(&pulumi.WhoAmIInfo{})
@@ -507,6 +523,7 @@ func (m *Model) fetchStackFiles() tea.Cmd {
 func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackInitializer := m.deps.StackInitializer
+	appCtx := m.appCtx
 	// Add plugin credentials as env vars
 	var pluginEnv map[string]string
 	if m.deps != nil && m.deps.PluginProvider != nil {
@@ -519,7 +536,7 @@ func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
 			Env:             pluginEnv,
 		}
 
-		err := stackInitializer.InitStack(context.Background(), workDir, name, opts)
+		err := stackInitializer.InitStack(appCtx, workDir, name, opts)
 		if err != nil {
 			return stackInitResultMsg{StackName: name, Error: err}
 		}
