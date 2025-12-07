@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1
+
+### Bug Fixes
+* 94b38c232b33f2fec946b0f5b727c122ebea4751 fix: env variable handling to avoid setting the process env
+
 ## v0.3.0
 
 ### Features
