@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
+│ ◐  Execute Up  +3                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  > [+] pulumi:providers:random  default_4_16_2 created
+    [+] pulumi:pulumi:Stack  simple-test created
+    └─ [+] random:index/randomId:RandomId  test-id created
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       esc cancel  v select  D details  s stack  w workspace  h history  ? help  q quit

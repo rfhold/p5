@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
+│ ◐  Execute Destroy  -3                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  > [-] pulumi:providers:random  default_4_16_2 deleted
+    [-] pulumi:pulumi:Stack  simple-test deleted
+    └─ [-] random:index/randomId:RandomId  test-id deleted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       esc cancel  v select  D details  s stack  w workspace  h history  ? help  q quit

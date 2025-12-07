@@ -1,0 +1,3 @@
+name: nested-project
+runtime: go
+description: Nested workspace test fixture

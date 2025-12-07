@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
+│ ◐  Execute Refresh  ↻3                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  > [↻] pulumi:providers:random  default_4_16_2 refreshed
+    [↻] pulumi:pulumi:Stack  simple-test refreshed
+    └─ [↻] random:index/randomId:RandomId  test-id refreshed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       esc cancel  v select  D details  s stack  w workspace  h history  ? help  q quit

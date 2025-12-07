@@ -1,6 +1,10 @@
 package ui
 
-import "github.com/rfhold/p5/internal/pulumi"
+import (
+	"sort"
+
+	"github.com/rfhold/p5/internal/pulumi"
+)
 
 // organizeItemsAsTree sorts items into tree order (parent followed by children)
 // and sets Depth and IsLast for each item
@@ -19,6 +23,17 @@ func organizeItemsAsTree(items []ResourceItem) []ResourceItem {
 		} else {
 			childrenOf[item.Parent] = append(childrenOf[item.Parent], i)
 		}
+	}
+
+	// Sort roots and children by URN for deterministic ordering
+	sort.Slice(rootIndices, func(i, j int) bool {
+		return items[rootIndices[i]].URN < items[rootIndices[j]].URN
+	})
+	for parent := range childrenOf {
+		children := childrenOf[parent]
+		sort.Slice(children, func(i, j int) bool {
+			return items[children[i]].URN < items[children[j]].URN
+		})
 	}
 
 	// Flatten tree into result slice with depth/isLast info
