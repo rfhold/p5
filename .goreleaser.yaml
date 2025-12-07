@@ -52,10 +52,11 @@ changelog:
   use: git
   filters:
     exclude:
-      - '^chore\(release\):'
-      - '^chore\(deps\):'
+      - '^chore:'
+      - '^ci:'
       - '^docs:'
       - '^test:'
+      - '^build:'
       - Merge pull request
       - Merge branch
   groups:
@@ -71,8 +72,6 @@ changelog:
     - title: Refactoring
       regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
       order: 3
-    - title: Other
-      order: 999
 
 # Disable GitHub release - just build locally
 release:
