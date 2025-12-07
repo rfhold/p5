@@ -45,6 +45,7 @@ func NewHelpDialog() *HelpDialog {
 			{Key: "R", Desc: "Toggle replace flag"},
 			{Key: "E", Desc: "Toggle exclude flag"},
 			{Key: "c", Desc: "Clear flags on selection"},
+			{Key: "C", Desc: "Clear all flags"},
 			{Key: "esc", Desc: "Cancel selection / back"},
 			{Key: "", Desc: ""},
 
@@ -57,6 +58,10 @@ func NewHelpDialog() *HelpDialog {
 			{Key: "ctrl+r", Desc: "Execute refresh"},
 			{Key: "ctrl+d", Desc: "Execute destroy"},
 			{Key: "I", Desc: "Import resource (in preview)"},
+			{Key: "x", Desc: "Delete from state"},
+			{Key: "o", Desc: "Open resource (external tool)"},
+			{Key: "y", Desc: "Copy resource JSON"},
+			{Key: "Y", Desc: "Copy all resources JSON"},
 			{Key: "", Desc: ""},
 
 			// General
