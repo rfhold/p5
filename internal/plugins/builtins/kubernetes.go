@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -88,8 +89,11 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 	// Build kubectl command
 	args := []string{"get", kubeKind, "-o", "json"}
 
-	// Add context if specified in stack config
-	kubeContext := req.StackConfig["kubernetes:context"]
+	// Get context - priority: provider inputs > stack config > program config
+	kubeContext := req.ProviderInputs["context"]
+	if kubeContext == "" {
+		kubeContext = req.StackConfig["kubernetes:context"]
+	}
 	if kubeContext == "" {
 		kubeContext = req.ProgramConfig["kubernetes:context"]
 	}
@@ -97,12 +101,36 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 		args = append(args, "--context", kubeContext)
 	}
 
+	// Handle kubeconfig from provider
+	var tempKubeconfig string
+	kubeconfig := req.ProviderInputs["kubeconfig"]
+	if kubeconfig != "" {
+		// kubeconfig could be file path or content
+		// If it looks like YAML/JSON content, write to temp file
+		if strings.Contains(kubeconfig, "apiVersion:") || strings.Contains(kubeconfig, "\"apiVersion\"") {
+			tmpFile, err := os.CreateTemp("", "p5-kubeconfig-*.yaml")
+			if err == nil {
+				tmpFile.WriteString(kubeconfig)
+				tmpFile.Close()
+				tempKubeconfig = tmpFile.Name()
+				defer os.Remove(tempKubeconfig)
+				args = append(args, "--kubeconfig", tempKubeconfig)
+			}
+		} else {
+			// Assume it's a file path
+			args = append(args, "--kubeconfig", kubeconfig)
+		}
+	}
+
 	// Add namespace for namespaced resources
 	namespace := ""
 
 	if !isClusterScoped {
-		// Try to get namespace from inputs, stack config, or default to "default"
+		// Priority: resource inputs > provider inputs > stack config > program config
 		namespace = req.Inputs["namespace"]
+		if namespace == "" {
+			namespace = req.ProviderInputs["namespace"]
+		}
 		if namespace == "" {
 			namespace = req.StackConfig["kubernetes:namespace"]
 		}

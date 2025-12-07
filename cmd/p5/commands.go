@@ -332,7 +332,7 @@ func (m *Model) fetchStackHistory() tea.Cmd {
 }
 
 // fetchImportSuggestions queries plugins for import suggestions
-func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, parentURN string, inputs map[string]interface{}) tea.Cmd {
+func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, parentURN, providerURN string, inputs, providerInputs map[string]interface{}) tea.Cmd {
 	if m.deps == nil || m.deps.PluginProvider == nil {
 		return func() tea.Msg {
 			return importSuggestionsMsg(nil)
@@ -353,15 +353,31 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 		}
 	}
 
+	// Convert provider inputs to string map for proto
+	providerInputStrings := make(map[string]string)
+	for k, v := range providerInputs {
+		switch val := v.(type) {
+		case string:
+			providerInputStrings[k] = val
+		default:
+			// For non-string values, JSON serialize them
+			if b, err := json.Marshal(val); err == nil {
+				providerInputStrings[k] = string(b)
+			}
+		}
+	}
+
 	appCtx := m.appCtx
 	pluginProvider := m.deps.PluginProvider
 	return func() tea.Msg {
 		req := &plugins.ImportSuggestionsRequest{
-			ResourceType: resourceType,
-			ResourceName: resourceName,
-			ResourceUrn:  resourceURN,
-			ParentUrn:    parentURN,
-			Inputs:       inputStrings,
+			ResourceType:   resourceType,
+			ResourceName:   resourceName,
+			ResourceUrn:    resourceURN,
+			ParentUrn:      parentURN,
+			Inputs:         inputStrings,
+			ProviderUrn:    providerURN,
+			ProviderInputs: providerInputStrings,
 		}
 
 		suggestions, err := pluginProvider.GetImportSuggestions(appCtx, req)

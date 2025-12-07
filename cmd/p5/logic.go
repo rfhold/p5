@@ -174,14 +174,16 @@ func ConvertResourcesToItems(resources []pulumi.ResourceInfo) []ui.ResourceItem 
 	items := make([]ui.ResourceItem, 0, len(resources))
 	for _, r := range resources {
 		items = append(items, ui.ResourceItem{
-			URN:     r.URN,
-			Type:    r.Type,
-			Name:    r.Name,
-			Op:      pulumi.OpSame, // Stack view shows existing resources
-			Status:  ui.StatusNone,
-			Parent:  r.Parent,
-			Inputs:  r.Inputs,
-			Outputs: r.Outputs,
+			URN:            r.URN,
+			Type:           r.Type,
+			Name:           r.Name,
+			Op:             pulumi.OpSame, // Stack view shows existing resources
+			Status:         ui.StatusNone,
+			Parent:         r.Parent,
+			Inputs:         r.Inputs,
+			Outputs:        r.Outputs,
+			Provider:       r.Provider,
+			ProviderInputs: r.ProviderInputs,
 		})
 	}
 	return items

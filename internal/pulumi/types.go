@@ -125,13 +125,14 @@ const (
 
 // ResourceInfo for stack resources
 type ResourceInfo struct {
-	URN      string
-	Type     string
-	Name     string
-	Provider string
-	Parent   string                 // Parent resource URN (empty for root resources)
-	Inputs   map[string]interface{} // Resource inputs/args
-	Outputs  map[string]interface{} // Resource outputs
+	URN            string
+	Type           string
+	Name           string
+	Provider       string
+	Parent         string                 // Parent resource URN (empty for root resources)
+	Inputs         map[string]interface{} // Resource inputs/args
+	Outputs        map[string]interface{} // Resource outputs
+	ProviderInputs map[string]interface{} // Configuration from the provider resource
 }
 
 // StackInfo holds information about a stack

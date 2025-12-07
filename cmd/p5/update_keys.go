@@ -248,7 +248,7 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if CanImportResource(m.ui.ViewMode, item) {
 			m.showImportModal(item.Type, item.Name, item.URN, item.Parent)
 			// Fetch import suggestions from plugins
-			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Inputs)
+			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Provider, item.Inputs, item.ProviderInputs)
 		}
 	}
 

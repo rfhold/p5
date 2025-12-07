@@ -85,16 +85,18 @@ func (m *Manager) GetImportSuggestions(ctx context.Context, req *ImportSuggestio
 		if config, ok := m.mergedConfig.Plugins[name]; ok && config.UseAuthEnv {
 			// Clone the request and add auth env
 			pluginReq = &ImportSuggestionsRequest{
-				ResourceType:  req.ResourceType,
-				ResourceName:  req.ResourceName,
-				ResourceUrn:   req.ResourceUrn,
-				ParentUrn:     req.ParentUrn,
-				Inputs:        req.Inputs,
-				ProgramConfig: req.ProgramConfig,
-				StackConfig:   req.StackConfig,
-				StackName:     req.StackName,
-				ProgramName:   req.ProgramName,
-				AuthEnv:       m.getMergedAuthEnvLocked(),
+				ResourceType:   req.ResourceType,
+				ResourceName:   req.ResourceName,
+				ResourceUrn:    req.ResourceUrn,
+				ParentUrn:      req.ParentUrn,
+				Inputs:         req.Inputs,
+				ProgramConfig:  req.ProgramConfig,
+				StackConfig:    req.StackConfig,
+				StackName:      req.StackName,
+				ProgramName:    req.ProgramName,
+				AuthEnv:        m.getMergedAuthEnvLocked(),
+				ProviderUrn:    req.ProviderUrn,
+				ProviderInputs: req.ProviderInputs,
 			}
 		}
 

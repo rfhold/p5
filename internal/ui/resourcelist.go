@@ -20,19 +20,21 @@ const (
 
 // ResourceItem is the generic representation of a resource
 type ResourceItem struct {
-	URN        string
-	Type       string
-	Name       string
-	Op         ResourceOp             // OpSame for stack view, actual op for preview/exec
-	Status     ItemStatus             // Execution progress
-	Parent     string                 // Parent URN for component hierarchy
-	Depth      int                    // Nesting depth (0 = root)
-	IsLast     bool                   // True if this is the last child of its parent
-	CurrentOp  ResourceOp             // Current step being executed (for replace: create-replacement or delete-replaced)
-	Inputs     map[string]interface{} // Resource inputs/args from stack state
-	Outputs    map[string]interface{} // Resource outputs from stack state
-	OldInputs  map[string]interface{} // Previous inputs (for updates/deletes)
-	OldOutputs map[string]interface{} // Previous outputs (for updates/deletes)
+	URN            string
+	Type           string
+	Name           string
+	Op             ResourceOp             // OpSame for stack view, actual op for preview/exec
+	Status         ItemStatus             // Execution progress
+	Parent         string                 // Parent URN for component hierarchy
+	Depth          int                    // Nesting depth (0 = root)
+	IsLast         bool                   // True if this is the last child of its parent
+	CurrentOp      ResourceOp             // Current step being executed (for replace: create-replacement or delete-replaced)
+	Inputs         map[string]interface{} // Resource inputs/args from stack state
+	Outputs        map[string]interface{} // Resource outputs from stack state
+	OldInputs      map[string]interface{} // Previous inputs (for updates/deletes)
+	OldOutputs     map[string]interface{} // Previous outputs (for updates/deletes)
+	Provider       string                 // Provider reference string (URN::ID format)
+	ProviderInputs map[string]interface{} // Provider's configuration inputs
 }
 
 // PreviewState represents the current state of the preview (for backwards compatibility)

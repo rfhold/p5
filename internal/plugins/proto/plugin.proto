@@ -47,6 +47,10 @@ message ImportSuggestionsRequest {
   
   // Auth environment (only populated if use_auth_env: true)
   map<string, string> auth_env = 10;
+  
+  // Provider configuration (if resource uses an explicit provider)
+  string provider_urn = 11;                   // Provider URN for logging/debugging
+  map<string, string> provider_inputs = 12;   // Provider's configuration inputs (kubeconfig, context, namespace, etc.)
 }
 
 message ImportSuggestion {
