@@ -1,0 +1,78 @@
+# GoReleaser configuration
+# https://goreleaser.com/customization/
+
+version: 2
+
+project_name: p5
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: p5
+    main: ./cmd/p5
+    binary: p5
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Changelog from conventional commits (uses git log, no GitHub API)
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - '^chore\(release\):'
+      - '^chore\(deps\):'
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Refactoring
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: Other
+      order: 999
+
+# Disable GitHub release - just build locally
+release:
+  disable: true
