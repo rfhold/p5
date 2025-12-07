@@ -11,8 +11,8 @@ func NewWorkspaceReader() *DefaultWorkspaceReader {
 }
 
 // GetProjectInfo returns project metadata.
-func (d *DefaultWorkspaceReader) GetProjectInfo(ctx context.Context, workDir, stackName string) (*ProjectInfo, error) {
-	return FetchProjectInfo(ctx, workDir, stackName)
+func (d *DefaultWorkspaceReader) GetProjectInfo(ctx context.Context, workDir, stackName string, opts ReadOptions) (*ProjectInfo, error) {
+	return FetchProjectInfo(ctx, workDir, stackName, opts.Env)
 }
 
 // FindWorkspaces finds Pulumi workspaces in a directory tree.
@@ -26,8 +26,8 @@ func (d *DefaultWorkspaceReader) IsWorkspace(dir string) bool {
 }
 
 // GetWhoAmI returns the current backend user and URL.
-func (d *DefaultWorkspaceReader) GetWhoAmI(ctx context.Context, workDir string) (*WhoAmIInfo, error) {
-	return GetWhoAmI(ctx, workDir)
+func (d *DefaultWorkspaceReader) GetWhoAmI(ctx context.Context, workDir string, opts ReadOptions) (*WhoAmIInfo, error) {
+	return GetWhoAmI(ctx, workDir, opts.Env)
 }
 
 // ListStackFiles finds all Pulumi.<stack>.yaml files in the workspace.

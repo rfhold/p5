@@ -8,13 +8,18 @@ import (
 )
 
 // GetStackHistory returns the history of updates for a stack
-func GetStackHistory(ctx context.Context, workDir, stackName string, pageSize, page int) ([]UpdateSummary, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+func GetStackHistory(ctx context.Context, workDir, stackName string, pageSize, page int, env map[string]string) ([]UpdateSummary, error) {
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, env)
 	if err != nil {
 		return nil, err
 	}
 
-	stack, err := auto.SelectStackLocalSource(ctx, resolvedStackName, workDir)
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+
+	stack, err := auto.SelectStackLocalSource(ctx, resolvedStackName, workDir, wsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select stack: %w", err)
 	}

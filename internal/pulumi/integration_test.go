@@ -411,19 +411,15 @@ func TestIntegration_GetResources_Empty(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
-	// Not parallel - we're setting env vars
+	t.Parallel()
+
 	ts := SetupTestStack(t, "simple")
 	ctx := context.Background()
 
-	// Set env vars for the reader (it doesn't have an Env option)
-	for k, v := range ts.Env() {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
-	}
-
 	reader := NewStackReader()
+	opts := ReadOptions{Env: ts.Env()}
 
-	resources, err := reader.GetResources(ctx, ts.WorkDir, ts.Name())
+	resources, err := reader.GetResources(ctx, ts.WorkDir, ts.Name(), opts)
 	if err != nil {
 		t.Fatalf("GetResources failed: %v", err)
 	}
@@ -438,15 +434,10 @@ func TestIntegration_GetResources_AfterUp(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
-	// Not parallel - we're setting env vars
+	t.Parallel()
+
 	ts := SetupTestStack(t, "multi")
 	ctx := context.Background()
-
-	// Set env vars for the reader (it doesn't have an Env option)
-	for k, v := range ts.Env() {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
-	}
 
 	// Deploy first
 	operator := NewStackOperator()
@@ -455,7 +446,8 @@ func TestIntegration_GetResources_AfterUp(t *testing.T) {
 
 	// Now read
 	reader := NewStackReader()
-	resources, err := reader.GetResources(ctx, ts.WorkDir, ts.Name())
+	opts := ReadOptions{Env: ts.Env()}
+	resources, err := reader.GetResources(ctx, ts.WorkDir, ts.Name(), opts)
 	if err != nil {
 		t.Fatalf("GetResources failed: %v", err)
 	}
@@ -521,15 +513,10 @@ func TestIntegration_History_AfterOperations(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
-	// Not parallel - we're setting env vars
+	t.Parallel()
+
 	ts := SetupTestStack(t, "simple")
 	ctx := context.Background()
-
-	// Set env vars for the reader (it doesn't have an Env option)
-	for k, v := range ts.Env() {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
-	}
 
 	operator := NewStackOperator()
 
@@ -539,7 +526,8 @@ func TestIntegration_History_AfterOperations(t *testing.T) {
 
 	// Check history
 	reader := NewStackReader()
-	history, err := reader.GetHistory(ctx, ts.WorkDir, ts.Name(), 10, 1)
+	opts := ReadOptions{Env: ts.Env()}
+	history, err := reader.GetHistory(ctx, ts.WorkDir, ts.Name(), 10, 1, opts)
 	if err != nil {
 		t.Fatalf("GetHistory failed: %v", err)
 	}

@@ -22,23 +22,23 @@ type StackOperator interface {
 // StackReader handles read-only stack queries.
 type StackReader interface {
 	// GetResources returns all resources in the stack.
-	GetResources(ctx context.Context, workDir, stackName string) ([]ResourceInfo, error)
+	GetResources(ctx context.Context, workDir, stackName string, opts ReadOptions) ([]ResourceInfo, error)
 
 	// GetHistory returns stack update history.
 	// pageSize is the number of entries per page, page is 1-indexed.
-	GetHistory(ctx context.Context, workDir, stackName string, pageSize, page int) ([]UpdateSummary, error)
+	GetHistory(ctx context.Context, workDir, stackName string, pageSize, page int, opts ReadOptions) ([]UpdateSummary, error)
 
 	// GetStacks returns available stacks for a workspace.
-	GetStacks(ctx context.Context, workDir string) ([]StackInfo, error)
+	GetStacks(ctx context.Context, workDir string, opts ReadOptions) ([]StackInfo, error)
 
 	// SelectStack sets the specified stack as current.
-	SelectStack(ctx context.Context, workDir, stackName string) error
+	SelectStack(ctx context.Context, workDir, stackName string, opts ReadOptions) error
 }
 
 // WorkspaceReader handles workspace-level queries.
 type WorkspaceReader interface {
 	// GetProjectInfo returns project metadata.
-	GetProjectInfo(ctx context.Context, workDir, stackName string) (*ProjectInfo, error)
+	GetProjectInfo(ctx context.Context, workDir, stackName string, opts ReadOptions) (*ProjectInfo, error)
 
 	// FindWorkspaces finds Pulumi workspaces in a directory tree.
 	FindWorkspaces(startDir, currentWorkDir string) ([]WorkspaceInfo, error)
@@ -47,7 +47,7 @@ type WorkspaceReader interface {
 	IsWorkspace(dir string) bool
 
 	// GetWhoAmI returns the current backend user and URL.
-	GetWhoAmI(ctx context.Context, workDir string) (*WhoAmIInfo, error)
+	GetWhoAmI(ctx context.Context, workDir string, opts ReadOptions) (*WhoAmIInfo, error)
 
 	// ListStackFiles finds all Pulumi.<stack>.yaml files in the workspace.
 	ListStackFiles(workDir string) ([]StackFileInfo, error)

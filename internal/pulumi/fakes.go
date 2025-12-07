@@ -118,16 +118,16 @@ func (f *FakeStackOperator) WithOperationEvents(events ...OperationEvent) *FakeS
 // FakeStackReader implements StackReader for testing.
 type FakeStackReader struct {
 	// GetResourcesFunc optionally configures GetResources behavior.
-	GetResourcesFunc func(ctx context.Context, workDir, stackName string) ([]ResourceInfo, error)
+	GetResourcesFunc func(ctx context.Context, workDir, stackName string, opts ReadOptions) ([]ResourceInfo, error)
 
 	// GetHistoryFunc optionally configures GetHistory behavior.
-	GetHistoryFunc func(ctx context.Context, workDir, stackName string, pageSize, page int) ([]UpdateSummary, error)
+	GetHistoryFunc func(ctx context.Context, workDir, stackName string, pageSize, page int, opts ReadOptions) ([]UpdateSummary, error)
 
 	// GetStacksFunc optionally configures GetStacks behavior.
-	GetStacksFunc func(ctx context.Context, workDir string) ([]StackInfo, error)
+	GetStacksFunc func(ctx context.Context, workDir string, opts ReadOptions) ([]StackInfo, error)
 
 	// SelectStackFunc optionally configures SelectStack behavior.
-	SelectStackFunc func(ctx context.Context, workDir, stackName string) error
+	SelectStackFunc func(ctx context.Context, workDir, stackName string, opts ReadOptions) error
 
 	// Default return values (used when funcs are nil)
 	Resources []ResourceInfo
@@ -146,6 +146,7 @@ type FakeStackReader struct {
 type GetResourcesCall struct {
 	WorkDir   string
 	StackName string
+	Opts      ReadOptions
 }
 
 type GetHistoryCall struct {
@@ -153,45 +154,48 @@ type GetHistoryCall struct {
 	StackName string
 	PageSize  int
 	Page      int
+	Opts      ReadOptions
 }
 
 type GetStacksCall struct {
 	WorkDir string
+	Opts    ReadOptions
 }
 
 type SelectStackCall struct {
 	WorkDir   string
 	StackName string
+	Opts      ReadOptions
 }
 
-func (f *FakeStackReader) GetResources(ctx context.Context, workDir, stackName string) ([]ResourceInfo, error) {
-	f.Calls.GetResources = append(f.Calls.GetResources, GetResourcesCall{workDir, stackName})
+func (f *FakeStackReader) GetResources(ctx context.Context, workDir, stackName string, opts ReadOptions) ([]ResourceInfo, error) {
+	f.Calls.GetResources = append(f.Calls.GetResources, GetResourcesCall{workDir, stackName, opts})
 	if f.GetResourcesFunc != nil {
-		return f.GetResourcesFunc(ctx, workDir, stackName)
+		return f.GetResourcesFunc(ctx, workDir, stackName, opts)
 	}
 	return f.Resources, nil
 }
 
-func (f *FakeStackReader) GetHistory(ctx context.Context, workDir, stackName string, pageSize, page int) ([]UpdateSummary, error) {
-	f.Calls.GetHistory = append(f.Calls.GetHistory, GetHistoryCall{workDir, stackName, pageSize, page})
+func (f *FakeStackReader) GetHistory(ctx context.Context, workDir, stackName string, pageSize, page int, opts ReadOptions) ([]UpdateSummary, error) {
+	f.Calls.GetHistory = append(f.Calls.GetHistory, GetHistoryCall{workDir, stackName, pageSize, page, opts})
 	if f.GetHistoryFunc != nil {
-		return f.GetHistoryFunc(ctx, workDir, stackName, pageSize, page)
+		return f.GetHistoryFunc(ctx, workDir, stackName, pageSize, page, opts)
 	}
 	return f.History, nil
 }
 
-func (f *FakeStackReader) GetStacks(ctx context.Context, workDir string) ([]StackInfo, error) {
-	f.Calls.GetStacks = append(f.Calls.GetStacks, GetStacksCall{workDir})
+func (f *FakeStackReader) GetStacks(ctx context.Context, workDir string, opts ReadOptions) ([]StackInfo, error) {
+	f.Calls.GetStacks = append(f.Calls.GetStacks, GetStacksCall{workDir, opts})
 	if f.GetStacksFunc != nil {
-		return f.GetStacksFunc(ctx, workDir)
+		return f.GetStacksFunc(ctx, workDir, opts)
 	}
 	return f.Stacks, nil
 }
 
-func (f *FakeStackReader) SelectStack(ctx context.Context, workDir, stackName string) error {
-	f.Calls.SelectStack = append(f.Calls.SelectStack, SelectStackCall{workDir, stackName})
+func (f *FakeStackReader) SelectStack(ctx context.Context, workDir, stackName string, opts ReadOptions) error {
+	f.Calls.SelectStack = append(f.Calls.SelectStack, SelectStackCall{workDir, stackName, opts})
 	if f.SelectStackFunc != nil {
-		return f.SelectStackFunc(ctx, workDir, stackName)
+		return f.SelectStackFunc(ctx, workDir, stackName, opts)
 	}
 	return nil
 }
@@ -199,7 +203,7 @@ func (f *FakeStackReader) SelectStack(ctx context.Context, workDir, stackName st
 // FakeWorkspaceReader implements WorkspaceReader for testing.
 type FakeWorkspaceReader struct {
 	// GetProjectInfoFunc optionally configures GetProjectInfo behavior.
-	GetProjectInfoFunc func(ctx context.Context, workDir, stackName string) (*ProjectInfo, error)
+	GetProjectInfoFunc func(ctx context.Context, workDir, stackName string, opts ReadOptions) (*ProjectInfo, error)
 
 	// FindWorkspacesFunc optionally configures FindWorkspaces behavior.
 	FindWorkspacesFunc func(startDir, currentWorkDir string) ([]WorkspaceInfo, error)
@@ -208,7 +212,7 @@ type FakeWorkspaceReader struct {
 	IsWorkspaceFunc func(dir string) bool
 
 	// GetWhoAmIFunc optionally configures GetWhoAmI behavior.
-	GetWhoAmIFunc func(ctx context.Context, workDir string) (*WhoAmIInfo, error)
+	GetWhoAmIFunc func(ctx context.Context, workDir string, opts ReadOptions) (*WhoAmIInfo, error)
 
 	// ListStackFilesFunc optionally configures ListStackFiles behavior.
 	ListStackFilesFunc func(workDir string) ([]StackFileInfo, error)
@@ -233,6 +237,7 @@ type FakeWorkspaceReader struct {
 type GetProjectInfoCall struct {
 	WorkDir   string
 	StackName string
+	Opts      ReadOptions
 }
 
 type FindWorkspacesCall struct {
@@ -242,12 +247,13 @@ type FindWorkspacesCall struct {
 
 type GetWhoAmICall struct {
 	WorkDir string
+	Opts    ReadOptions
 }
 
-func (f *FakeWorkspaceReader) GetProjectInfo(ctx context.Context, workDir, stackName string) (*ProjectInfo, error) {
-	f.Calls.GetProjectInfo = append(f.Calls.GetProjectInfo, GetProjectInfoCall{workDir, stackName})
+func (f *FakeWorkspaceReader) GetProjectInfo(ctx context.Context, workDir, stackName string, opts ReadOptions) (*ProjectInfo, error) {
+	f.Calls.GetProjectInfo = append(f.Calls.GetProjectInfo, GetProjectInfoCall{workDir, stackName, opts})
 	if f.GetProjectInfoFunc != nil {
-		return f.GetProjectInfoFunc(ctx, workDir, stackName)
+		return f.GetProjectInfoFunc(ctx, workDir, stackName, opts)
 	}
 	return f.ProjectInfo, nil
 }
@@ -268,10 +274,10 @@ func (f *FakeWorkspaceReader) IsWorkspace(dir string) bool {
 	return f.ValidWorkDir
 }
 
-func (f *FakeWorkspaceReader) GetWhoAmI(ctx context.Context, workDir string) (*WhoAmIInfo, error) {
-	f.Calls.GetWhoAmI = append(f.Calls.GetWhoAmI, GetWhoAmICall{workDir})
+func (f *FakeWorkspaceReader) GetWhoAmI(ctx context.Context, workDir string, opts ReadOptions) (*WhoAmIInfo, error) {
+	f.Calls.GetWhoAmI = append(f.Calls.GetWhoAmI, GetWhoAmICall{workDir, opts})
 	if f.GetWhoAmIFunc != nil {
-		return f.GetWhoAmIFunc(ctx, workDir)
+		return f.GetWhoAmIFunc(ctx, workDir, opts)
 	}
 	return f.WhoAmI, nil
 }

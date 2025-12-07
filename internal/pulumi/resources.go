@@ -10,13 +10,18 @@ import (
 )
 
 // GetStackResources returns the currently deployed resources in the stack
-func GetStackResources(ctx context.Context, workDir, stackName string) ([]ResourceInfo, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+func GetStackResources(ctx context.Context, workDir, stackName string, env map[string]string) ([]ResourceInfo, error) {
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, env)
 	if err != nil {
 		return nil, err
 	}
 
-	stack, err := auto.SelectStackLocalSource(ctx, resolvedStackName, workDir)
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+
+	stack, err := auto.SelectStackLocalSource(ctx, resolvedStackName, workDir, wsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select stack: %w", err)
 	}

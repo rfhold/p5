@@ -17,6 +17,7 @@ type Dependencies struct {
 	StackInitializer pulumi.StackInitializer
 	ResourceImporter pulumi.ResourceImporter
 	PluginProvider   plugins.PluginProvider
+	Env              map[string]string // Environment variables to pass to Pulumi
 }
 
 // NewProductionDependencies creates dependencies configured for production use.

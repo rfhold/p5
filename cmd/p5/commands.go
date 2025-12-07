@@ -72,8 +72,9 @@ func (m Model) initLoadStackResources() tea.Cmd {
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		resources, err := stackReader.GetResources(appCtx, workDir, stackName)
+		resources, err := stackReader.GetResources(appCtx, workDir, stackName, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -88,6 +89,9 @@ func (m Model) initPreview(op pulumi.OperationType) tea.Cmd {
 		Targets:  m.ui.ResourceList.GetTargetURNs(),
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
+
+	// Merge base env with plugin env
+	opts.Env = mergeEnvMaps(m.deps.Env, m.deps.PluginProvider.GetAllEnv())
 
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
@@ -110,8 +114,9 @@ func (m *Model) loadStackResources() tea.Cmd {
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		resources, err := stackReader.GetResources(appCtx, workDir, stackName)
+		resources, err := stackReader.GetResources(appCtx, workDir, stackName, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -139,10 +144,8 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
 
-	// Add plugin credentials as env vars
-	if m.deps != nil && m.deps.PluginProvider != nil {
-		opts.Env = m.deps.PluginProvider.GetAllEnv()
-	}
+	// Merge base env with plugin credentials
+	opts.Env = mergeEnvMaps(m.deps.Env, m.deps.PluginProvider.GetAllEnv())
 
 	workDir := m.ctx.WorkDir
 	stackName := m.ctx.StackName
@@ -198,10 +201,8 @@ func (m *Model) startExecution(op pulumi.OperationType) tea.Cmd {
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
 	}
 
-	// Add plugin credentials as env vars
-	if m.deps != nil && m.deps.PluginProvider != nil {
-		opts.Env = m.deps.PluginProvider.GetAllEnv()
-	}
+	// Merge base env with plugin credentials
+	opts.Env = mergeEnvMaps(m.deps.Env, m.deps.PluginProvider.GetAllEnv())
 
 	// Create cancellable context as child of app context
 	m.operationCtx, m.operationCancel = context.WithCancel(m.appCtx)
@@ -324,8 +325,9 @@ func (m *Model) fetchStackHistory() tea.Cmd {
 	stackName := m.ctx.StackName
 	stackReader := m.deps.StackReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		history, err := stackReader.GetHistory(appCtx, workDir, stackName, pulumi.DefaultHistoryPageSize, pulumi.DefaultHistoryPage)
+		history, err := stackReader.GetHistory(appCtx, workDir, stackName, pulumi.DefaultHistoryPageSize, pulumi.DefaultHistoryPage, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -401,9 +403,10 @@ func (m *Model) authenticatePlugins() tea.Cmd {
 	pluginProvider := m.deps.PluginProvider
 	workspaceReader := m.deps.WorkspaceReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
 		// Get project info for the program name
-		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName)
+		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName, opts)
 		if err != nil {
 			return pluginAuthErrorMsg(err)
 		}
@@ -450,8 +453,9 @@ func (m *Model) fetchProjectInfo() tea.Cmd {
 	stackName := m.ctx.StackName
 	workspaceReader := m.deps.WorkspaceReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName)
+		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -464,8 +468,9 @@ func (m *Model) fetchStacksList() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackReader := m.deps.StackReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		stacks, err := stackReader.GetStacks(appCtx, workDir)
+		stacks, err := stackReader.GetStacks(appCtx, workDir, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -478,8 +483,9 @@ func (m *Model) selectStack(name string) tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackReader := m.deps.StackReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		err := stackReader.SelectStack(appCtx, workDir, name)
+		err := stackReader.SelectStack(appCtx, workDir, name, opts)
 		if err != nil {
 			return errMsg(err)
 		}
@@ -513,8 +519,9 @@ func (m *Model) fetchWhoAmI() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	workspaceReader := m.deps.WorkspaceReader
 	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		info, err := workspaceReader.GetWhoAmI(appCtx, workDir)
+		info, err := workspaceReader.GetWhoAmI(appCtx, workDir, opts)
 		if err != nil {
 			// Non-fatal - return empty info
 			return whoAmIMsg(&pulumi.WhoAmIInfo{})
@@ -542,16 +549,17 @@ func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackInitializer := m.deps.StackInitializer
 	appCtx := m.appCtx
-	// Add plugin credentials as env vars
+	// Merge base env with plugin credentials
 	var pluginEnv map[string]string
 	if m.deps != nil && m.deps.PluginProvider != nil {
 		pluginEnv = m.deps.PluginProvider.GetAllEnv()
 	}
+	env := mergeEnvMaps(m.deps.Env, pluginEnv)
 	return func() tea.Msg {
 		opts := pulumi.InitStackOptions{
 			SecretsProvider: secretsProvider,
 			Passphrase:      passphrase,
-			Env:             pluginEnv,
+			Env:             env,
 		}
 
 		err := stackInitializer.InitStack(appCtx, workDir, name, opts)
@@ -659,6 +667,17 @@ func mapToEnvSlice(m map[string]string) []string {
 	result := make([]string, 0, len(m))
 	for k, v := range m {
 		result = append(result, k+"="+v)
+	}
+	return result
+}
+
+// mergeEnvMaps merges multiple env maps, with later maps taking precedence
+func mergeEnvMaps(maps ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = v
+		}
 	}
 	return result
 }

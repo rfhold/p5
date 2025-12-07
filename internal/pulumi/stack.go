@@ -13,9 +13,13 @@ import (
 
 // FetchProjectInfo loads project info from the specified directory
 // If stackName is empty, it will use the currently selected stack
-func FetchProjectInfo(ctx context.Context, workDir string, stackName string) (*ProjectInfo, error) {
+func FetchProjectInfo(ctx context.Context, workDir string, stackName string, env map[string]string) (*ProjectInfo, error) {
 	// Create a local workspace
-	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(workDir))
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+	ws, err := auto.NewLocalWorkspace(ctx, wsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -65,7 +69,7 @@ func FetchProjectInfo(ctx context.Context, workDir string, stackName string) (*P
 // selectStack handles the common stack selection boilerplate
 // It resolves the stack name and creates workspace options with environment variables
 func selectStack(ctx context.Context, workDir, stackName string, env map[string]string) (*auto.Stack, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, env)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +88,12 @@ func selectStack(ctx context.Context, workDir, stackName string, env map[string]
 }
 
 // ListStacks returns all available stacks in the workspace
-func ListStacks(ctx context.Context, workDir string) ([]StackInfo, error) {
-	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(workDir))
+func ListStacks(ctx context.Context, workDir string, env map[string]string) ([]StackInfo, error) {
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+	ws, err := auto.NewLocalWorkspace(ctx, wsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -106,8 +114,12 @@ func ListStacks(ctx context.Context, workDir string) ([]StackInfo, error) {
 }
 
 // SelectStack sets the specified stack as current
-func SelectStack(ctx context.Context, workDir string, stackName string) error {
-	_, err := auto.SelectStackLocalSource(ctx, stackName, workDir)
+func SelectStack(ctx context.Context, workDir string, stackName string, env map[string]string) error {
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+	_, err := auto.SelectStackLocalSource(ctx, stackName, workDir, wsOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to select stack: %w", err)
 	}
@@ -115,12 +127,16 @@ func SelectStack(ctx context.Context, workDir string, stackName string) error {
 }
 
 // resolveStackName resolves the stack name, using current stack if empty
-func resolveStackName(ctx context.Context, workDir string, stackName string) (string, error) {
+func resolveStackName(ctx context.Context, workDir string, stackName string, env map[string]string) (string, error) {
 	if stackName != "" {
 		return stackName, nil
 	}
 
-	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(workDir))
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+	ws, err := auto.NewLocalWorkspace(ctx, wsOpts...)
 	if err != nil {
 		return "", fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -146,8 +162,12 @@ type WhoAmIInfo struct {
 }
 
 // GetWhoAmI returns the current backend user and URL
-func GetWhoAmI(ctx context.Context, workDir string) (*WhoAmIInfo, error) {
-	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(workDir))
+func GetWhoAmI(ctx context.Context, workDir string, env map[string]string) (*WhoAmIInfo, error) {
+	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
+	if len(env) > 0 {
+		wsOpts = append(wsOpts, auto.EnvVars(env))
+	}
+	ws, err := auto.NewLocalWorkspace(ctx, wsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}

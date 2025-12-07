@@ -84,7 +84,7 @@ func RunRefreshPreview(ctx context.Context, workDir string, stackName string, op
 func RunDestroyPreview(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
 	if err != nil {
 		eventCh <- PreviewEvent{Error: err}
 		return
@@ -93,7 +93,7 @@ func RunDestroyPreview(ctx context.Context, workDir string, stackName string, op
 	// For a true destroy preview, we need to use a different approach
 	// since the automation API doesn't have a destroy preview
 	// For now, we'll just mark all resources as delete operations
-	resources, err := GetStackResources(ctx, workDir, resolvedStackName)
+	resources, err := GetStackResources(ctx, workDir, resolvedStackName, opts.Env)
 	if err != nil {
 		eventCh <- PreviewEvent{Error: fmt.Errorf("failed to get stack resources: %w", err)}
 		return

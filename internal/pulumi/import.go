@@ -58,7 +58,7 @@ func runPulumiCommand(ctx context.Context, workDir string, env map[string]string
 // importID is the provider-specific ID of the existing resource to import
 // parentURN is optional - if provided, the resource will be imported as a child of this resource
 func ImportResource(ctx context.Context, workDir, stackName string, resourceType, resourceName, importID, parentURN string, opts ImportOptions) (*CommandResult, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func ImportResource(ctx context.Context, workDir, stackName string, resourceType
 // DeleteFromState removes a resource from the Pulumi state without deleting the actual resource
 // urn is the full URN of the resource to remove from state
 func DeleteFromState(ctx context.Context, workDir, stackName string, urn string, opts StateDeleteOptions) (*CommandResult, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName)
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
 	if err != nil {
 		return nil, err
 	}

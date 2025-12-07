@@ -179,6 +179,11 @@ type StateDeleteOptions struct {
 	Env map[string]string // Environment variables to set for the operation
 }
 
+// ReadOptions contains options for read operations
+type ReadOptions struct {
+	Env map[string]string
+}
+
 // History pagination defaults
 const (
 	// DefaultHistoryPageSize is the default number of history entries to fetch
