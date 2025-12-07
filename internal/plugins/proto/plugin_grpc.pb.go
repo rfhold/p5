@@ -229,3 +229,153 @@ var ImportHelperPlugin_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "internal/plugins/proto/plugin.proto",
 }
+
+const (
+	ResourceOpenerPlugin_GetSupportedOpenTypes_FullMethodName = "/p5.plugin.v0.ResourceOpenerPlugin/GetSupportedOpenTypes"
+	ResourceOpenerPlugin_OpenResource_FullMethodName          = "/p5.plugin.v0.ResourceOpenerPlugin/OpenResource"
+)
+
+// ResourceOpenerPluginClient is the client API for ResourceOpenerPlugin service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// ResourceOpenerPlugin provides resource opening capabilities (optional capability)
+// Plugins can open resources in a browser or launch an alternate screen program (e.g., k9s)
+type ResourceOpenerPluginClient interface {
+	// GetSupportedOpenTypes returns regex patterns for resource types this plugin can open
+	GetSupportedOpenTypes(ctx context.Context, in *SupportedOpenTypesRequest, opts ...grpc.CallOption) (*SupportedOpenTypesResponse, error)
+	// OpenResource returns the action to open a specific resource
+	OpenResource(ctx context.Context, in *OpenResourceRequest, opts ...grpc.CallOption) (*OpenResourceResponse, error)
+}
+
+type resourceOpenerPluginClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewResourceOpenerPluginClient(cc grpc.ClientConnInterface) ResourceOpenerPluginClient {
+	return &resourceOpenerPluginClient{cc}
+}
+
+func (c *resourceOpenerPluginClient) GetSupportedOpenTypes(ctx context.Context, in *SupportedOpenTypesRequest, opts ...grpc.CallOption) (*SupportedOpenTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SupportedOpenTypesResponse)
+	err := c.cc.Invoke(ctx, ResourceOpenerPlugin_GetSupportedOpenTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *resourceOpenerPluginClient) OpenResource(ctx context.Context, in *OpenResourceRequest, opts ...grpc.CallOption) (*OpenResourceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OpenResourceResponse)
+	err := c.cc.Invoke(ctx, ResourceOpenerPlugin_OpenResource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ResourceOpenerPluginServer is the server API for ResourceOpenerPlugin service.
+// All implementations must embed UnimplementedResourceOpenerPluginServer
+// for forward compatibility.
+//
+// ResourceOpenerPlugin provides resource opening capabilities (optional capability)
+// Plugins can open resources in a browser or launch an alternate screen program (e.g., k9s)
+type ResourceOpenerPluginServer interface {
+	// GetSupportedOpenTypes returns regex patterns for resource types this plugin can open
+	GetSupportedOpenTypes(context.Context, *SupportedOpenTypesRequest) (*SupportedOpenTypesResponse, error)
+	// OpenResource returns the action to open a specific resource
+	OpenResource(context.Context, *OpenResourceRequest) (*OpenResourceResponse, error)
+	mustEmbedUnimplementedResourceOpenerPluginServer()
+}
+
+// UnimplementedResourceOpenerPluginServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedResourceOpenerPluginServer struct{}
+
+func (UnimplementedResourceOpenerPluginServer) GetSupportedOpenTypes(context.Context, *SupportedOpenTypesRequest) (*SupportedOpenTypesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSupportedOpenTypes not implemented")
+}
+func (UnimplementedResourceOpenerPluginServer) OpenResource(context.Context, *OpenResourceRequest) (*OpenResourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenResource not implemented")
+}
+func (UnimplementedResourceOpenerPluginServer) mustEmbedUnimplementedResourceOpenerPluginServer() {}
+func (UnimplementedResourceOpenerPluginServer) testEmbeddedByValue()                              {}
+
+// UnsafeResourceOpenerPluginServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ResourceOpenerPluginServer will
+// result in compilation errors.
+type UnsafeResourceOpenerPluginServer interface {
+	mustEmbedUnimplementedResourceOpenerPluginServer()
+}
+
+func RegisterResourceOpenerPluginServer(s grpc.ServiceRegistrar, srv ResourceOpenerPluginServer) {
+	// If the following call pancis, it indicates UnimplementedResourceOpenerPluginServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ResourceOpenerPlugin_ServiceDesc, srv)
+}
+
+func _ResourceOpenerPlugin_GetSupportedOpenTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SupportedOpenTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceOpenerPluginServer).GetSupportedOpenTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceOpenerPlugin_GetSupportedOpenTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceOpenerPluginServer).GetSupportedOpenTypes(ctx, req.(*SupportedOpenTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ResourceOpenerPlugin_OpenResource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenResourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceOpenerPluginServer).OpenResource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceOpenerPlugin_OpenResource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceOpenerPluginServer).OpenResource(ctx, req.(*OpenResourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ResourceOpenerPlugin_ServiceDesc is the grpc.ServiceDesc for ResourceOpenerPlugin service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ResourceOpenerPlugin_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "p5.plugin.v0.ResourceOpenerPlugin",
+	HandlerType: (*ResourceOpenerPluginServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetSupportedOpenTypes",
+			Handler:    _ResourceOpenerPlugin_GetSupportedOpenTypes_Handler,
+		},
+		{
+			MethodName: "OpenResource",
+			Handler:    _ResourceOpenerPlugin_OpenResource_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "internal/plugins/proto/plugin.proto",
+}

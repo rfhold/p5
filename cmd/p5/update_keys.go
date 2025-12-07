@@ -282,6 +282,15 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Open resource (requires resource opener plugins)
+	if key.Matches(msg, ui.Keys.OpenResource) {
+		item := m.ui.ResourceList.SelectedItem()
+		hasOpeners := m.deps != nil && m.deps.PluginProvider != nil && m.deps.PluginProvider.HasResourceOpeners()
+		if CanOpenResource(m.ui.ViewMode, item, hasOpeners) {
+			return m, m.fetchOpenResourceAction(item.Type, item.Name, item.URN, item.Provider, item.Inputs, item.Outputs, item.ProviderInputs)
+		}
+	}
+
 	// Preview operations (lowercase u/r/d)
 	if key.Matches(msg, ui.Keys.PreviewUp) {
 		return m, m.startPreview(pulumi.OperationUp)

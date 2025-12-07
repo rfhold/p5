@@ -19,6 +19,10 @@ type FakePluginProvider struct {
 	GetImportSuggestionsFunc func(ctx context.Context, req *ImportSuggestionsRequest) ([]*AggregatedImportSuggestion, error)
 	HasImportHelpersFunc     func() bool
 
+	// ResourceOpener methods
+	OpenResourceFunc       func(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error)
+	HasResourceOpenersFunc func() bool
+
 	// PluginProvider methods
 	InitializeFunc                      func(ctx context.Context, workDir, programName, stackName string) ([]AuthenticateResult, error)
 	CloseFunc                           func(ctx context.Context)
@@ -28,14 +32,17 @@ type FakePluginProvider struct {
 	AuthenticateAllFunc                 func(ctx context.Context, programName, stackName string, p5Config *P5Config, workDir string) ([]AuthenticateResult, error)
 
 	// Default return values
-	AuthEnv            map[string]string
-	AllEnv             map[string]string
-	CredentialsSummary []CredentialsSummary
-	ImportSuggestions  []*AggregatedImportSuggestion
-	HasImportHelper    bool
-	AuthResults        []AuthenticateResult
-	MergedConfig       *P5Config
-	ShouldRefresh      bool
+	AuthEnv              map[string]string
+	AllEnv               map[string]string
+	CredentialsSummary   []CredentialsSummary
+	ImportSuggestions    []*AggregatedImportSuggestion
+	HasImportHelper      bool
+	OpenResourceResponse *OpenResourceResponse
+	OpenResourcePlugin   string
+	HasResourceOpener    bool
+	AuthResults          []AuthenticateResult
+	MergedConfig         *P5Config
+	ShouldRefresh        bool
 
 	// Calls tracks all method invocations.
 	Calls struct {
@@ -47,6 +54,8 @@ type FakePluginProvider struct {
 		InvalidateAllCredentials        int
 		GetImportSuggestions            []*ImportSuggestionsRequest
 		HasImportHelpers                int
+		OpenResource                    []*OpenResourceRequest
+		HasResourceOpeners              int
 		Initialize                      []InitializeCall
 		Close                           int
 		GetMergedConfig                 int
@@ -154,6 +163,24 @@ func (f *FakePluginProvider) HasImportHelpers() bool {
 		return f.HasImportHelpersFunc()
 	}
 	return f.HasImportHelper
+}
+
+// ResourceOpener interface implementation
+
+func (f *FakePluginProvider) OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error) {
+	f.Calls.OpenResource = append(f.Calls.OpenResource, req)
+	if f.OpenResourceFunc != nil {
+		return f.OpenResourceFunc(ctx, req)
+	}
+	return f.OpenResourceResponse, f.OpenResourcePlugin, nil
+}
+
+func (f *FakePluginProvider) HasResourceOpeners() bool {
+	f.Calls.HasResourceOpeners++
+	if f.HasResourceOpenersFunc != nil {
+		return f.HasResourceOpenersFunc()
+	}
+	return f.HasResourceOpener
 }
 
 // PluginProvider interface implementation

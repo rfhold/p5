@@ -21,6 +21,12 @@ type BuiltinImportHelperPlugin interface {
 	ImportHelperPlugin
 }
 
+// BuiltinResourceOpenerPlugin is for builtin plugins that also provide resource opening capabilities
+type BuiltinResourceOpenerPlugin interface {
+	BuiltinPlugin
+	ResourceOpenerPlugin
+}
+
 // builtinRegistry holds all registered builtin plugins
 var builtinRegistry = make(map[string]BuiltinPlugin)
 

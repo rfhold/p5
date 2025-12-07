@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pkg/browser"
 
 	"github.com/rfhold/p5/internal/plugins"
 	"github.com/rfhold/p5/internal/pulumi"
@@ -558,4 +560,121 @@ func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
 		}
 		return stackInitResultMsg{StackName: name, Error: nil}
 	}
+}
+
+// fetchOpenResourceAction queries plugins for an action to open the resource
+func (m *Model) fetchOpenResourceAction(resourceType, resourceName, resourceURN, providerURN string, inputs, outputs, providerInputs map[string]interface{}) tea.Cmd {
+	if m.deps == nil || m.deps.PluginProvider == nil {
+		return func() tea.Msg {
+			return openResourceActionMsg{Response: nil, PluginName: ""}
+		}
+	}
+
+	// Convert inputs to string map for proto
+	inputStrings := make(map[string]string)
+	for k, v := range inputs {
+		switch val := v.(type) {
+		case string:
+			inputStrings[k] = val
+		default:
+			if b, err := json.Marshal(val); err == nil {
+				inputStrings[k] = string(b)
+			}
+		}
+	}
+
+	// Convert outputs to string map for proto
+	outputStrings := make(map[string]string)
+	for k, v := range outputs {
+		switch val := v.(type) {
+		case string:
+			outputStrings[k] = val
+		default:
+			if b, err := json.Marshal(val); err == nil {
+				outputStrings[k] = string(b)
+			}
+		}
+	}
+
+	// Convert provider inputs to string map for proto
+	providerInputStrings := make(map[string]string)
+	for k, v := range providerInputs {
+		switch val := v.(type) {
+		case string:
+			providerInputStrings[k] = val
+		default:
+			if b, err := json.Marshal(val); err == nil {
+				providerInputStrings[k] = string(b)
+			}
+		}
+	}
+
+	appCtx := m.appCtx
+	pluginProvider := m.deps.PluginProvider
+	return func() tea.Msg {
+		req := &plugins.OpenResourceRequest{
+			ResourceType:   resourceType,
+			ResourceName:   resourceName,
+			ResourceUrn:    resourceURN,
+			ProviderUrn:    providerURN,
+			ProviderInputs: providerInputStrings,
+			Inputs:         inputStrings,
+			Outputs:        outputStrings,
+		}
+
+		resp, pluginName, err := pluginProvider.OpenResource(appCtx, req)
+		if err != nil {
+			return openResourceErrMsg(err)
+		}
+		return openResourceActionMsg{Response: resp, PluginName: pluginName}
+	}
+}
+
+// openInBrowser opens a URL in the default browser
+func openInBrowser(url string) tea.Cmd {
+	return func() tea.Msg {
+		if err := browser.OpenURL(url); err != nil {
+			return openResourceErrMsg(fmt.Errorf("failed to open browser: %w", err))
+		}
+		return nil
+	}
+}
+
+// openWithExec launches an alternate screen program using tea.ExecProcess
+func openWithExec(command string, args []string, env map[string]string) tea.Cmd {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables
+	if len(env) > 0 {
+		cmd.Env = append(cmd.Environ(), mapToEnvSlice(env)...)
+	}
+
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return openResourceExecDoneMsg{Error: err}
+	})
+}
+
+// mapToEnvSlice converts a map to a slice of KEY=VALUE strings
+func mapToEnvSlice(m map[string]string) []string {
+	result := make([]string, 0, len(m))
+	for k, v := range m {
+		result = append(result, k+"="+v)
+	}
+	return result
+}
+
+// CanOpenResource checks if a resource can be opened (requires plugins)
+func CanOpenResource(viewMode ui.ViewMode, item *ui.ResourceItem, hasResourceOpeners bool) bool {
+	// Only works in stack view with selected resource and active resource opener plugins
+	if viewMode != ui.ViewStack && viewMode != ui.ViewPreview {
+		return false
+	}
+	if item == nil {
+		return false
+	}
+	// Don't allow opening the root stack resource
+	if item.Type == "pulumi:pulumi:Stack" {
+		return false
+	}
+	return hasResourceOpeners
 }

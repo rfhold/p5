@@ -32,11 +32,23 @@ type ImportHelper interface {
 	HasImportHelpers() bool
 }
 
+// ResourceOpener provides resource opening capabilities (browser URLs or alternate screen programs).
+type ResourceOpener interface {
+	// OpenResource queries plugins for an action to open a resource.
+	// Returns the response, the plugin name that handled the request, and any error.
+	// Returns nil response if no plugin can open the resource.
+	OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error)
+
+	// HasResourceOpeners returns true if any plugin provides resource opening capabilities.
+	HasResourceOpeners() bool
+}
+
 // PluginProvider combines all plugin capabilities needed by the application.
 // This is the main interface used by the TUI to interact with the plugin system.
 type PluginProvider interface {
 	AuthProvider
 	ImportHelper
+	ResourceOpener
 
 	// Initialize loads and authenticates plugins based on the current context.
 	// This is a convenience method that loads plugins from config and authenticates.

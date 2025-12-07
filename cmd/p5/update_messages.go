@@ -54,6 +54,12 @@ func (m Model) handleMessage(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleImportSuggestions(msg)
 	case importSuggestionsErrMsg:
 		return m.handleImportSuggestionsError(msg)
+	case openResourceActionMsg:
+		return m.handleOpenResourceAction(msg)
+	case openResourceErrMsg:
+		return m.handleOpenResourceError(msg)
+	case openResourceExecDoneMsg:
+		return m.handleOpenResourceExecDone(msg)
 
 	// Selection messages
 	case stacksListMsg:

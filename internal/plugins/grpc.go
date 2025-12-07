@@ -28,4 +28,10 @@ type (
 	ImportHelperGRPCClient = p5plugin.ImportHelperGRPCClient
 	// ImportHelperGRPCServer is the server-side implementation that wraps the actual import helper plugin
 	ImportHelperGRPCServer = p5plugin.ImportHelperGRPCServer
+	// ResourceOpenerPluginGRPC is the implementation of goplugin.GRPCPlugin for ResourceOpenerPlugin
+	ResourceOpenerPluginGRPC = p5plugin.ResourceOpenerPluginGRPC
+	// ResourceOpenerGRPCClient is the client-side implementation of ResourceOpenerPlugin over gRPC
+	ResourceOpenerGRPCClient = p5plugin.ResourceOpenerGRPCClient
+	// ResourceOpenerGRPCServer is the server-side implementation that wraps the actual resource opener plugin
+	ResourceOpenerGRPCServer = p5plugin.ResourceOpenerGRPCServer
 )

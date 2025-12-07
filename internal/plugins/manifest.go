@@ -65,6 +65,10 @@ type PluginConfig struct {
 	ImportHelper bool `yaml:"import_helper,omitempty" toml:"import_helper,omitempty"`
 	// UseAuthEnv passes merged auth environment variables to import helper requests (default: false)
 	UseAuthEnv bool `yaml:"use_auth_env,omitempty" toml:"use_auth_env,omitempty"`
+
+	// Resource opener settings
+	// ResourceOpener enables the resource opener capability for this plugin (default: false)
+	ResourceOpener bool `yaml:"resource_opener,omitempty" toml:"resource_opener,omitempty"`
 }
 
 // P5Config represents the p5 configuration section in Pulumi.yaml
@@ -263,6 +267,11 @@ func MergeConfigs(global *GlobalConfig, program *P5Config) *P5Config {
 			}
 			if cfg.UseAuthEnv {
 				mergedPlugin.UseAuthEnv = cfg.UseAuthEnv
+			}
+
+			// Resource opener settings from program override global
+			if cfg.ResourceOpener {
+				mergedPlugin.ResourceOpener = cfg.ResourceOpener
 			}
 
 			merged.Plugins[name] = mergedPlugin

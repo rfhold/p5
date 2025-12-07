@@ -161,6 +161,71 @@ func (m *Manager) HasImportHelpers() bool {
 	return false
 }
 
+// HasResourceOpeners returns true if any plugin has resource opener capability enabled
+func (m *Manager) HasResourceOpeners() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, instance := range m.plugins {
+		if instance.HasResourceOpener() {
+			return true
+		}
+	}
+	return false
+}
+
+// OpenResource queries all enabled resource opener plugins to get an action for opening the resource.
+// Returns the first plugin that can handle the resource type, or nil if none can.
+func (m *Manager) OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for name, instance := range m.plugins {
+		if !instance.HasResourceOpener() {
+			continue
+		}
+
+		// Build the request with auth env if configured
+		pluginReq := req
+
+		// If use_auth_env is enabled for this plugin, populate auth_env
+		if config, ok := m.mergedConfig.Plugins[name]; ok && config.UseAuthEnv {
+			// Clone the request and add auth env
+			pluginReq = &OpenResourceRequest{
+				ResourceType:   req.ResourceType,
+				ResourceName:   req.ResourceName,
+				ResourceUrn:    req.ResourceUrn,
+				ProviderUrn:    req.ProviderUrn,
+				ProviderInputs: req.ProviderInputs,
+				Inputs:         req.Inputs,
+				Outputs:        req.Outputs,
+				ProgramConfig:  req.ProgramConfig,
+				StackConfig:    req.StackConfig,
+				StackName:      req.StackName,
+				ProgramName:    req.ProgramName,
+				AuthEnv:        m.getMergedAuthEnvLocked(),
+			}
+		}
+
+		resp, err := instance.resourceOpener.OpenResource(ctx, pluginReq)
+		if err != nil {
+			// Log error but continue with other plugins
+			continue
+		}
+
+		// Skip if plugin can't open this resource type
+		if !resp.CanOpen {
+			continue
+		}
+
+		// Return first plugin that can open the resource
+		return resp, name, nil
+	}
+
+	// No plugin can open this resource
+	return nil, "", nil
+}
+
 // Initialize loads and authenticates plugins based on the current context.
 // This is an alias for LoadAndAuthenticate to satisfy the PluginProvider interface.
 func (m *Manager) Initialize(ctx context.Context, workDir, programName, stackName string) ([]AuthenticateResult, error) {

@@ -47,3 +47,13 @@ type stackInitResultMsg struct {
 	StackName string
 	Error     error
 }
+
+// Open resource messages
+type openResourceActionMsg struct {
+	Response   *plugins.OpenResourceResponse
+	PluginName string
+}
+type openResourceErrMsg error
+type openResourceExecDoneMsg struct {
+	Error error
+}

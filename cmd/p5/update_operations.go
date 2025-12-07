@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/rfhold/p5/internal/plugins/proto"
 	"github.com/rfhold/p5/internal/pulumi"
 	"github.com/rfhold/p5/internal/ui"
 )
@@ -208,5 +209,57 @@ func (m Model) handleImportSuggestions(msg importSuggestionsMsg) (tea.Model, tea
 // handleImportSuggestionsError handles import suggestions error
 func (m Model) handleImportSuggestionsError(msg importSuggestionsErrMsg) (tea.Model, tea.Cmd) {
 	m.ui.ImportModal.SetSuggestions(nil)
+	return m, nil
+}
+
+// handleOpenResourceAction handles the response from plugin open resource query
+func (m Model) handleOpenResourceAction(msg openResourceActionMsg) (tea.Model, tea.Cmd) {
+	resp := msg.Response
+	if resp == nil {
+		// No plugin could open this resource
+		return m, m.ui.Toast.Show("No plugin can open this resource type")
+	}
+
+	if !resp.CanOpen {
+		return m, m.ui.Toast.Show("Resource type not supported for opening")
+	}
+
+	if resp.Error != "" {
+		return m, m.ui.Toast.Show(fmt.Sprintf("Open resource failed: %s", resp.Error))
+	}
+
+	action := resp.Action
+	if action == nil {
+		return m, m.ui.Toast.Show("Plugin returned no action")
+	}
+
+	switch action.Type {
+	case proto.OpenActionType_OPEN_ACTION_TYPE_BROWSER:
+		return m, tea.Batch(
+			m.ui.Toast.Show("Opening in browser..."),
+			openInBrowser(action.Url),
+		)
+	case proto.OpenActionType_OPEN_ACTION_TYPE_EXEC:
+		// Convert proto env map to Go map
+		env := make(map[string]string)
+		for k, v := range action.Env {
+			env[k] = v
+		}
+		return m, openWithExec(action.Command, action.Args, env)
+	default:
+		return m, m.ui.Toast.Show("Unknown open action type")
+	}
+}
+
+// handleOpenResourceError handles errors from plugin open resource query
+func (m Model) handleOpenResourceError(msg openResourceErrMsg) (tea.Model, tea.Cmd) {
+	return m, m.ui.Toast.Show(fmt.Sprintf("Open resource failed: %s", error(msg).Error()))
+}
+
+// handleOpenResourceExecDone handles completion of an exec-based open action
+func (m Model) handleOpenResourceExecDone(msg openResourceExecDoneMsg) (tea.Model, tea.Cmd) {
+	if msg.Error != nil {
+		return m, m.ui.Toast.Show(fmt.Sprintf("Program exited with error: %s", msg.Error.Error()))
+	}
 	return m, nil
 }

@@ -126,8 +126,9 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 	namespace := ""
 
 	if !isClusterScoped {
-		// Priority: resource inputs > provider inputs > stack config > program config
-		namespace = req.Inputs["namespace"]
+		// Priority: resource metadata > provider inputs > stack config > program config
+		// Kubernetes resources store namespace in metadata.namespace (JSON serialized)
+		namespace = extractK8sNamespace(req.Inputs["metadata"])
 		if namespace == "" {
 			namespace = req.ProviderInputs["namespace"]
 		}

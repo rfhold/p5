@@ -55,6 +55,9 @@ type KeyMap struct {
 	// Delete from state
 	DeleteFromState key.Binding
 
+	// Open resource
+	OpenResource key.Binding
+
 	// General
 	Help key.Binding
 	Quit key.Binding
@@ -194,6 +197,12 @@ var Keys = KeyMap{
 		key.WithHelp("x", "delete from state"),
 	),
 
+	// Open resource
+	OpenResource: key.NewBinding(
+		key.WithKeys("o"),
+		key.WithHelp("o", "open resource"),
+	),
+
 	// General
 	Help: key.NewBinding(
 		key.WithKeys("?"),
@@ -219,7 +228,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.PreviewUp, k.PreviewRefresh, k.PreviewDestroy},
 		{k.ExecuteUp, k.ExecuteRefresh, k.ExecuteDestroy},
 		{k.CopyResource, k.ToggleDetails, k.SelectStack, k.SelectWorkspace, k.ViewHistory},
-		{k.Import, k.DeleteFromState},
+		{k.Import, k.DeleteFromState, k.OpenResource},
 		{k.Help, k.Quit},
 	}
 }

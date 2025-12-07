@@ -14,6 +14,15 @@ service ImportHelperPlugin {
   rpc GetImportSuggestions(ImportSuggestionsRequest) returns (ImportSuggestionsResponse);
 }
 
+// ResourceOpenerPlugin provides resource opening capabilities (optional capability)
+// Plugins can open resources in a browser or launch an alternate screen program (e.g., k9s)
+service ResourceOpenerPlugin {
+  // GetSupportedOpenTypes returns regex patterns for resource types this plugin can open
+  rpc GetSupportedOpenTypes(SupportedOpenTypesRequest) returns (SupportedOpenTypesResponse);
+  // OpenResource returns the action to open a specific resource
+  rpc OpenResource(OpenResourceRequest) returns (OpenResourceResponse);
+}
+
 message AuthenticateRequest {
   map<string, string> program_config = 1;
   map<string, string> stack_config = 2;
@@ -63,4 +72,57 @@ message ImportSuggestionsResponse {
   bool can_provide = 1;                       // False if plugin doesn't handle this resource type
   repeated ImportSuggestion suggestions = 2;  // List of suggestions (can be empty)
   string error = 3;                           // Error message if something went wrong
+}
+
+// Resource opener messages
+message SupportedOpenTypesRequest {
+  // Empty for now, could include context for filtering in the future
+}
+
+message SupportedOpenTypesResponse {
+  repeated string resource_type_patterns = 1;  // Regex patterns for resource types this plugin can open
+}
+
+message OpenResourceRequest {
+  // Resource information
+  string resource_type = 1;     // e.g., "kubernetes:core/v1:Pod"
+  string resource_name = 2;     // Logical name in Pulumi program
+  string resource_urn = 3;      // Full Pulumi URN
+  
+  // Provider configuration
+  string provider_urn = 4;                    // Provider URN for logging/debugging
+  map<string, string> provider_inputs = 5;   // Provider's configuration inputs (kubeconfig, context, namespace, etc.)
+  
+  // Resource state
+  map<string, string> inputs = 6;            // Resource inputs (serialized as JSON strings for complex values)
+  map<string, string> outputs = 7;           // Resource outputs (may contain URLs, IDs, ARNs, etc.)
+  
+  // Context
+  map<string, string> program_config = 8;
+  map<string, string> stack_config = 9;
+  string stack_name = 10;
+  string program_name = 11;
+  
+  // Auth environment (only populated if use_auth_env: true)
+  map<string, string> auth_env = 12;
+}
+
+message OpenResourceResponse {
+  bool can_open = 1;          // False if plugin doesn't handle this resource type
+  OpenAction action = 2;      // The action to perform (only set if can_open is true)
+  string error = 3;           // Error message if something went wrong
+}
+
+message OpenAction {
+  OpenActionType type = 1;
+  string url = 2;                       // For BROWSER type: URL to open
+  string command = 3;                   // For EXEC type: executable path (e.g., "k9s")
+  repeated string args = 4;             // For EXEC type: command arguments
+  map<string, string> env = 5;          // For EXEC type: additional environment variables
+}
+
+enum OpenActionType {
+  OPEN_ACTION_TYPE_UNSPECIFIED = 0;
+  OPEN_ACTION_TYPE_BROWSER = 1;         // Open URL in default browser
+  OPEN_ACTION_TYPE_EXEC = 2;            // Launch alternate screen program
 }

@@ -11,16 +11,22 @@ import (
 
 // PluginInstance holds a running plugin client and its interface
 type PluginInstance struct {
-	name         string
-	client       *plugin.Client // nil for builtin plugins
-	auth         AuthPlugin
-	importHelper ImportHelperPlugin // nil if not supported or not enabled
-	builtin      bool               // true if this is a builtin plugin
+	name           string
+	client         *plugin.Client // nil for builtin plugins
+	auth           AuthPlugin
+	importHelper   ImportHelperPlugin   // nil if not supported or not enabled
+	resourceOpener ResourceOpenerPlugin // nil if not supported or not enabled
+	builtin        bool                 // true if this is a builtin plugin
 }
 
 // HasImportHelper returns true if this plugin provides import suggestions
 func (p *PluginInstance) HasImportHelper() bool {
 	return p.importHelper != nil
+}
+
+// HasResourceOpener returns true if this plugin provides resource opening capabilities
+func (p *PluginInstance) HasResourceOpener() bool {
+	return p.resourceOpener != nil
 }
 
 // Close shuts down the plugin
@@ -77,6 +83,13 @@ func (m *Manager) loadBuiltinPlugin(name string, config PluginConfig) error {
 	if config.ImportHelper {
 		if importHelper, ok := builtinPlugin.(ImportHelperPlugin); ok {
 			instance.importHelper = importHelper
+		}
+	}
+
+	// Check if plugin implements ResourceOpenerPlugin and is enabled
+	if config.ResourceOpener {
+		if resourceOpener, ok := builtinPlugin.(ResourceOpenerPlugin); ok {
+			instance.resourceOpener = resourceOpener
 		}
 	}
 
@@ -146,6 +159,17 @@ func (m *Manager) loadPlugin(ctx context.Context, name string, config PluginConf
 			}
 		}
 		// If dispensing fails, just continue without import helper capability
+	}
+
+	// Try to load resource opener if enabled in config
+	if config.ResourceOpener {
+		rawResourceOpener, err := rpcClient.Dispense("resource_opener")
+		if err == nil {
+			if resourceOpener, ok := rawResourceOpener.(ResourceOpenerPlugin); ok {
+				instance.resourceOpener = resourceOpener
+			}
+		}
+		// If dispensing fails, just continue without resource opener capability
 	}
 
 	m.plugins[name] = instance
