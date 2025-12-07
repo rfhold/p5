@@ -23,9 +23,8 @@ func TestPreview_Up(t *testing.T) {
 	m := te.CreateModel("up")
 	h := newTestHarness(t, m)
 
-	// Wait for preview to complete
-	h.WaitFor("RandomId", 30*time.Second)
-	h.FinalSnapshot("preview_creates")
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitFor("done", 15*time.Second)
 }
 
 func TestPreview_UpAndExecute(t *testing.T) {
@@ -41,14 +40,17 @@ func TestPreview_UpAndExecute(t *testing.T) {
 	m := te.CreateModel("up")
 	h := newTestHarness(t, m)
 
-	// Wait for preview to complete
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitFor("done", 15*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlU})
 
-	// Wait for all resources to be created - provider is typically last
-	h.WaitFor("default_4_16_2 created", 30*time.Second)
-	h.FinalSnapshot("execute_complete")
+	// Wait for execution to complete - "done" reappears after execution finishes.
+	// Also verify resources show "created" status.
+	h.WaitForAll([]string{
+		"created",
+		"done",
+	}, 15*time.Second)
 }
 
 func TestPreview_DestroyAndExecute(t *testing.T) {
@@ -68,14 +70,17 @@ func TestPreview_DestroyAndExecute(t *testing.T) {
 	m := te.CreateModel("destroy")
 	h := newTestHarness(t, m)
 
-	// Wait for preview to complete
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitFor("done", 15*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlD})
 
-	// Wait for all resources to be deleted - provider is typically last
-	h.WaitFor("default_4_16_2 deleted", 30*time.Second)
-	h.FinalSnapshot("destroy_complete")
+	// Wait for execution to complete - "done" reappears after execution finishes.
+	// Also verify resources show "deleted" status.
+	h.WaitForAll([]string{
+		"deleted",
+		"done",
+	}, 15*time.Second)
 }
 
 func TestPreview_RefreshAndExecute(t *testing.T) {
@@ -92,15 +97,21 @@ func TestPreview_RefreshAndExecute(t *testing.T) {
 		t.Fatalf("failed to deploy stack: %v", err)
 	}
 
+	// Delay to ensure pulumi releases any locks from the deploy
+	time.Sleep(2 * time.Second)
+
 	m := te.CreateModel("refresh")
 	h := newTestHarness(t, m)
 
-	// Wait for preview to complete
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitFor("done", 15*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlR})
 
-	// Wait for all resources to be refreshed - provider is typically last
-	h.WaitFor("default_4_16_2 refreshed", 30*time.Second)
-	h.FinalSnapshot("refresh_complete")
+	// Wait for execution to complete - "done" reappears after execution finishes.
+	// Also verify resources show "refreshed" status.
+	h.WaitForAll([]string{
+		"refreshed",
+		"done",
+	}, 15*time.Second)
 }

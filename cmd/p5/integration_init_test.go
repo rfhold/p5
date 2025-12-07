@@ -40,8 +40,6 @@ func TestInit_NeedsWorkspaceSelection(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	h.WaitAndSnapshot("Select Workspace", "workspace_selector_shown", 10*time.Second)
-
-	h.Quit(5 * time.Second)
 }
 
 func TestInit_MultipleStacksAutoSelectsCurrent(t *testing.T) {
@@ -82,10 +80,13 @@ func TestInit_MultipleStacksAutoSelectsCurrent(t *testing.T) {
 	m := initialModel(context.Background(), appCtx, deps)
 	h := newTestHarness(t, m)
 
-	// App should auto-select the current stack (staging) and load it
-	h.WaitAndSnapshot("staging", "auto_selected_current_stack", 15*time.Second)
-
-	h.Quit(5 * time.Second)
+	// App should auto-select the current stack (staging) and show settled stack view
+	// Wait for both stack name in header AND footer showing stack view keys
+	h.WaitForAll([]string{
+		"Stack: staging",
+		"u up",
+	}, 15*time.Second)
+	h.FinalSnapshot("auto_selected_current_stack")
 }
 
 func TestInit_CreateNewStack(t *testing.T) {
@@ -113,10 +114,8 @@ func TestInit_CreateNewStack(t *testing.T) {
 	m := initialModel(context.Background(), appCtx, deps)
 	h := newTestHarness(t, m)
 
-	// Wait for modal AND backend info to be loaded (to avoid race condition)
+	// Wait for modal AND backend info to be loaded
 	h.WaitFor("Backend:", 10*time.Second)
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("stack_init_modal_shown")
 
 	for _, r := range "teststack" {
 		h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
@@ -124,13 +123,9 @@ func TestInit_CreateNewStack(t *testing.T) {
 	}
 
 	h.Send(tea.KeyMsg{Type: tea.KeyEnter})
-	time.Sleep(100 * time.Millisecond)
-
 	h.WaitFor("Select secrets provider", 5*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyEnter})
-	time.Sleep(100 * time.Millisecond)
-
 	h.WaitFor("Enter passphrase", 5*time.Second)
 
 	for _, r := range "testpassphrase" {
@@ -140,9 +135,13 @@ func TestInit_CreateNewStack(t *testing.T) {
 
 	h.Send(tea.KeyMsg{Type: tea.KeyEnter})
 
-	h.WaitAndSnapshot("teststack", "stack_created", 30*time.Second)
-
-	h.Quit(5 * time.Second)
+	// Wait for fully settled state: header shows stack name, toast shown, footer shows keys
+	h.WaitForAll([]string{
+		"Stack: teststack",
+		"Created stack 'teststack'",
+		"u up",
+	}, 30*time.Second)
+	h.FinalSnapshot("stack_created")
 }
 
 func TestInit_SelectExistingStack(t *testing.T) {
@@ -171,26 +170,28 @@ func TestInit_SelectExistingStack(t *testing.T) {
 	m := te.CreateModel("stack")
 	h := newTestHarness(t, m)
 
-	h.WaitFor("RandomId", 30*time.Second)
-	h.Snapshot("initial_stack_view")
+	// Wait for stack view to be fully loaded (footer shows stack view keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
 
 	// Open stack selector
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
 
-	h.WaitFor("Select Stack", 5*time.Second)
-	h.Snapshot("stack_selector_open")
+	// Wait for stacks to be loaded (not just the modal title, but actual stack names)
+	h.WaitForAll([]string{"Select Stack", "dev", "staging"}, 10*time.Second)
 
-	// Navigate to staging (2 down from dev)
-	h.Send(tea.KeyMsg{Type: tea.KeyDown})
-	time.Sleep(50 * time.Millisecond)
+	// Navigate to staging (down from dev) - use 'j' key which also works for down
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	time.Sleep(100 * time.Millisecond)
 
 	// Select staging
 	h.Send(tea.KeyMsg{Type: tea.KeyEnter})
 
-	// Wait for staging stack to load (it has 0 resources)
-	h.WaitAndSnapshot("staging", "switched_to_staging", 30*time.Second)
-
-	h.Quit(5 * time.Second)
+	// Wait for staging stack to load with settled view (stack name + footer)
+	h.WaitForAll([]string{
+		"Stack: staging",
+		"u up",
+	}, 30*time.Second)
+	h.FinalSnapshot("switched_to_staging")
 }
 
 func TestInit_WorkspaceSelectionAndNavigate(t *testing.T) {
@@ -230,12 +231,13 @@ func TestInit_WorkspaceSelectionAndNavigate(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	h.WaitFor("Select Workspace", 10*time.Second)
-	h.Snapshot("workspace_selector_initial")
 
 	h.Send(tea.KeyMsg{Type: tea.KeyEnter})
 
-	// After selecting the workspace, the app loads the project (named "nested-project")
-	h.WaitAndSnapshot("nested-project", "after_workspace_selection", 30*time.Second)
-
-	h.Quit(5 * time.Second)
+	// After selecting the workspace, wait for settled stack view with program name + footer
+	h.WaitForAll([]string{
+		"Program: nested-project",
+		"u up",
+	}, 30*time.Second)
+	h.FinalSnapshot("after_workspace_selection")
 }

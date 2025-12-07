@@ -227,6 +227,11 @@ func (h *Header) renderSummaryRow() string {
 		}
 	}
 
+	// Add "done" indicator for completed preview/execute operations
+	if h.state == HeaderDone && (h.viewMode == ViewPreview || h.viewMode == ViewExecute) {
+		parts = append(parts, DimStyle.Render("done"))
+	}
+
 	return strings.Join(parts, "  ")
 }
 

@@ -51,7 +51,7 @@ func RunUpPreview(ctx context.Context, workDir, stackName string, opts Operation
 	eventCh <- PreviewEvent{Done: true}
 }
 
-// RunRefreshPreview runs a pulumi refresh preview
+// RunRefreshPreview runs a pulumi refresh preview (dry-run)
 func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
@@ -70,8 +70,8 @@ func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts Oper
 		refreshOpts = append(refreshOpts, optrefresh.Target(opts.Targets))
 	}
 
-	// Refresh with ExpectNoChanges to preview only
-	_, err = stack.Refresh(ctx, refreshOpts...)
+	// Use PreviewRefresh for dry-run (requires Pulumi CLI >= 3.105.0)
+	_, err = stack.PreviewRefresh(ctx, refreshOpts...)
 	if err != nil {
 		eventCh <- PreviewEvent{Error: fmt.Errorf("refresh preview failed: %w", err)}
 		return

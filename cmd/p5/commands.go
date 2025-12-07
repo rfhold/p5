@@ -163,6 +163,10 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 // maybeConfirmExecution checks if confirmation is needed before executing
 // Confirmation is needed if the user is not on the preview screen for the requested operation
 func (m *Model) maybeConfirmExecution(op pulumi.OperationType) tea.Cmd {
+	// Don't start execution if an operation is already running (prevents race with preview)
+	if m.state.OpState.IsActive() {
+		return nil
+	}
 	// If we're on the preview screen for this exact operation, execute directly
 	if m.ui.ViewMode == ui.ViewPreview && m.state.Operation == op {
 		return m.startExecution(op)

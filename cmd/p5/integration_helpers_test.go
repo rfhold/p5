@@ -217,11 +217,20 @@ func (h *testHarness) Send(msg tea.Msg) {
 	h.tm.Send(msg)
 }
 
+// stripANSI removes ANSI escape sequences from byte slice for reliable content matching.
+// Terminal output contains cursor movements, colors, etc. that can fragment searchable text.
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+func stripANSI(b []byte) []byte {
+	return ansiRegex.ReplaceAll(b, nil)
+}
+
 func (h *testHarness) WaitFor(content string, timeout time.Duration) {
 	h.t.Helper()
 	teatest.WaitFor(h.t, h.capture,
 		func(bts []byte) bool {
-			return bytes.Contains(bts, []byte(content))
+			// Strip ANSI codes before searching to handle cursor movements
+			return bytes.Contains(stripANSI(bts), []byte(content))
 		},
 		teatest.WithCheckInterval(50*time.Millisecond),
 		teatest.WithDuration(timeout),
@@ -232,8 +241,9 @@ func (h *testHarness) WaitForAny(contents []string, timeout time.Duration) {
 	h.t.Helper()
 	teatest.WaitFor(h.t, h.capture,
 		func(bts []byte) bool {
+			stripped := stripANSI(bts)
 			for _, content := range contents {
-				if bytes.Contains(bts, []byte(content)) {
+				if bytes.Contains(stripped, []byte(content)) {
 					return true
 				}
 			}
@@ -244,68 +254,43 @@ func (h *testHarness) WaitForAny(contents []string, timeout time.Duration) {
 	)
 }
 
-func (h *testHarness) Snapshot(name string) {
+func (h *testHarness) WaitForAll(contents []string, timeout time.Duration) {
 	h.t.Helper()
-	// Wait for UI to stabilize - operations may still be updating
-	time.Sleep(500 * time.Millisecond)
-	out := h.capture.AllOutput()
-	// Extract only the last frame to avoid capturing spinner animation differences
-	lastFrame := extractLastFrame(out)
-	// Normalize dynamic content (temp paths, random values)
-	normalized := normalizeDynamicContent(string(lastFrame))
-	h.t.Run(name, func(t *testing.T) {
-		golden.RequireEqual(t, []byte(normalized))
-	})
+	teatest.WaitFor(h.t, h.capture,
+		func(bts []byte) bool {
+			stripped := stripANSI(bts)
+			for _, content := range contents {
+				if !bytes.Contains(stripped, []byte(content)) {
+					return false
+				}
+			}
+			return true
+		},
+		teatest.WithCheckInterval(50*time.Millisecond),
+		teatest.WithDuration(timeout),
+	)
 }
 
-func (h *testHarness) FinalSnapshot(name string) {
+func (h *testHarness) Snapshot(name string) {
 	h.t.Helper()
+	// Wait briefly for UI to stabilize
 	time.Sleep(100 * time.Millisecond)
-	// Send quit to allow FinalModel to complete
+
+	// Quit and get clean view directly from the model (bypasses terminal output buffer)
 	h.tm.Send(tea.Quit())
 	finalModel := h.tm.FinalModel(h.t, teatest.WithFinalTimeout(5*time.Second))
-	view := normalizeSpinners(finalModel.View())
-	// Normalize dynamic content (temp paths, random values)
+
+	view := finalModel.View()
+	view = normalizeSpinners(view)
 	view = normalizeDynamicContent(view)
+
 	h.t.Run(name, func(t *testing.T) {
 		golden.RequireEqual(t, []byte(view))
 	})
 }
 
-func extractLastFrame(output []byte) []byte {
-	// Bubbletea redraws by moving cursor up N lines (ESC[<N>A) and redrawing
-	// Find the last cursor-up sequence which marks the start of the final frame
-	str := string(output)
-
-	// Look for ESC[<digits>A pattern (cursor up) - this is how bubbletea redraws
-	// We want to find the last occurrence and take everything after it
-	lastCursorUp := -1
-	for i := len(str) - 1; i >= 0; i-- {
-		if i >= 2 && str[i] == 'A' {
-			// Look backwards for digits and ESC[
-			j := i - 1
-			for j > 0 && str[j] >= '0' && str[j] <= '9' {
-				j--
-			}
-			if j >= 1 && str[j] == '[' && str[j-1] == '\x1b' {
-				lastCursorUp = j - 1
-				break
-			}
-		}
-	}
-
-	var result string
-	if lastCursorUp > 0 {
-		result = str[lastCursorUp:]
-	} else {
-		result = str
-	}
-
-	// Normalize spinner characters to avoid timing-based test failures
-	// Braille spinner chars: ⣾ ⣷ ⣯ ⣟ ⡿ ⢿ ⣻ ⣽
-	result = normalizeSpinners(result)
-
-	return []byte(result)
+func (h *testHarness) FinalSnapshot(name string) {
+	h.Snapshot(name)
 }
 
 func normalizeSpinners(s string) string {

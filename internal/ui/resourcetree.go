@@ -6,6 +6,23 @@ import (
 	"github.com/rfhold/p5/internal/pulumi"
 )
 
+// compareItems provides deterministic ordering for resources
+// Priority: 1) Stack type first, 2) Sequence number, 3) URN (guaranteed unique)
+func compareItems(a, b *ResourceItem) bool {
+	// Stack always comes first
+	aIsStack := a.Type == "pulumi:pulumi:Stack"
+	bIsStack := b.Type == "pulumi:pulumi:Stack"
+	if aIsStack != bIsStack {
+		return aIsStack
+	}
+	// Then by sequence
+	if a.Sequence != b.Sequence {
+		return a.Sequence < b.Sequence
+	}
+	// Finally by URN for guaranteed stable sort
+	return a.URN < b.URN
+}
+
 // organizeItemsAsTree sorts items into tree order (parent followed by children)
 // and sets Depth and IsLast for each item
 func organizeItemsAsTree(items []ResourceItem) []ResourceItem {
@@ -25,16 +42,15 @@ func organizeItemsAsTree(items []ResourceItem) []ResourceItem {
 		}
 	}
 
-	// Sort roots and children by Sequence for deterministic ordering
-	// Sequence is assigned by the Pulumi engine and reflects the natural order
-	// resources are registered (Stack first, then providers, then user resources)
+	// Sort roots and children for deterministic ordering
+	// Priority: 1) Stack type first, 2) Sequence number, 3) URN (guaranteed unique)
 	sort.Slice(rootIndices, func(i, j int) bool {
-		return items[rootIndices[i]].Sequence < items[rootIndices[j]].Sequence
+		return compareItems(&items[rootIndices[i]], &items[rootIndices[j]])
 	})
 	for parent := range childrenOf {
 		children := childrenOf[parent]
 		sort.Slice(children, func(i, j int) bool {
-			return items[children[i]].Sequence < items[children[j]].Sequence
+			return compareItems(&items[children[i]], &items[children[j]])
 		})
 	}
 

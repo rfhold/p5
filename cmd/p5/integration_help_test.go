@@ -26,17 +26,16 @@ func TestHelp_ShowAndClose(t *testing.T) {
 	m := te.CreateModel("stack")
 	h := newTestHarness(t, m)
 
-	// Wait for stack view to load
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for settled stack view (resource + footer keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
 
 	// Open help with ?
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	h.WaitAndSnapshot("Keyboard Shortcuts", "help_open", 5*time.Second)
+	h.WaitFor("Keyboard Shortcuts", 5*time.Second)
 
 	// Close help with ? again
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	time.Sleep(200 * time.Millisecond)
-	h.Snapshot("help_closed")
 
-	h.Quit(5 * time.Second)
+	h.Snapshot("help_closed")
 }

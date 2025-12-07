@@ -158,6 +158,10 @@ func (r *ResourceList) AddItem(item ResourceItem) {
 		if item.Parent != "" {
 			r.items[i].Parent = item.Parent
 		}
+		// Update sequence if set (placeholders have Sequence=0)
+		if item.Sequence != 0 {
+			r.items[i].Sequence = item.Sequence
+		}
 		// Update status if set
 		if item.Status != StatusNone {
 			r.items[i].Status = item.Status

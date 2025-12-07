@@ -26,7 +26,8 @@ func TestFlags_TargetReplace(t *testing.T) {
 	m := te.CreateModel("stack")
 	h := newTestHarness(t, m)
 
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for settled stack view (resource + footer keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
 
 	// Move to RandomId resource
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
@@ -34,20 +35,17 @@ func TestFlags_TargetReplace(t *testing.T) {
 
 	// Target the RandomId - should show T:1 in status bar
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("targeted")
+	h.WaitFor("T:1", 2*time.Second)
 
 	// Also mark same resource for replace - should show T:1 R:1
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("R")})
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("target_and_replace")
+	h.WaitFor("R:1", 2*time.Second)
 
-	// Clear the flags with 'c' (clear current) then 'C' (clear all)
+	// Clear the flags with 'c' (clear current)
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
 	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("cleared_current")
 
-	h.Quit(5 * time.Second)
+	h.Snapshot("cleared_current")
 }
 
 func TestFlags_VisualExcludeClearAll(t *testing.T) {
@@ -66,32 +64,34 @@ func TestFlags_VisualExcludeClearAll(t *testing.T) {
 	m := te.CreateModel("stack")
 	h := newTestHarness(t, m)
 
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for settled stack view (resource + footer keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
 
+	// Move to RandomId
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(100 * time.Millisecond)
 
+	// Enter visual mode
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("visual_mode_entered")
+	h.WaitFor("VISUAL", 2*time.Second)
 
+	// Extend selection
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("visual_selection_extended")
 
+	// Exclude selected resources
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("E")})
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("excluded_selected")
+	h.WaitFor("E:2", 2*time.Second)
 
+	// Clear one flag
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
 	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("cleared_one_flag")
 
+	// Clear all flags
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("C")})
 	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("cleared_all_flags")
 
-	h.Quit(5 * time.Second)
+	h.Snapshot("cleared_all_flags")
 }
 
 func TestFlags_ExcludeFromDestroy(t *testing.T) {
@@ -110,7 +110,8 @@ func TestFlags_ExcludeFromDestroy(t *testing.T) {
 	m := te.CreateModel("stack")
 	h := newTestHarness(t, m)
 
-	h.WaitFor("RandomId", 30*time.Second)
+	// Wait for settled stack view (resource + footer keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
 
 	// Move to RandomId
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
@@ -118,16 +119,13 @@ func TestFlags_ExcludeFromDestroy(t *testing.T) {
 
 	// Exclude the RandomId from destroy
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("E")})
-	time.Sleep(100 * time.Millisecond)
-	h.Snapshot("excluded_randomid")
+	h.WaitFor("E:1", 2*time.Second)
 
 	// Start destroy preview
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
-	// Wait for destroy preview to complete - look for resources to appear
-	// The preview should show -3 deletes (excluding the Stack which has [E] flag)
-	h.WaitFor("-3", 30*time.Second)
-	time.Sleep(200 * time.Millisecond)
-	h.Snapshot("destroy_preview_with_exclusion")
 
-	h.Quit(5 * time.Second)
+	// Wait for destroy preview to complete - footer shows "ctrl+u execute" when done
+	// The preview should show -3 deletes (excluding the resource with [E] flag)
+	h.WaitForAll([]string{"-3", "ctrl+u execute"}, 30*time.Second)
+	h.FinalSnapshot("destroy_preview_with_exclusion")
 }

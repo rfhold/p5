@@ -1,24 +1,12 @@
-[38A
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: multi  │  Stack: test  │  Runtime: go                                                                       │
+│ Preview Destroy  -3  done                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-│ Preview Destroy  -3                                                                                                  │
-
-
-  > [-] pulumi:providers:random  default_4_16_2                                                                         
-    [ ] pulumi:pulumi:Stack  multi-test                                                                                          
-    ├─ [-] random:index/randomId:RandomId  base-id  [E]                                                                 
-    └─ [-] random:index/randomString:RandomString  derived-string                                                       
-
-
-
-
-
-
-
-
-
-
-
-                                                                                                                        
+  > [-] pulumi:providers:random  default_4_16_2
+    [ ] pulumi:pulumi:Stack  multi-test
+    ├─ [-] random:index/randomId:RandomId  base-id  [E]
+    └─ [-] random:index/randomString:RandomString  derived-string
 
 
 
@@ -36,4 +24,16 @@
 
 
 
-
+
+
+
+
+
+
+
+
+
+
+
+
+ E:1  C clear all ctrl+u execute  I import  esc back  v select  D details  s stack  w workspace  h history  ? help  q quit
