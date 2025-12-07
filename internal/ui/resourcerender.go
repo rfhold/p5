@@ -22,10 +22,7 @@ func (r *ResourceList) renderItems() string {
 
 	var b strings.Builder
 	visible := r.visibleHeight()
-	endIdx := r.scrollOffset + visible
-	if endIdx > len(r.visibleIdx) {
-		endIdx = len(r.visibleIdx)
-	}
+	endIdx := min(r.scrollOffset+visible, len(r.visibleIdx))
 
 	// Check if content is scrollable at all
 	scrollable := r.isScrollable()
@@ -76,116 +73,128 @@ func (r *ResourceList) renderItems() string {
 	return paddedStyle.Render(b.String())
 }
 
-func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFlashing bool, ancestorIsLast []bool) string {
-	// Op symbol and color
-	var symbol string
-	var opStyle lipgloss.Style
+type opSymbolInfo struct {
+	symbol string
+	style  lipgloss.Style
+}
 
-	switch item.Op {
+func getOpSymbolInfo(op ResourceOp) opSymbolInfo {
+	switch op {
 	case OpCreate:
-		symbol = "+"
-		opStyle = OpCreateStyle
+		return opSymbolInfo{"+", OpCreateStyle}
 	case OpUpdate:
-		symbol = "~"
-		opStyle = OpUpdateStyle
+		return opSymbolInfo{"~", OpUpdateStyle}
 	case OpDelete:
-		symbol = "-"
-		opStyle = OpDeleteStyle
+		return opSymbolInfo{"-", OpDeleteStyle}
 	case OpReplace, OpCreateReplace, OpDeleteReplace:
-		symbol = "+-"
-		opStyle = OpReplaceStyle
+		return opSymbolInfo{"+-", OpReplaceStyle}
 	case OpRefresh:
-		symbol = "↻"
-		opStyle = OpRefreshStyle
-	case OpSame:
-		symbol = " "
-		opStyle = DimStyle
+		return opSymbolInfo{"↻", OpRefreshStyle}
 	default:
-		symbol = " "
-		opStyle = DimStyle
+		return opSymbolInfo{" ", DimStyle}
+	}
+}
+
+type renderStyles struct {
+	op, dim, value, cursor               lipgloss.Style
+	flagTarget, flagReplace, flagExclude lipgloss.Style
+	tree                                 lipgloss.Style
+	bg                                   lipgloss.Color
+	hasBackground                        bool
+}
+
+func newRenderStyles(opStyle lipgloss.Style, isFlashing, isSelected bool) renderStyles {
+	rs := renderStyles{
+		op:          opStyle,
+		dim:         DimStyle,
+		value:       ValueStyle,
+		cursor:      CursorStyle,
+		flagTarget:  FlagTargetStyle,
+		flagReplace: FlagReplaceStyle,
+		flagExclude: FlagExcludeStyle,
+		tree:        TreeLineStyle,
 	}
 
-	// If selected or flashing, we need to apply background to each styled segment
-	dimStyle := DimStyle
-	valueStyle := ValueStyle
-	cursorStyle := CursorStyle
-	targetStyle := FlagTargetStyle
-	replaceStyle := FlagReplaceStyle
-	excludeStyle := FlagExcludeStyle
-	treeStyle := TreeLineStyle
-
-	// Determine background color
-	var bg lipgloss.Color
-	hasBackground := false
 	if isFlashing {
-		bg = ColorFlash
-		hasBackground = true
+		rs.bg = ColorFlash
+		rs.hasBackground = true
 	} else if isSelected {
-		bg = ColorSelection
-		hasBackground = true
+		rs.bg = ColorSelection
+		rs.hasBackground = true
 	}
 
-	if hasBackground {
-		opStyle = opStyle.Background(bg)
-		dimStyle = dimStyle.Background(bg)
-		valueStyle = valueStyle.Background(bg)
-		cursorStyle = cursorStyle.Background(bg)
-		targetStyle = targetStyle.Background(bg)
-		replaceStyle = replaceStyle.Background(bg)
-		excludeStyle = excludeStyle.Background(bg)
-		treeStyle = treeStyle.Background(bg)
+	if rs.hasBackground {
+		rs.op = rs.op.Background(rs.bg)
+		rs.dim = rs.dim.Background(rs.bg)
+		rs.value = rs.value.Background(rs.bg)
+		rs.cursor = rs.cursor.Background(rs.bg)
+		rs.flagTarget = rs.flagTarget.Background(rs.bg)
+		rs.flagReplace = rs.flagReplace.Background(rs.bg)
+		rs.flagExclude = rs.flagExclude.Background(rs.bg)
+		rs.tree = rs.tree.Background(rs.bg)
 	}
 
-	// Cursor indicator
-	cursor := "  "
-	if isCursor {
-		cursor = cursorStyle.Render("> ")
-	} else if hasBackground {
-		// Need to style the spaces too for consistent background
-		cursor = lipgloss.NewStyle().Background(bg).Render("  ")
-	}
+	return rs
+}
 
-	// Build tree prefix for nested items
-	treePrefix := ""
-	if item.Depth > 0 {
-		var treeParts []string
-		// For each ancestor level, draw vertical line or space
-		for i := 0; i < item.Depth-1; i++ {
-			if i < len(ancestorIsLast) && ancestorIsLast[i] {
-				// Ancestor was last child, no vertical line needed
-				if hasBackground {
-					treeParts = append(treeParts, lipgloss.NewStyle().Background(bg).Render("   "))
-				} else {
-					treeParts = append(treeParts, "   ")
-				}
-			} else {
-				// Draw vertical line
-				treeParts = append(treeParts, treeStyle.Render("│  "))
-			}
-		}
-		// Draw the connector for this item
-		if item.IsLast {
-			treeParts = append(treeParts, treeStyle.Render("└─ "))
-		} else {
-			treeParts = append(treeParts, treeStyle.Render("├─ "))
-		}
-		treePrefix = strings.Join(treeParts, "")
+func (r *ResourceList) buildFlagBadges(urn string, styles renderStyles) string {
+	flags := r.flags[urn]
+	var badges []string
+	if flags.Target {
+		badges = append(badges, styles.flagTarget.Render("[T]"))
 	}
+	if flags.Replace {
+		badges = append(badges, styles.flagReplace.Render("[R]"))
+	}
+	if flags.Exclude {
+		badges = append(badges, styles.flagExclude.Render("[E]"))
+	}
+	if len(badges) == 0 {
+		return ""
+	}
+	if styles.hasBackground {
+		return lipgloss.NewStyle().Background(styles.bg).Render("  ") + strings.Join(badges, "")
+	}
+	return "  " + strings.Join(badges, "")
+}
 
-	// Status icon for execution
+func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFlashing bool, ancestorIsLast []bool) string {
+	opInfo := getOpSymbolInfo(item.Op)
+	styles := newRenderStyles(opInfo.style, isFlashing, isSelected)
+
+	cursor := r.renderCursor(isCursor, styles)
+	treePrefix := buildTreePrefix(item, ancestorIsLast, styles.hasBackground, styles.bg, styles.tree)
 	statusIcon := r.renderStatusIcon(item.Status, item.Op, item.CurrentOp)
 	if statusIcon != "" {
 		statusIcon = " " + statusIcon
 	}
 
-	// Format: > [tree] [+] type  name  [T][R][E]  status
-	opStr := opStyle.Render(fmt.Sprintf("[%s]", symbol))
+	opStr := styles.op.Render(fmt.Sprintf("[%s]", opInfo.symbol))
+	maxTypeLen := r.calculateMaxTypeLen(item)
+	typeStr := styles.dim.Render(truncateMiddle(item.Type, maxTypeLen))
+	nameStr := styles.value.Render(item.Name)
+	badgeStr := r.buildFlagBadges(item.URN, styles)
 
-	// Calculate max width for type to prevent overflow
-	// Account for: cursor(2) + tree prefix(3*depth) + op(4) + spacing(3) + name + badges + status
+	if styles.hasBackground {
+		bgStyle := lipgloss.NewStyle().Background(styles.bg)
+		return fmt.Sprintf("%s%s%s%s%s%s%s%s%s", cursor, treePrefix, opStr, bgStyle.Render(" "), typeStr, bgStyle.Render("  "), nameStr, badgeStr, statusIcon)
+	}
+	return fmt.Sprintf("%s%s%s %s  %s%s%s", cursor, treePrefix, opStr, typeStr, nameStr, badgeStr, statusIcon)
+}
+
+func (r *ResourceList) renderCursor(isCursor bool, styles renderStyles) string {
+	if isCursor {
+		return styles.cursor.Render("> ")
+	}
+	if styles.hasBackground {
+		return lipgloss.NewStyle().Background(styles.bg).Render("  ")
+	}
+	return "  "
+}
+
+func (r *ResourceList) calculateMaxTypeLen(item ResourceItem) int {
 	maxTypeLen := DefaultMaxTypeLength
 	if r.Width() > 0 {
-		// Estimate other elements: cursor(2) + op(4) + spaces(3) + name(~20) + badges(~12) + status(~20) + padding(4)
 		treePrefixLen := item.Depth * 3
 		otherElements := 2 + treePrefixLen + 4 + 3 + len(item.Name) + 12 + 20 + 4
 		available := r.Width() - otherElements
@@ -193,44 +202,10 @@ func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFla
 			maxTypeLen = available
 		}
 	}
-	truncatedType := truncateMiddle(item.Type, maxTypeLen)
-	typeStr := dimStyle.Render(truncatedType)
-	nameStr := valueStyle.Render(item.Name)
-
-	// Build flag badges
-	flags := r.flags[item.URN]
-	var badges []string
-	if flags.Target {
-		badges = append(badges, targetStyle.Render("[T]"))
-	}
-	if flags.Replace {
-		badges = append(badges, replaceStyle.Render("[R]"))
-	}
-	if flags.Exclude {
-		badges = append(badges, excludeStyle.Render("[E]"))
-	}
-	badgeStr := ""
-	if len(badges) > 0 {
-		if hasBackground {
-			badgeStr = lipgloss.NewStyle().Background(bg).Render("  ") + strings.Join(badges, "")
-		} else {
-			badgeStr = "  " + strings.Join(badges, "")
-		}
-	}
-
-	// Build the line with styled separators for background highlight
-	var line string
-	if hasBackground {
-		bgStyle := lipgloss.NewStyle().Background(bg)
-		line = fmt.Sprintf("%s%s%s%s%s%s%s%s%s", cursor, treePrefix, opStr, bgStyle.Render(" "), typeStr, bgStyle.Render("  "), nameStr, badgeStr, statusIcon)
-	} else {
-		line = fmt.Sprintf("%s%s%s %s  %s%s%s", cursor, treePrefix, opStr, typeStr, nameStr, badgeStr, statusIcon)
-	}
-
-	return line
+	return maxTypeLen
 }
 
-func (r *ResourceList) renderStatusIcon(status ItemStatus, op ResourceOp, currentOp ResourceOp) string {
+func (r *ResourceList) renderStatusIcon(status ItemStatus, op, currentOp ResourceOp) string {
 	switch status {
 	case StatusPending:
 		return StatusPendingStyle.Render("pending")
@@ -301,4 +276,32 @@ func (r *ResourceList) ClearFlash() {
 	r.flashing = false
 	r.flashIdx = -1
 	r.flashAll = false
+}
+
+func buildTreePrefix(item ResourceItem, ancestorIsLast []bool, hasBackground bool, bg lipgloss.Color, treeStyle lipgloss.Style) string {
+	if item.Depth == 0 {
+		return ""
+	}
+
+	var treeParts []string
+	for i := range item.Depth - 1 {
+		treeParts = append(treeParts, buildAncestorSegment(i, ancestorIsLast, hasBackground, bg, treeStyle))
+	}
+
+	if item.IsLast {
+		treeParts = append(treeParts, treeStyle.Render("└─ "))
+	} else {
+		treeParts = append(treeParts, treeStyle.Render("├─ "))
+	}
+	return strings.Join(treeParts, "")
+}
+
+func buildAncestorSegment(i int, ancestorIsLast []bool, hasBackground bool, bg lipgloss.Color, treeStyle lipgloss.Style) string {
+	if i < len(ancestorIsLast) && ancestorIsLast[i] {
+		if hasBackground {
+			return lipgloss.NewStyle().Background(bg).Render("   ")
+		}
+		return "   "
+	}
+	return treeStyle.Render("│  ")
 }

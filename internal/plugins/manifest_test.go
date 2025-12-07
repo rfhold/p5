@@ -426,7 +426,7 @@ func TestLoadStackPluginConfig_Valid(t *testing.T) {
 	}
 }
 
-// TestLoadStackPluginConfig_NoFile verifies nil returned when stack file doesn't exist.
+// TestLoadStackPluginConfig_NoFile verifies empty map returned when stack file doesn't exist.
 func TestLoadStackPluginConfig_NoFile(t *testing.T) {
 	testdataDir := "testdata"
 	config, err := LoadStackPluginConfig(testdataDir, "nonexistent", "aws")
@@ -434,17 +434,17 @@ func TestLoadStackPluginConfig_NoFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if config != nil {
-		t.Errorf("expected nil config for non-existent stack, got %v", config)
+	if len(config) != 0 {
+		t.Errorf("expected empty config for non-existent stack, got %v", config)
 	}
 }
 
-// TestLoadStackPluginConfig_NoP5Plugins verifies nil returned when no p5:plugins section.
+// TestLoadStackPluginConfig_NoP5Plugins verifies empty map returned when no p5:plugins section.
 func TestLoadStackPluginConfig_NoP5Plugins(t *testing.T) {
 	// Create a temp stack config without p5:plugins
 	tmpDir := t.TempDir()
 	stackContent := []byte("config:\n  other:key: value\n")
-	err := os.WriteFile(filepath.Join(tmpDir, "Pulumi.test.yaml"), stackContent, 0644)
+	err := os.WriteFile(filepath.Join(tmpDir, "Pulumi.test.yaml"), stackContent, 0o600)
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -454,12 +454,12 @@ func TestLoadStackPluginConfig_NoP5Plugins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if config != nil {
-		t.Errorf("expected nil config when no p5:plugins, got %v", config)
+	if len(config) != 0 {
+		t.Errorf("expected empty config when no p5:plugins, got %v", config)
 	}
 }
 
-// TestLoadStackPluginConfig_PluginNotFound verifies nil returned when plugin not in config.
+// TestLoadStackPluginConfig_PluginNotFound verifies empty map returned when plugin not in config.
 func TestLoadStackPluginConfig_PluginNotFound(t *testing.T) {
 	testdataDir := "testdata"
 	config, err := LoadStackPluginConfig(testdataDir, "dev", "nonexistent-plugin")
@@ -467,8 +467,8 @@ func TestLoadStackPluginConfig_PluginNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if config != nil {
-		t.Errorf("expected nil config for unknown plugin, got %v", config)
+	if len(config) != 0 {
+		t.Errorf("expected empty config for unknown plugin, got %v", config)
 	}
 }
 
@@ -522,7 +522,7 @@ func TestLoadGlobalConfig_FallbackToLaunchDir(t *testing.T) {
 	// Create temp directory with p5.toml (outside git repo)
 	tmpDir := t.TempDir()
 	content := []byte("[plugins.test]\ncmd = \"test-plugin\"\n")
-	err := os.WriteFile(filepath.Join(tmpDir, "p5.toml"), content, 0644)
+	err := os.WriteFile(filepath.Join(tmpDir, "p5.toml"), content, 0o600)
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -570,7 +570,7 @@ func TestLoadGlobalConfig_InvalidTOML(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create invalid TOML file
 	invalidContent := []byte("this is not valid toml [[[")
-	err := os.WriteFile(filepath.Join(tmpDir, "p5.toml"), invalidContent, 0644)
+	err := os.WriteFile(filepath.Join(tmpDir, "p5.toml"), invalidContent, 0o600)
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -590,7 +590,7 @@ func TestLoadGlobalConfigFile_NilPlugins(t *testing.T) {
 	// Create TOML file with no plugins section
 	content := []byte("# Empty config\n")
 	configPath := filepath.Join(tmpDir, "p5.toml")
-	err := os.WriteFile(configPath, content, 0644)
+	err := os.WriteFile(configPath, content, 0o600)
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}

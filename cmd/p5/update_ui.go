@@ -28,9 +28,7 @@ func (m Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	headerHeight := lipgloss.Height(m.ui.Header.View())
 	footerHeight := 1 // single line footer
 	listHeight := msg.Height - headerHeight - footerHeight - 1
-	if listHeight < 1 {
-		listHeight = 1
-	}
+	listHeight = max(listHeight, 1)
 	m.ui.ResourceList.SetSize(msg.Width, listHeight)
 	// Details panel will be sized when rendered as overlay
 	detailsWidth := msg.Width / 2
@@ -90,13 +88,13 @@ func (m Model) handleCopiedToClipboard(msg ui.CopiedToClipboardMsg) (tea.Model, 
 }
 
 // handleToastHide handles toast hide event
-func (m Model) handleToastHide() (tea.Model, tea.Cmd) {
+func (m Model) handleToastHide() (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	m.ui.Toast.Hide()
 	return m, nil
 }
 
 // handleFlashClear handles clearing the flash highlight
-func (m Model) handleFlashClear() (tea.Model, tea.Cmd) {
+func (m Model) handleFlashClear() (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	m.ui.ResourceList.ClearFlash()
 	return m, nil
 }

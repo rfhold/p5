@@ -67,7 +67,7 @@ func convertPreviewStepToItem(step *pulumi.PreviewStep) *ui.ResourceItem {
 	outputs := step.Outputs
 
 	// Old state (for updates/deletes) - used for diff view
-	var oldInputs, oldOutputs map[string]interface{}
+	var oldInputs, oldOutputs map[string]any
 	if step.Old != nil {
 		oldInputs = step.Old.Inputs
 		oldOutputs = step.Old.Outputs
@@ -195,7 +195,8 @@ func ConvertResourcesToItems(resources []pulumi.ResourceInfo) []ui.ResourceItem 
 // For local backends where Version may be 0, it calculates version from index.
 func ConvertHistoryToItems(history []pulumi.UpdateSummary) []ui.HistoryItem {
 	items := make([]ui.HistoryItem, 0, len(history))
-	for i, h := range history {
+	for i := range history {
+		h := &history[i]
 		version := h.Version
 		// Pulumi local backend doesn't track version numbers, so use index
 		// History is returned newest-first, so index 0 = most recent

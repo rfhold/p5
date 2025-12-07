@@ -2,7 +2,9 @@ package pulumi
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,9 +13,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var ErrNoStacksFound = errors.New("no stacks found")
+
 // FetchProjectInfo loads project info from the specified directory
 // If stackName is empty, it will use the currently selected stack
-func FetchProjectInfo(ctx context.Context, workDir string, stackName string, env map[string]string) (*ProjectInfo, error) {
+func FetchProjectInfo(ctx context.Context, workDir, stackName string, env map[string]string) (*ProjectInfo, error) {
 	// Create a local workspace
 	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
 	if len(env) > 0 {
@@ -39,18 +43,7 @@ func FetchProjectInfo(ctx context.Context, workDir string, stackName string, env
 	// Try to get current stack if not specified
 	resolvedStackName := stackName
 	if resolvedStackName == "" {
-		stacks, err := ws.ListStacks(ctx)
-		if err == nil && len(stacks) > 0 {
-			for _, s := range stacks {
-				if s.Current {
-					resolvedStackName = s.Name
-					break
-				}
-			}
-			if resolvedStackName == "" {
-				resolvedStackName = stacks[0].Name
-			}
-		}
+		resolvedStackName = findCurrentStack(ctx, ws)
 	}
 
 	description := ""
@@ -114,7 +107,7 @@ func ListStacks(ctx context.Context, workDir string, env map[string]string) ([]S
 }
 
 // SelectStack sets the specified stack as current
-func SelectStack(ctx context.Context, workDir string, stackName string, env map[string]string) error {
+func SelectStack(ctx context.Context, workDir, stackName string, env map[string]string) error {
 	wsOpts := []auto.LocalWorkspaceOption{auto.WorkDir(workDir)}
 	if len(env) > 0 {
 		wsOpts = append(wsOpts, auto.EnvVars(env))
@@ -127,7 +120,7 @@ func SelectStack(ctx context.Context, workDir string, stackName string, env map[
 }
 
 // resolveStackName resolves the stack name, using current stack if empty
-func resolveStackName(ctx context.Context, workDir string, stackName string, env map[string]string) (string, error) {
+func resolveStackName(ctx context.Context, workDir, stackName string, env map[string]string) (string, error) {
 	if stackName != "" {
 		return stackName, nil
 	}
@@ -152,7 +145,7 @@ func resolveStackName(ctx context.Context, workDir string, stackName string, env
 	if len(stacks) > 0 {
 		return stacks[0].Name, nil
 	}
-	return "", fmt.Errorf("no stacks found")
+	return "", ErrNoStacksFound
 }
 
 // WhoAmIInfo contains backend connection information
@@ -210,32 +203,7 @@ func ListStackFiles(workDir string) ([]StackFileInfo, error) {
 		stackName := strings.TrimPrefix(filename, "Pulumi.")
 		stackName = strings.TrimSuffix(stackName, ".yaml")
 
-		// Parse the YAML to extract secrets provider info
-		info := StackFileInfo{
-			Name:     stackName,
-			FilePath: match,
-		}
-
-		data, err := os.ReadFile(match)
-		if err == nil {
-			var config map[string]interface{}
-			if yaml.Unmarshal(data, &config) == nil {
-				// Check for secretsprovider
-				if sp, ok := config["secretsprovider"]; ok {
-					if spStr, ok := sp.(string); ok {
-						info.SecretsProvider = spStr
-					}
-				}
-				// Check for encryptionsalt or encryptedkey (indicates existing encryption)
-				if _, ok := config["encryptionsalt"]; ok {
-					info.HasEncryption = true
-				}
-				if _, ok := config["encryptedkey"]; ok {
-					info.HasEncryption = true
-				}
-			}
-		}
-
+		info := parseStackFileInfo(stackName, match)
 		files = append(files, info)
 	}
 
@@ -255,9 +223,7 @@ func InitStack(ctx context.Context, workDir, stackName string, opts InitStackOpt
 
 	// Build env vars
 	env := make(map[string]string)
-	for k, v := range opts.Env {
-		env[k] = v
-	}
+	maps.Copy(env, opts.Env)
 
 	// Set passphrase if provided
 	if opts.Passphrase != "" {
@@ -280,4 +246,45 @@ func InitStack(ctx context.Context, workDir, stackName string, opts InitStackOpt
 	}
 
 	return nil
+}
+
+func findCurrentStack(ctx context.Context, ws auto.Workspace) string {
+	stacks, err := ws.ListStacks(ctx)
+	if err != nil || len(stacks) == 0 {
+		return ""
+	}
+
+	for _, s := range stacks {
+		if s.Current {
+			return s.Name
+		}
+	}
+	return stacks[0].Name
+}
+
+func parseStackFileInfo(stackName, filePath string) StackFileInfo {
+	info := StackFileInfo{
+		Name:     stackName,
+		FilePath: filePath,
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return info
+	}
+
+	var config map[string]any
+	if yaml.Unmarshal(data, &config) != nil {
+		return info
+	}
+
+	if sp, ok := config["secretsprovider"].(string); ok {
+		info.SecretsProvider = sp
+	}
+
+	_, hasSalt := config["encryptionsalt"]
+	_, hasKey := config["encryptedkey"]
+	info.HasEncryption = hasSalt || hasKey
+
+	return info
 }

@@ -108,8 +108,8 @@ func (s *SelectorDialog[T]) SetEmptyText(text string) {
 }
 
 // SetMaxVisible sets the maximum number of visible items before scrolling
-func (s *SelectorDialog[T]) SetMaxVisible(max int) {
-	s.maxVisible = max
+func (s *SelectorDialog[T]) SetMaxVisible(maxItems int) {
+	s.maxVisible = maxItems
 }
 
 // SetItemRenderer sets a custom item renderer function
@@ -172,20 +172,18 @@ func (s *SelectorDialog[T]) View() string {
 	titleText := s.title
 
 	var content string
-	if s.loading {
+	switch {
+	case s.loading:
 		content = DimStyle.Render(s.loadingText)
-	} else if s.err != nil {
+	case s.err != nil:
 		content = ErrorStyle.Render(s.err.Error())
-	} else if len(s.items) == 0 {
+	case len(s.items) == 0:
 		content = DimStyle.Render(s.emptyText)
-	} else {
+	default:
 		// Add line count hint to title if scrollable
 		if len(s.items) > s.maxVisible {
 			// Calculate visible range
-			start := s.cursor - s.maxVisible/2
-			if start < 0 {
-				start = 0
-			}
+			start := max(s.cursor-s.maxVisible/2, 0)
 			end := start + s.maxVisible
 			if end > len(s.items) {
 				end = len(s.items)
@@ -220,10 +218,7 @@ func (s *SelectorDialog[T]) renderItems() string {
 
 	if len(s.items) > s.maxVisible {
 		// Center cursor in visible range
-		start = s.cursor - s.maxVisible/2
-		if start < 0 {
-			start = 0
-		}
+		start = max(s.cursor-s.maxVisible/2, 0)
 		end = start + s.maxVisible
 		if end > len(s.items) {
 			end = len(s.items)
@@ -268,11 +263,12 @@ func (s *SelectorDialog[T]) defaultRenderItem(item T, isCursor bool) string {
 
 	label := item.Label()
 	var name string
-	if item.IsCurrent() {
+	switch {
+	case item.IsCurrent():
 		name = ValueStyle.Render(label) + DimStyle.Render(" (current)")
-	} else if isCursor {
+	case isCursor:
 		name = ValueStyle.Render(label)
-	} else {
+	default:
 		name = DimStyle.Render(label)
 	}
 

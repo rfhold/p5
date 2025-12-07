@@ -10,7 +10,7 @@ import (
 )
 
 // getMapValue safely gets a value from a map
-func getMapValue(m map[string]interface{}, key string) (interface{}, bool) {
+func getMapValue(m map[string]any, key string) (any, bool) {
 	if m == nil {
 		return nil, false
 	}
@@ -19,7 +19,7 @@ func getMapValue(m map[string]interface{}, key string) (interface{}, bool) {
 }
 
 // valuesEqual compares two values for equality
-func valuesEqual(a, b interface{}) bool {
+func valuesEqual(a, b any) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -28,8 +28,8 @@ func valuesEqual(a, b interface{}) bool {
 	}
 
 	// Compare maps recursively
-	aMap, aIsMap := a.(map[string]interface{})
-	bMap, bIsMap := b.(map[string]interface{})
+	aMap, aIsMap := a.(map[string]any)
+	bMap, bIsMap := b.(map[string]any)
 	if aIsMap && bIsMap {
 		if len(aMap) != len(bMap) {
 			return false
@@ -44,8 +44,8 @@ func valuesEqual(a, b interface{}) bool {
 	}
 
 	// Compare slices
-	aSlice, aIsSlice := a.([]interface{})
-	bSlice, bIsSlice := b.([]interface{})
+	aSlice, aIsSlice := a.([]any)
+	bSlice, bIsSlice := b.([]any)
 	if aIsSlice && bIsSlice {
 		if len(aSlice) != len(bSlice) {
 			return false
@@ -64,7 +64,7 @@ func valuesEqual(a, b interface{}) bool {
 
 // sortStrings sorts a slice of strings in place
 func sortStrings(s []string) {
-	for i := 0; i < len(s)-1; i++ {
+	for i := range len(s) - 1 {
 		for j := i + 1; j < len(s); j++ {
 			if s[i] > s[j] {
 				s[i], s[j] = s[j], s[i]
@@ -114,7 +114,7 @@ func RenderPaddedError(err error) string {
 
 // FormatTime parses an RFC3339 time string and formats it with the given format.
 // Returns the original string if parsing fails.
-func FormatTime(timeStr string, format string) string {
+func FormatTime(timeStr, format string) string {
 	t, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		return timeStr
@@ -125,7 +125,7 @@ func FormatTime(timeStr string, format string) string {
 // FormatTimeStyled parses an RFC3339 time string and formats it with styling.
 // If parsing fails and the string is longer than maxLen, it truncates the string.
 // Pass maxLen <= 0 to skip truncation on parse failure.
-func FormatTimeStyled(timeStr string, format string, maxLen int, style lipgloss.Style) string {
+func FormatTimeStyled(timeStr, format string, maxLen int, style lipgloss.Style) string {
 	t, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		if maxLen > 0 && len(timeStr) > maxLen {
@@ -250,14 +250,16 @@ func RenderScrollIndicators(isScrollable, canScrollUp, canScrollDown bool, confi
 // RenderScrollHint renders a text-based scroll hint for dialogs/modals.
 // This uses text like "↑↓ more" rather than arrow symbols for inline hints.
 func RenderScrollHint(canScrollUp, canScrollDown bool, padding string) string {
-	if canScrollUp && canScrollDown {
+	switch {
+	case canScrollUp && canScrollDown:
 		return ScrollIndicatorStyle.Render(padding + "▲▼ more")
-	} else if canScrollUp {
+	case canScrollUp:
 		return ScrollIndicatorStyle.Render(padding + "▲ more above")
-	} else if canScrollDown {
+	case canScrollDown:
 		return ScrollIndicatorStyle.Render(padding + "▼ more below")
+	default:
+		return ""
 	}
-	return ""
 }
 
 // ResourceChangesFormat specifies the output format for RenderResourceChanges
@@ -273,7 +275,7 @@ const (
 // RenderResourceChanges renders a map of resource changes with appropriate styling.
 // The changes map typically has keys: "create", "update", "delete", "replace", "same".
 func RenderResourceChanges(changes map[string]int, format ResourceChangesFormat) string {
-	if changes == nil || len(changes) == 0 {
+	if len(changes) == 0 {
 		return DimStyle.Render("no changes")
 	}
 
@@ -371,10 +373,7 @@ func EnsureCursorVisible(cursor, scrollOffset, itemCount, visibleHeight int) int
 	}
 
 	// Clamp scroll offset
-	maxScroll := itemCount - visibleHeight
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
+	maxScroll := max(itemCount-visibleHeight, 0)
 	if scrollOffset > maxScroll {
 		scrollOffset = maxScroll
 	}
@@ -389,18 +388,12 @@ func EnsureCursorVisible(cursor, scrollOffset, itemCount, visibleHeight int) int
 // Accounts for padding and scroll indicators if content is scrollable.
 func CalculateVisibleHeight(totalHeight, itemCount, padding int) int {
 	// Base height minus padding
-	baseHeight := totalHeight - padding
-	if baseHeight < 1 {
-		baseHeight = 1
-	}
+	baseHeight := max(totalHeight-padding, 1)
 
 	// Check if scrollable (more items than base height)
 	if itemCount > baseHeight {
 		// Reserve 2 lines for scroll indicators
-		height := baseHeight - 2
-		if height < 1 {
-			height = 1
-		}
+		height := max(baseHeight-2, 1)
 		return height
 	}
 
@@ -409,10 +402,7 @@ func CalculateVisibleHeight(totalHeight, itemCount, padding int) int {
 
 // IsScrollable returns true if there are more items than can fit in the base height.
 func IsScrollable(totalHeight, itemCount, padding int) bool {
-	baseHeight := totalHeight - padding
-	if baseHeight < 1 {
-		baseHeight = 1
-	}
+	baseHeight := max(totalHeight-padding, 1)
 	return itemCount > baseHeight
 }
 
@@ -443,33 +433,26 @@ func RenderDetailPanel(params DetailPanelContent) DetailPanelResult {
 
 	// Calculate content height (subtract header, blank line, border, padding)
 	headerHeight := lipgloss.Height(header)
-	contentHeight := panelHeight - headerHeight - 5 // header + blank line + border(2) + padding(2)
-	if contentHeight < 1 {
-		contentHeight = 1
-	}
+	contentHeight := max(
+		// header + blank line + border(2) + padding(2)
+		panelHeight-headerHeight-5, 1)
 
 	// Apply scrolling to content
 	contentLines := strings.Split(params.Content, "\n")
 	scrollOffset := params.ScrollOffset
 	if scrollOffset >= len(contentLines) {
-		scrollOffset = len(contentLines) - 1
-		if scrollOffset < 0 {
-			scrollOffset = 0
-		}
+		scrollOffset = max(len(contentLines)-1, 0)
 	}
 
 	// Get visible portion
-	endIdx := scrollOffset + contentHeight
-	if endIdx > len(contentLines) {
-		endIdx = len(contentLines)
-	}
+	endIdx := min(scrollOffset+contentHeight, len(contentLines))
 	visibleLines := contentLines[scrollOffset:endIdx]
 	visibleContent := strings.Join(visibleLines, "\n")
 
 	// Add scroll indicator if needed
 	if len(contentLines) > contentHeight {
 		scrollInfo := DimStyle.Render(fmt.Sprintf(" [%d/%d]", scrollOffset+1, len(contentLines)))
-		header = header + scrollInfo
+		header += scrollInfo
 	}
 
 	// Combine header and content

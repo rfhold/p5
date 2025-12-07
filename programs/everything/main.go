@@ -112,7 +112,7 @@ func NewRandomBundle(ctx *pulumi.Context, name string, opts ...pulumi.ResourceOp
 	bundle.Uuid = uuid
 
 	// Register outputs
-	ctx.RegisterResourceOutputs(bundle, pulumi.Map{
+	if err := ctx.RegisterResourceOutputs(bundle, pulumi.Map{
 		"bytesHex":       bytes.Hex,
 		"idHex":          id.Hex,
 		"integerResult":  integer.Result,
@@ -121,7 +121,9 @@ func NewRandomBundle(ctx *pulumi.Context, name string, opts ...pulumi.ResourceOp
 		"shuffleResults": shuffle.Results,
 		"stringResult":   str.Result,
 		"uuidResult":     uuid.Result,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return bundle, nil
 }

@@ -3,6 +3,7 @@ package pulumi
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 )
@@ -43,9 +44,7 @@ func GetStackHistory(ctx context.Context, workDir, stackName string, pageSize, p
 		}
 		if h.ResourceChanges != nil {
 			summary.ResourceChanges = make(map[string]int)
-			for k, v := range *h.ResourceChanges {
-				summary.ResourceChanges[k] = v
-			}
+			maps.Copy(summary.ResourceChanges, *h.ResourceChanges)
 		}
 		// Extract user info from environment
 		if h.Environment != nil {

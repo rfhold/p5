@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -343,14 +344,14 @@ func TestDiffRenderer_Create(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
 	resource := &ResourceItem{
 		Op: OpCreate,
-		Inputs: map[string]interface{}{
+		Inputs: map[string]any{
 			"name":   "my-bucket",
 			"region": "us-west-2",
-			"tags": map[string]interface{}{
+			"tags": map[string]any{
 				"env": "dev",
 			},
 		},
-		Outputs: map[string]interface{}{
+		Outputs: map[string]any{
 			"id":  "bucket-12345",
 			"arn": "arn:aws:s3:::my-bucket",
 		},
@@ -363,11 +364,11 @@ func TestDiffRenderer_Delete(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
 	resource := &ResourceItem{
 		Op: OpDelete,
-		OldInputs: map[string]interface{}{
+		OldInputs: map[string]any{
 			"name":   "my-bucket",
 			"region": "us-west-2",
 		},
-		OldOutputs: map[string]interface{}{
+		OldOutputs: map[string]any{
 			"id":  "bucket-12345",
 			"arn": "arn:aws:s3:::my-bucket",
 		},
@@ -380,24 +381,24 @@ func TestDiffRenderer_Update(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
 	resource := &ResourceItem{
 		Op: OpUpdate,
-		OldInputs: map[string]interface{}{
+		OldInputs: map[string]any{
 			"name":   "my-bucket",
 			"region": "us-west-2",
-			"tags": map[string]interface{}{
+			"tags": map[string]any{
 				"env": "dev",
 			},
 		},
-		Inputs: map[string]interface{}{
+		Inputs: map[string]any{
 			"name":   "my-bucket",
 			"region": "us-west-2",
-			"tags": map[string]interface{}{
+			"tags": map[string]any{
 				"env": "prod",
 			},
 		},
-		OldOutputs: map[string]interface{}{
+		OldOutputs: map[string]any{
 			"id": "bucket-12345",
 		},
-		Outputs: map[string]interface{}{
+		Outputs: map[string]any{
 			"id": "bucket-12345",
 		},
 	}
@@ -409,12 +410,12 @@ func TestDiffRenderer_UpdateAddRemoveKeys(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
 	resource := &ResourceItem{
 		Op: OpUpdate,
-		OldInputs: map[string]interface{}{
+		OldInputs: map[string]any{
 			"name":      "my-bucket",
 			"oldField":  "will-be-removed",
 			"unchanged": "stays-same",
 		},
-		Inputs: map[string]interface{}{
+		Inputs: map[string]any{
 			"name":      "my-bucket-renamed",
 			"newField":  "just-added",
 			"unchanged": "stays-same",
@@ -428,11 +429,11 @@ func TestDiffRenderer_ArrayDiff(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
 	resource := &ResourceItem{
 		Op: OpUpdate,
-		OldInputs: map[string]interface{}{
-			"ports": []interface{}{80, 443},
+		OldInputs: map[string]any{
+			"ports": []any{80, 443},
 		},
-		Inputs: map[string]interface{}{
-			"ports": []interface{}{80, 443, 8080},
+		Inputs: map[string]any{
+			"ports": []any{80, 443, 8080},
 		},
 	}
 
@@ -474,11 +475,11 @@ func TestDetailPanel_WithResource(t *testing.T) {
 		Name:   "my-bucket",
 		Op:     OpCreate,
 		Status: StatusPending,
-		Inputs: map[string]interface{}{
+		Inputs: map[string]any{
 			"bucketName": "my-bucket",
 			"region":     "us-west-2",
 		},
-		Outputs: map[string]interface{}{
+		Outputs: map[string]any{
 			"id":  "bucket-12345",
 			"arn": "arn:aws:s3:::my-bucket",
 		},
@@ -498,10 +499,10 @@ func TestDetailPanel_WithRunningStatus(t *testing.T) {
 		Op:        OpUpdate,
 		Status:    StatusRunning,
 		CurrentOp: OpUpdate,
-		OldInputs: map[string]interface{}{
+		OldInputs: map[string]any{
 			"bucketName": "old-bucket",
 		},
-		Inputs: map[string]interface{}{
+		Inputs: map[string]any{
 			"bucketName": "new-bucket",
 		},
 	})
@@ -741,7 +742,7 @@ func TestImportModal_WithError(t *testing.T) {
 	m.SetSize(testWidth, testHeight)
 	m.Show("aws:s3/bucket:Bucket", "my-bucket", "urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket", "")
 	m.SetSuggestions([]ImportSuggestion{})
-	m.SetError(fmt.Errorf("invalid import ID format"))
+	m.SetError(errors.New("invalid import ID format"))
 
 	golden.RequireEqual(t, []byte(m.View()))
 }
@@ -790,7 +791,7 @@ func TestSelectorDialog_WithError(t *testing.T) {
 	s := NewSelectorDialog[testSelectorItem]("Select Item")
 	s.SetSize(testWidth, testHeight)
 	s.Show()
-	s.SetError(fmt.Errorf("failed to load items"))
+	s.SetError(errors.New("failed to load items"))
 
 	golden.RequireEqual(t, []byte(s.View()))
 }

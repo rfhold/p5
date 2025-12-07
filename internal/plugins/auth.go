@@ -3,8 +3,11 @@ package plugins
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,6 +15,8 @@ import (
 
 	"github.com/rfhold/p5/internal/plugins/proto"
 )
+
+var ErrAuthenticationFailed = errors.New("authentication failed")
 
 // Credentials holds the result of a plugin authentication
 type Credentials struct {
@@ -53,9 +58,7 @@ type CredentialsSummary struct {
 func (m *Manager) AuthenticateAll(ctx context.Context, programName, stackName string, p5Config *P5Config, workDir string) ([]AuthenticateResult, error) {
 	m.mu.RLock()
 	plugins := make(map[string]*PluginInstance, len(m.plugins))
-	for k, v := range m.plugins {
-		plugins[k] = v
-	}
+	maps.Copy(plugins, m.plugins)
 	m.mu.RUnlock()
 
 	if len(plugins) == 0 {
@@ -124,7 +127,7 @@ func (m *Manager) AuthenticateAll(ctx context.Context, programName, stackName st
 }
 
 // authenticateWithHash runs authentication for a single plugin and returns the config hash
-func (m *Manager) authenticateWithHash(ctx context.Context, name string, pluginInst *PluginInstance, programName, stackName string, p5Config *P5Config, workDir string) (AuthenticateResult, string) {
+func (m *Manager) authenticateWithHash(ctx context.Context, name string, pluginInst *PluginInstance, programName, stackName string, p5Config *P5Config, workDir string) (result AuthenticateResult, configHash string) {
 	// Get program-level config
 	programConfig := make(map[string]any)
 	if pluginCfg, ok := p5Config.Plugins[name]; ok {
@@ -169,7 +172,7 @@ func (m *Manager) authenticateWithHash(ctx context.Context, name string, pluginI
 	if !resp.Success {
 		return AuthenticateResult{
 			PluginName: name,
-			Error:      fmt.Errorf("authentication failed: %s", resp.Error),
+			Error:      fmt.Errorf("%w: %s", ErrAuthenticationFailed, resp.Error),
 		}, cfgHash
 	}
 
@@ -200,9 +203,7 @@ func (m *Manager) GetAllEnv() map[string]string {
 	env := make(map[string]string)
 	for _, creds := range m.credentials {
 		if !creds.IsExpired() || creds.AlwaysCall {
-			for k, v := range creds.Env {
-				env[k] = v
-			}
+			maps.Copy(env, creds.Env)
 		}
 	}
 	return env
@@ -303,7 +304,7 @@ func hashConfig(programConfig, stackConfig map[string]any) string {
 	}
 	data, _ := json.Marshal(combined)
 	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash[:8]) // Use first 8 bytes for brevity
+	return hex.EncodeToString(hash[:8]) // Use first 8 bytes for brevity
 }
 
 // convertToStringMap converts a map[string]any to map[string]string

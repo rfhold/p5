@@ -112,6 +112,9 @@ type Model struct {
 	previewCh   <-chan pulumi.PreviewEvent
 	operationCh <-chan pulumi.OperationEvent
 
+	// Preview context for cancellation
+	previewCancel context.CancelFunc
+
 	// Operation context for cancellation
 	operationCtx    context.Context
 	operationCancel context.CancelFunc

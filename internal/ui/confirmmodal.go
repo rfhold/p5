@@ -92,7 +92,7 @@ func (m *ConfirmModal) GetContextType() string {
 }
 
 // Update handles key events and returns confirmation status and any tea command.
-func (m *ConfirmModal) Update(msg tea.KeyMsg) (confirmed bool, cancelled bool, cmd tea.Cmd) {
+func (m *ConfirmModal) Update(msg tea.KeyMsg) (confirmed, cancelled bool, cmd tea.Cmd) {
 	if !m.Visible() {
 		return false, false, nil
 	}

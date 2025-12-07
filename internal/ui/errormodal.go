@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -80,20 +80,20 @@ func (m *ErrorModal) Update(msg tea.KeyMsg) (dismissed bool, cmd tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, Keys.Escape), msg.String() == "enter", msg.String() == "q":
-		m.ModalBase.Hide()
+		m.Hide()
 		return true, nil
 
 	case key.Matches(msg, Keys.Up), msg.String() == "k":
-		m.viewport.LineUp(1)
+		m.viewport.ScrollUp(1)
 
 	case key.Matches(msg, Keys.Down), msg.String() == "j":
-		m.viewport.LineDown(1)
+		m.viewport.ScrollDown(1)
 
 	case key.Matches(msg, Keys.PageUp):
-		m.viewport.HalfViewUp()
+		m.viewport.HalfPageUp()
 
 	case key.Matches(msg, Keys.PageDown):
-		m.viewport.HalfViewDown()
+		m.viewport.HalfPageDown()
 
 	case msg.String() == "g":
 		m.viewport.GotoTop()
@@ -108,7 +108,7 @@ func (m *ErrorModal) Update(msg tea.KeyMsg) (dismissed bool, cmd tea.Cmd) {
 // View renders the error modal
 func (m *ErrorModal) View() string {
 	// Title
-	titleStyle := DialogTitleStyle.Copy().Foreground(ColorError)
+	titleStyle := DialogTitleStyle.Foreground(ColorError)
 	title := titleStyle.Render(m.title)
 
 	// Summary
@@ -138,7 +138,7 @@ func (m *ErrorModal) View() string {
 			DimStyle.Render("/") +
 			ValueStyle.Render(strings.Repeat("k", 1)) +
 			DimStyle.Render(" scroll ") +
-			ValueStyle.Render(fmt.Sprintf("%d", percent)) +
+			ValueStyle.Render(strconv.Itoa(percent)) +
 			DimStyle.Render("%]")
 	}
 
@@ -156,6 +156,6 @@ func (m *ErrorModal) View() string {
 		footer,
 	)
 
-	errorDialogStyle := DialogStyle.Copy().BorderForeground(ColorError)
+	errorDialogStyle := DialogStyle.BorderForeground(ColorError)
 	return m.RenderDialogWithStyle(errorDialogStyle, content)
 }

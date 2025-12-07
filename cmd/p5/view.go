@@ -22,9 +22,7 @@ func (m Model) View() string {
 	footerHeight := lipgloss.Height(footer)
 	mainHeight := m.ui.Height - headerHeight - footerHeight - 1
 
-	if mainHeight < 1 {
-		mainHeight = 1
-	}
+	mainHeight = max(mainHeight, 1)
 
 	var mainContent string
 	if m.ui.ViewMode == ui.ViewHistory {
@@ -83,9 +81,7 @@ func (m Model) View() string {
 		toastView := m.ui.Toast.View(m.ui.Width)
 		footerHeight := 1
 		toastY := m.ui.Height - footerHeight - 2
-		if toastY < 0 {
-			toastY = 0
-		}
+		toastY = max(toastY, 0)
 		fullView = placeOverlay(0, toastY, toastView, fullView)
 	}
 
@@ -117,39 +113,46 @@ func (m Model) renderFooter() string {
 			flagParts = append(flagParts, ui.FlagExcludeStyle.Render(fmt.Sprintf("E:%d", excludes)))
 		}
 		if len(flagParts) > 0 {
-			leftParts = append(leftParts, strings.Join(flagParts, " "))
-			leftParts = append(leftParts, ui.DimStyle.Render("C clear all"))
+			leftParts = append(leftParts, strings.Join(flagParts, " "), ui.DimStyle.Render("C clear all"))
 		}
 	}
 
 	if m.ui.ResourceList.VisualMode() {
-		rightParts = append(rightParts, ui.DimStyle.Render("T target"))
-		rightParts = append(rightParts, ui.DimStyle.Render("R replace"))
-		rightParts = append(rightParts, ui.DimStyle.Render("E exclude"))
-		rightParts = append(rightParts, ui.DimStyle.Render("esc cancel"))
+		rightParts = append(rightParts,
+			ui.DimStyle.Render("T target"),
+			ui.DimStyle.Render("R replace"),
+			ui.DimStyle.Render("E exclude"),
+			ui.DimStyle.Render("esc cancel"),
+		)
 	} else {
 		switch m.ui.ViewMode {
 		case ui.ViewStack:
-			rightParts = append(rightParts, ui.DimStyle.Render("u up"))
-			rightParts = append(rightParts, ui.DimStyle.Render("r refresh"))
-			rightParts = append(rightParts, ui.DimStyle.Render("d destroy"))
-			rightParts = append(rightParts, ui.DimStyle.Render("x delete"))
+			rightParts = append(rightParts,
+				ui.DimStyle.Render("u up"),
+				ui.DimStyle.Render("r refresh"),
+				ui.DimStyle.Render("d destroy"),
+				ui.DimStyle.Render("x delete"),
+			)
 		case ui.ViewPreview:
-			rightParts = append(rightParts, ui.DimStyle.Render("ctrl+u execute"))
-			rightParts = append(rightParts, ui.DimStyle.Render("I import"))
-			rightParts = append(rightParts, ui.DimStyle.Render("esc back"))
+			rightParts = append(rightParts,
+				ui.DimStyle.Render("ctrl+u execute"),
+				ui.DimStyle.Render("I import"),
+				ui.DimStyle.Render("esc back"),
+			)
 		case ui.ViewExecute:
 			rightParts = append(rightParts, ui.DimStyle.Render("esc cancel"))
 		case ui.ViewHistory:
 			rightParts = append(rightParts, ui.DimStyle.Render("esc back"))
 		}
-		rightParts = append(rightParts, ui.DimStyle.Render("v select"))
-		rightParts = append(rightParts, ui.DimStyle.Render("D details"))
-		rightParts = append(rightParts, ui.DimStyle.Render("s stack"))
-		rightParts = append(rightParts, ui.DimStyle.Render("w workspace"))
-		rightParts = append(rightParts, ui.DimStyle.Render("h history"))
-		rightParts = append(rightParts, ui.DimStyle.Render("? help"))
-		rightParts = append(rightParts, ui.DimStyle.Render("q quit"))
+		rightParts = append(rightParts,
+			ui.DimStyle.Render("v select"),
+			ui.DimStyle.Render("D details"),
+			ui.DimStyle.Render("s stack"),
+			ui.DimStyle.Render("w workspace"),
+			ui.DimStyle.Render("h history"),
+			ui.DimStyle.Render("? help"),
+			ui.DimStyle.Render("q quit"),
+		)
 	}
 
 	left := joinWithSeparator(leftParts, "  ")
@@ -157,10 +160,9 @@ func (m Model) renderFooter() string {
 
 	leftWidth := lipgloss.Width(left)
 	rightWidth := lipgloss.Width(right)
-	padding := m.ui.Width - leftWidth - rightWidth - 2 // -2 for margins
-	if padding < 1 {
-		padding = 1
-	}
+	padding := max(
+		// -2 for margins
+		m.ui.Width-leftWidth-rightWidth-2, 1)
 
 	return " " + left + strings.Repeat(" ", padding) + right + " "
 }

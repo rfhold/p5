@@ -152,11 +152,12 @@ func (h *Header) View() string {
 	var topRow string
 	var bottomRow string
 
-	if h.loading {
-		topRow = fmt.Sprintf("%s Loading...", h.spinner.View())
-	} else if h.err != nil {
+	switch {
+	case h.loading:
+		topRow = h.spinner.View() + " Loading..."
+	case h.err != nil:
 		topRow = ErrorStyle.Render(fmt.Sprintf("Error: %v", h.err))
-	} else if h.data != nil {
+	case h.data != nil:
 		program := fmt.Sprintf("%s %s",
 			LabelStyle.Render("Program:"),
 			ValueStyle.Render(h.data.ProgramName))
@@ -221,39 +222,48 @@ func (h *Header) renderSummaryRow() string {
 
 	// Summary counts
 	if h.summary != nil {
-		total := h.summary.Create + h.summary.Update + h.summary.Delete + h.summary.Replace + h.summary.Refresh
-		// For stack view, always show the resource count
-		if h.viewMode == ViewStack {
-			parts = append(parts, DimStyle.Render(fmt.Sprintf("%d resources", h.summary.Total)))
-		} else if h.viewMode == ViewHistory {
-			// For history view, show number of history entries
-			parts = append(parts, DimStyle.Render(fmt.Sprintf("%d updates", h.summary.Total)))
-		} else if total == 0 && h.state == HeaderDone {
-			parts = append(parts, DimStyle.Render("No changes"))
-		} else if total > 0 {
-			var countParts []string
-			if h.summary.Create > 0 {
-				countParts = append(countParts, OpCreateStyle.Render(fmt.Sprintf("+%d", h.summary.Create)))
-			}
-			if h.summary.Update > 0 {
-				countParts = append(countParts, OpUpdateStyle.Render(fmt.Sprintf("~%d", h.summary.Update)))
-			}
-			if h.summary.Replace > 0 {
-				countParts = append(countParts, OpReplaceStyle.Render(fmt.Sprintf("±%d", h.summary.Replace)))
-			}
-			if h.summary.Delete > 0 {
-				countParts = append(countParts, OpDeleteStyle.Render(fmt.Sprintf("-%d", h.summary.Delete)))
-			}
-			if h.summary.Refresh > 0 {
-				countParts = append(countParts, OpRefreshStyle.Render(fmt.Sprintf("↻%d", h.summary.Refresh)))
-			}
-			if len(countParts) > 0 {
-				parts = append(parts, strings.Join(countParts, " "))
-			}
+		if summaryPart := h.renderSummaryCounts(); summaryPart != "" {
+			parts = append(parts, summaryPart)
 		}
 	}
 
 	return strings.Join(parts, "  ")
+}
+
+func (h *Header) renderSummaryCounts() string {
+	total := h.summary.Create + h.summary.Update + h.summary.Delete + h.summary.Replace + h.summary.Refresh
+
+	switch {
+	case h.viewMode == ViewStack:
+		return DimStyle.Render(fmt.Sprintf("%d resources", h.summary.Total))
+	case h.viewMode == ViewHistory:
+		return DimStyle.Render(fmt.Sprintf("%d updates", h.summary.Total))
+	case total == 0 && h.state == HeaderDone:
+		return DimStyle.Render("No changes")
+	case total > 0:
+		return h.renderOperationCounts()
+	}
+	return ""
+}
+
+func (h *Header) renderOperationCounts() string {
+	var countParts []string
+	if h.summary.Create > 0 {
+		countParts = append(countParts, OpCreateStyle.Render(fmt.Sprintf("+%d", h.summary.Create)))
+	}
+	if h.summary.Update > 0 {
+		countParts = append(countParts, OpUpdateStyle.Render(fmt.Sprintf("~%d", h.summary.Update)))
+	}
+	if h.summary.Replace > 0 {
+		countParts = append(countParts, OpReplaceStyle.Render(fmt.Sprintf("±%d", h.summary.Replace)))
+	}
+	if h.summary.Delete > 0 {
+		countParts = append(countParts, OpDeleteStyle.Render(fmt.Sprintf("-%d", h.summary.Delete)))
+	}
+	if h.summary.Refresh > 0 {
+		countParts = append(countParts, OpRefreshStyle.Render(fmt.Sprintf("↻%d", h.summary.Refresh)))
+	}
+	return strings.Join(countParts, " ")
 }
 
 func orDefault(s, def string) string {

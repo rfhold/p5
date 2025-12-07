@@ -90,21 +90,20 @@ func (h *HistoryList) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch {
-		case key.Matches(msg, Keys.Up):
+		case key.Matches(keyMsg, Keys.Up):
 			h.moveCursor(-1)
-		case key.Matches(msg, Keys.Down):
+		case key.Matches(keyMsg, Keys.Down):
 			h.moveCursor(1)
-		case key.Matches(msg, Keys.PageUp):
+		case key.Matches(keyMsg, Keys.PageUp):
 			h.moveCursor(-h.visibleHeight())
-		case key.Matches(msg, Keys.PageDown):
+		case key.Matches(keyMsg, Keys.PageDown):
 			h.moveCursor(h.visibleHeight())
-		case key.Matches(msg, Keys.Home):
+		case key.Matches(keyMsg, Keys.Home):
 			h.cursor = 0
 			h.ensureCursorVisible()
-		case key.Matches(msg, Keys.End):
+		case key.Matches(keyMsg, Keys.End):
 			h.cursor = len(h.items) - 1
 			h.ensureCursorVisible()
 		}
@@ -157,10 +156,7 @@ func (h *HistoryList) renderItems() string {
 
 	var b strings.Builder
 	visible := h.visibleHeight()
-	endIdx := h.scrollOffset + visible
-	if endIdx > len(h.items) {
-		endIdx = len(h.items)
-	}
+	endIdx := min(h.scrollOffset+visible, len(h.items))
 
 	// Check if content is scrollable
 	scrollable := h.isScrollable()
@@ -215,7 +211,7 @@ func (h *HistoryList) renderItem(item HistoryItem, isCursor bool) string {
 	// User (short form)
 	userStr := ""
 	if item.User != "" {
-		userStr = DimStyle.Render(fmt.Sprintf("by %s", item.User))
+		userStr = DimStyle.Render("by " + item.User)
 	}
 
 	// Message (truncated)

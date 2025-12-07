@@ -2,61 +2,11 @@ package plugins
 
 import (
 	"context"
-	"regexp"
 	"testing"
 
 	"github.com/rfhold/p5/internal/plugins/proto"
 	"github.com/rfhold/p5/pkg/plugin"
 )
-
-// mockResourceOpenerPlugin implements both BuiltinPlugin and ResourceOpenerPlugin for testing
-type mockResourceOpenerPlugin struct {
-	BuiltinPluginBase
-	patterns     []string
-	openResponse *OpenResourceResponse
-	openError    error
-	supportedErr error
-	openCalls    []*OpenResourceRequest
-	supportCalls []*SupportedOpenTypesRequest
-}
-
-func newMockResourceOpener(name string, patterns []string, response *OpenResourceResponse) *mockResourceOpenerPlugin {
-	return &mockResourceOpenerPlugin{
-		BuiltinPluginBase: NewBuiltinPluginBase(name),
-		patterns:          patterns,
-		openResponse:      response,
-	}
-}
-
-func (m *mockResourceOpenerPlugin) Authenticate(ctx context.Context, req *proto.AuthenticateRequest) (*proto.AuthenticateResponse, error) {
-	return SuccessResponse(nil, 0), nil
-}
-
-func (m *mockResourceOpenerPlugin) GetSupportedOpenTypes(ctx context.Context, req *SupportedOpenTypesRequest) (*SupportedOpenTypesResponse, error) {
-	m.supportCalls = append(m.supportCalls, req)
-	if m.supportedErr != nil {
-		return nil, m.supportedErr
-	}
-	return SupportedOpenTypesPatterns(m.patterns...), nil
-}
-
-func (m *mockResourceOpenerPlugin) OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, error) {
-	m.openCalls = append(m.openCalls, req)
-	if m.openError != nil {
-		return nil, m.openError
-	}
-	if m.openResponse != nil {
-		return m.openResponse, nil
-	}
-	// Check if the resource type matches any pattern
-	for _, pattern := range m.patterns {
-		matched, _ := regexp.MatchString(pattern, req.ResourceType)
-		if matched {
-			return OpenExecResponse("mock-cmd", []string{"--resource", req.ResourceType}, nil), nil
-		}
-	}
-	return OpenNotSupported(), nil
-}
 
 func TestOpenNotSupported(t *testing.T) {
 	resp := OpenNotSupported()

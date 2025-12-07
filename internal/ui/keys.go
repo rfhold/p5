@@ -215,12 +215,12 @@ var Keys = KeyMap{
 }
 
 // ShortHelp returns keybindings for the short help view
-func (k KeyMap) ShortHelp() []key.Binding {
+func (k *KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help, k.Quit}
 }
 
 // FullHelp returns keybindings for the full help view
-func (k KeyMap) FullHelp() [][]key.Binding {
+func (k *KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Home, k.End},
 		{k.VisualMode, k.Escape},

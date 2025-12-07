@@ -260,8 +260,17 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
+	if r.handleNavigationKeys(keyMsg) {
+		return nil
+	}
+	if r.handleSelectionKeys(keyMsg) {
+		return nil
+	}
+	return r.handleCopyKeys(keyMsg)
+}
+
+func (r *ResourceList) handleNavigationKeys(keyMsg tea.KeyMsg) bool {
 	switch {
-	// Navigation
 	case key.Matches(keyMsg, Keys.Up):
 		r.moveCursor(-1)
 	case key.Matches(keyMsg, Keys.Down):
@@ -276,8 +285,14 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 	case key.Matches(keyMsg, Keys.End):
 		r.cursor = len(r.visibleIdx) - 1
 		r.ensureCursorVisible()
+	default:
+		return false
+	}
+	return true
+}
 
-	// Visual mode
+func (r *ResourceList) handleSelectionKeys(keyMsg tea.KeyMsg) bool {
+	switch {
 	case key.Matches(keyMsg, Keys.VisualMode):
 		if !r.visualMode {
 			r.visualMode = true
@@ -285,8 +300,6 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 		}
 	case key.Matches(keyMsg, Keys.Escape):
 		r.visualMode = false
-
-	// Flag toggles
 	case key.Matches(keyMsg, Keys.ToggleTarget):
 		r.toggleFlag("target")
 	case key.Matches(keyMsg, Keys.ToggleReplace):
@@ -298,14 +311,19 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 	case key.Matches(keyMsg, Keys.ClearAllFlags):
 		r.ClearAllFlags()
 		r.visualMode = false
+	default:
+		return false
+	}
+	return true
+}
 
-	// Copy resource(s) as JSON
+func (r *ResourceList) handleCopyKeys(keyMsg tea.KeyMsg) tea.Cmd {
+	switch {
 	case key.Matches(keyMsg, Keys.CopyResource):
 		return r.CopyResourceJSON()
 	case key.Matches(keyMsg, Keys.CopyAllResources):
 		return r.CopyAllResourcesJSON()
 	}
-
 	return nil
 }
 

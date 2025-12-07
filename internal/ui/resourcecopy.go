@@ -9,10 +9,10 @@ import (
 // ResourceJSON is the JSON structure for copying a resource
 // Matches Pulumi's native output format as closely as possible
 type ResourceJSON struct {
-	URN     string                 `json:"urn"`
-	Type    string                 `json:"type"`
-	Inputs  map[string]interface{} `json:"inputs,omitempty"`
-	Outputs map[string]interface{} `json:"outputs,omitempty"`
+	URN     string         `json:"urn"`
+	Type    string         `json:"type"`
+	Inputs  map[string]any `json:"inputs,omitempty"`
+	Outputs map[string]any `json:"outputs,omitempty"`
 }
 
 // CopyResourceJSON copies the selected resource as JSON to the clipboard

@@ -2,11 +2,18 @@ package plugins
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+)
+
+var (
+	ErrBuiltinPluginNotFound    = errors.New("builtin plugin not found")
+	ErrExternalPluginCmdMissing = errors.New("cmd is required for external plugins (not a builtin)")
+	ErrNotAuthPlugin            = errors.New("plugin does not implement AuthPlugin interface")
 )
 
 // PluginInstance holds a running plugin client and its interface
@@ -69,7 +76,7 @@ func (m *Manager) LoadPlugins(ctx context.Context, p5Config *P5Config) error {
 func (m *Manager) loadBuiltinPlugin(name string, config PluginConfig) error {
 	builtinPlugin := GetBuiltin(name)
 	if builtinPlugin == nil {
-		return fmt.Errorf("builtin plugin %s not found", name)
+		return fmt.Errorf("%w: %s", ErrBuiltinPluginNotFound, name)
 	}
 
 	instance := &PluginInstance{
@@ -100,7 +107,7 @@ func (m *Manager) loadBuiltinPlugin(name string, config PluginConfig) error {
 // loadPlugin loads a single external plugin using go-plugin
 func (m *Manager) loadPlugin(ctx context.Context, name string, config PluginConfig) error {
 	if config.Cmd == "" {
-		return fmt.Errorf("plugin %s: cmd is required for external plugins (not a builtin)", name)
+		return fmt.Errorf("plugin %s: %w", name, ErrExternalPluginCmdMissing)
 	}
 
 	// Create a logger that discards output (plugins should be quiet)
@@ -111,7 +118,7 @@ func (m *Manager) loadPlugin(ctx context.Context, name string, config PluginConf
 	})
 
 	// Build the command
-	cmd := exec.CommandContext(ctx, config.Cmd, config.Args...)
+	cmd := exec.CommandContext(ctx, config.Cmd, config.Args...) //nolint:gosec // G204: Plugin command comes from user config
 
 	// Create the plugin client
 	client := plugin.NewClient(&plugin.ClientConfig{
@@ -141,7 +148,7 @@ func (m *Manager) loadPlugin(ctx context.Context, name string, config PluginConf
 	authPlugin, ok := raw.(AuthPlugin)
 	if !ok {
 		client.Kill()
-		return fmt.Errorf("plugin does not implement AuthPlugin interface")
+		return ErrNotAuthPlugin
 	}
 
 	instance := &PluginInstance{

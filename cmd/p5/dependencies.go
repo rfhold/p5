@@ -22,7 +22,7 @@ type Dependencies struct {
 
 // NewProductionDependencies creates dependencies configured for production use.
 // workDir is used to initialize the plugin manager for p5.toml discovery.
-func NewProductionDependencies(workDir string) (*Dependencies, error) {
+func NewProductionDependencies(workDir string) *Dependencies {
 	pluginMgr, err := plugins.NewManager(workDir)
 	if err != nil {
 		// Log but don't fail - plugins are optional
@@ -37,5 +37,5 @@ func NewProductionDependencies(workDir string) (*Dependencies, error) {
 		StackInitializer: pulumi.NewStackInitializer(),
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   pluginMgr,
-	}, nil
+	}
 }

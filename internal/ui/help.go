@@ -89,16 +89,11 @@ func (h *HelpDialog) SetSize(width, height int) {
 	dialogChrome := 11
 
 	// Maximum viewport height that will fit on screen
-	maxVpHeight := height - dialogChrome
-	if maxVpHeight < 3 {
-		maxVpHeight = 3
-	}
+	maxVpHeight := max(height-dialogChrome, 3)
 
 	// Viewport height is the smaller of content height or max available
 	vpHeight := contentLines
-	if vpHeight > maxVpHeight {
-		vpHeight = maxVpHeight
-	}
+	vpHeight = min(vpHeight, maxVpHeight)
 
 	// Initialize or update viewport
 	if !h.ready {
@@ -116,14 +111,12 @@ func (h *HelpDialog) SetSize(width, height int) {
 func (h *HelpDialog) buildContent() string {
 	var lines []string
 	for _, item := range h.items {
-		if item.Key == "" && item.Desc != "" {
-			// Section header
+		switch {
+		case item.Key == "" && item.Desc != "":
+			lines = append(lines, "", LabelStyle.Render(item.Desc))
+		case item.Key == "":
 			lines = append(lines, "")
-			lines = append(lines, LabelStyle.Render(item.Desc))
-		} else if item.Key == "" {
-			// Empty line
-			lines = append(lines, "")
-		} else {
+		default:
 			lines = append(lines, fmt.Sprintf("  %s  %s",
 				ValueStyle.Render(fmt.Sprintf("%8s", item.Key)),
 				DimStyle.Render(item.Desc)))
@@ -156,51 +149,14 @@ func (h *HelpDialog) GotoTop() {
 // GotoBottom scrolls to the bottom of the help content
 func (h *HelpDialog) GotoBottom() {
 	if h.ready {
-		maxOffset := h.viewport.TotalLineCount() - h.viewport.Height
-		if maxOffset < 0 {
-			maxOffset = 0
-		}
+		maxOffset := max(h.viewport.TotalLineCount()-h.viewport.Height, 0)
 		h.viewport.SetYOffset(maxOffset)
 	}
 }
 
 // View renders the help dialog centered on screen
 func (h *HelpDialog) View() string {
-	titleText := "Keyboard Shortcuts"
-
-	var content string
-	if h.ready {
-		// Check if content is scrollable
-		isScrollable := h.viewport.TotalLineCount() > h.viewport.Height
-		canScrollUp := h.viewport.YOffset > 0
-		canScrollDown := h.viewport.YOffset < h.viewport.TotalLineCount()-h.viewport.Height
-
-		// Add line count hint to title if scrollable
-		if isScrollable {
-			startLine := h.viewport.YOffset + 1
-			endLine := h.viewport.YOffset + h.viewport.Height
-			if endLine > h.viewport.TotalLineCount() {
-				endLine = h.viewport.TotalLineCount()
-			}
-			titleText += DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", startLine, endLine, h.viewport.TotalLineCount()))
-		}
-
-		// Build content with scroll hint at bottom only
-		var parts []string
-		parts = append(parts, h.viewport.View())
-
-		// Add scroll hint at bottom (import modal style)
-		if isScrollable {
-			hint := RenderScrollHint(canScrollUp, canScrollDown, "      ")
-			if hint != "" {
-				parts = append(parts, hint)
-			}
-		}
-
-		content = strings.Join(parts, "\n")
-	} else {
-		content = h.buildContent()
-	}
+	titleText, content := h.buildViewContent()
 
 	title := DialogTitleStyle.Render(titleText)
 	dialog := DialogStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, content))
@@ -210,4 +166,34 @@ func (h *HelpDialog) View() string {
 		lipgloss.WithWhitespaceChars(" "),
 		lipgloss.WithWhitespaceForeground(ColorBg),
 	)
+}
+
+func (h *HelpDialog) buildViewContent() (titleText, content string) {
+	titleText = "Keyboard Shortcuts"
+
+	if !h.ready {
+		return titleText, h.buildContent()
+	}
+
+	isScrollable := h.viewport.TotalLineCount() > h.viewport.Height
+	if isScrollable {
+		titleText = h.appendScrollIndicator(titleText)
+	}
+
+	parts := []string{h.viewport.View()}
+	if isScrollable {
+		canScrollUp := h.viewport.YOffset > 0
+		canScrollDown := h.viewport.YOffset < h.viewport.TotalLineCount()-h.viewport.Height
+		if hint := RenderScrollHint(canScrollUp, canScrollDown, "      "); hint != "" {
+			parts = append(parts, hint)
+		}
+	}
+
+	return titleText, strings.Join(parts, "\n")
+}
+
+func (h *HelpDialog) appendScrollIndicator(titleText string) string {
+	startLine := h.viewport.YOffset + 1
+	endLine := min(h.viewport.YOffset+h.viewport.Height, h.viewport.TotalLineCount())
+	return titleText + DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", startLine, endLine, h.viewport.TotalLineCount()))
 }

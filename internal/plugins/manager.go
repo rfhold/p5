@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"maps"
 	"sync"
 )
 
@@ -140,9 +141,7 @@ func (m *Manager) getMergedAuthEnvLocked() map[string]string {
 	env := make(map[string]string)
 	for _, creds := range m.credentials {
 		if creds != nil && creds.Env != nil {
-			for k, v := range creds.Env {
-				env[k] = v
-			}
+			maps.Copy(env, creds.Env)
 		}
 	}
 	return env
@@ -176,7 +175,7 @@ func (m *Manager) HasResourceOpeners() bool {
 
 // OpenResource queries all enabled resource opener plugins to get an action for opening the resource.
 // Returns the first plugin that can handle the resource type, or nil if none can.
-func (m *Manager) OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error) {
+func (m *Manager) OpenResource(ctx context.Context, req *OpenResourceRequest) (resp *OpenResourceResponse, pluginName string, err error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

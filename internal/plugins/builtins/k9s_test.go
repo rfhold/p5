@@ -2,6 +2,7 @@ package builtins
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/rfhold/p5/internal/plugins"
@@ -258,14 +259,7 @@ func TestK9sPlugin_GetSupportedOpenTypes(t *testing.T) {
 	}
 
 	// Should contain kubernetes pattern
-	found := false
-	for _, pattern := range resp.ResourceTypePatterns {
-		if pattern == `^kubernetes:.*` {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(resp.ResourceTypePatterns, `^kubernetes:.*`) {
 		t.Errorf("expected pattern ^kubernetes:.* in %v", resp.ResourceTypePatterns)
 	}
 }
@@ -596,14 +590,7 @@ func TestK9sPlugin_OpenResource_WithKubeconfig(t *testing.T) {
 			}
 
 			// Check for --kubeconfig in args
-			foundKubeconfig := false
-			for _, arg := range resp.Action.Args {
-				if arg == "--kubeconfig" {
-					foundKubeconfig = true
-					break
-				}
-			}
-
+			foundKubeconfig := slices.Contains(resp.Action.Args, "--kubeconfig")
 			if foundKubeconfig != tc.expectKubeconfig {
 				t.Errorf("expected kubeconfig=%v, found=%v in args: %v", tc.expectKubeconfig, foundKubeconfig, resp.Action.Args)
 			}

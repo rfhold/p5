@@ -123,7 +123,7 @@ func (d *HistoryDetailPanel) renderContent() string {
 	b.WriteString(DimStyle.Render("─── Resource Changes ───"))
 	b.WriteString("\n\n")
 
-	if d.item.ResourceChanges == nil || len(d.item.ResourceChanges) == 0 {
+	if len(d.item.ResourceChanges) == 0 {
 		b.WriteString(DimStyle.Render("No resource information available"))
 	} else {
 		d.renderResourceChanges(&b)

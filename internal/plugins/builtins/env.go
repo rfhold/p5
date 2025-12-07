@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +15,12 @@ import (
 
 	"github.com/rfhold/p5/internal/plugins"
 	"github.com/rfhold/p5/internal/plugins/proto"
+)
+
+var (
+	ErrUnknownSourceType = errors.New("unknown source type")
+	ErrFilePathRequired  = errors.New("file path is required")
+	ErrCmdRequired       = errors.New("cmd is required for exec source")
 )
 
 func init() {
@@ -66,9 +74,7 @@ func (e *EnvPlugin) Authenticate(ctx context.Context, req *proto.AuthenticateReq
 			return plugins.ErrorResponse("source %d (%s): %v", i, src.Type, err), nil
 		}
 		// Merge - later sources override earlier ones
-		for k, v := range srcEnv {
-			env[k] = v
-		}
+		maps.Copy(env, srcEnv)
 	}
 
 	// Return with TTL of 0 (never expires, will reload on stack/workspace change)
@@ -166,14 +172,14 @@ func (e *EnvPlugin) processSource(ctx context.Context, src EnvSource) (map[strin
 	case "exec":
 		return e.loadFromExec(ctx, src)
 	default:
-		return nil, fmt.Errorf("unknown source type: %s", src.Type)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownSourceType, src.Type)
 	}
 }
 
 // loadFromFile reads a .env file and parses it
 func (e *EnvPlugin) loadFromFile(path string) (map[string]string, error) {
 	if path == "" {
-		return nil, fmt.Errorf("file path is required")
+		return nil, ErrFilePathRequired
 	}
 
 	// Expand ~ to home directory
@@ -196,10 +202,10 @@ func (e *EnvPlugin) loadFromFile(path string) (map[string]string, error) {
 // loadFromExec runs a command and parses its stdout as .env format
 func (e *EnvPlugin) loadFromExec(ctx context.Context, src EnvSource) (map[string]string, error) {
 	if src.Cmd == "" {
-		return nil, fmt.Errorf("cmd is required for exec source")
+		return nil, ErrCmdRequired
 	}
 
-	cmd := exec.CommandContext(ctx, src.Cmd, src.Args...)
+	cmd := exec.CommandContext(ctx, src.Cmd, src.Args...) //nolint:gosec // G204: Command arguments come from user config
 	if src.Dir != "" {
 		cmd.Dir = src.Dir
 	}

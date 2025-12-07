@@ -246,97 +246,90 @@ func (m *StepModal) ensureSelectedVisible() {
 	}
 }
 
-// Update handles key events and returns the action taken
-func (m *StepModal) Update(msg tea.KeyMsg) (StepModalAction, tea.Cmd) {
-	if !m.Visible() {
-		return StepModalActionNone, nil
+func (m *StepModal) handleEnterKey(step StepModalStep) StepModalAction {
+	m.saveCurrentResult()
+	if m.results[m.currentStep] == "" && len(step.Suggestions) > 0 && m.showSuggestions {
+		if m.selectedIdx >= 0 && m.selectedIdx < len(step.Suggestions) {
+			m.results[m.currentStep] = step.Suggestions[m.selectedIdx].ID
+		}
 	}
 
-	if m.currentStep < 0 || m.currentStep >= len(m.steps) {
+	if m.results[m.currentStep] == "" {
+		return StepModalActionNone
+	}
+
+	if m.IsLastStep() {
+		return StepModalActionConfirm
+	}
+	m.NextStep()
+	return StepModalActionNext
+}
+
+func (m *StepModal) handleNavigationKey(step StepModalStep, direction int) {
+	if len(step.Suggestions) == 0 || !m.showSuggestions {
+		return
+	}
+	m.selectedIdx += direction
+	if m.selectedIdx < 0 {
+		m.selectedIdx = len(step.Suggestions) - 1
+	} else if m.selectedIdx >= len(step.Suggestions) {
+		m.selectedIdx = 0
+	}
+	m.ensureSelectedVisible()
+}
+
+func (m *StepModal) handleEscapeKey() StepModalAction {
+	if m.showSuggestions && m.input.Value() != "" {
+		m.showSuggestions = false
+		return StepModalActionNone
+	}
+	m.Hide()
+	return StepModalActionCancel
+}
+
+func (m *StepModal) handleTextInput(msg tea.KeyMsg, step StepModalStep) tea.Cmd {
+	var inputCmd tea.Cmd
+	m.input, inputCmd = m.input.Update(msg)
+	if len(step.Suggestions) > 0 && m.input.Value() == "" {
+		m.showSuggestions = true
+	}
+	return inputCmd
+}
+
+// Update handles key events and returns the action taken
+func (m *StepModal) Update(msg tea.KeyMsg) (StepModalAction, tea.Cmd) {
+	if !m.Visible() || m.currentStep < 0 || m.currentStep >= len(m.steps) {
 		return StepModalActionNone, nil
 	}
 
 	step := m.steps[m.currentStep]
 
-	switch {
-	case msg.String() == "enter":
-		m.saveCurrentResult()
-		// Check if we have a valid result
-		if m.results[m.currentStep] == "" {
-			// If suggestions exist and one is selected, use it
-			if len(step.Suggestions) > 0 && m.showSuggestions {
-				if m.selectedIdx >= 0 && m.selectedIdx < len(step.Suggestions) {
-					m.results[m.currentStep] = step.Suggestions[m.selectedIdx].ID
-				}
-			}
-		}
-
-		if m.results[m.currentStep] == "" {
-			return StepModalActionNone, nil
-		}
-
-		// Move to next step or confirm
-		if m.IsLastStep() {
-			return StepModalActionConfirm, nil
-		}
-		m.NextStep()
-		return StepModalActionNext, nil
-
-	case msg.String() == "backspace" && m.input.Value() == "":
-		// Backspace on empty input goes back a step
-		if m.currentStep > 0 {
+	switch msg.String() {
+	case "enter":
+		return m.handleEnterKey(step), nil
+	case "backspace":
+		if m.input.Value() == "" && m.currentStep > 0 {
 			m.PrevStep()
 			return StepModalActionPrev, nil
 		}
-
-	case msg.String() == "up":
-		if len(step.Suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx--
-			if m.selectedIdx < 0 {
-				m.selectedIdx = len(step.Suggestions) - 1
-			}
-			m.ensureSelectedVisible()
-			return StepModalActionNone, nil
-		}
-
-	case msg.String() == "down":
-		if len(step.Suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx++
-			if m.selectedIdx >= len(step.Suggestions) {
-				m.selectedIdx = 0
-			}
-			m.ensureSelectedVisible()
-			return StepModalActionNone, nil
-		}
-
-	case msg.String() == "tab":
-		// Toggle suggestion selection mode
+	case "up":
+		m.handleNavigationKey(step, -1)
+		return StepModalActionNone, nil
+	case "down":
+		m.handleNavigationKey(step, 1)
+		return StepModalActionNone, nil
+	case "tab":
 		if len(step.Suggestions) > 0 {
 			m.showSuggestions = !m.showSuggestions
 		}
 		return StepModalActionNone, nil
-
-	case key.Matches(msg, Keys.Escape):
-		// If suggestions are shown, hide them first
-		if m.showSuggestions && m.input.Value() != "" {
-			m.showSuggestions = false
-			return StepModalActionNone, nil
-		}
-		m.Hide()
-		return StepModalActionCancel, nil
-
-	default:
-		// Forward to text input
-		var inputCmd tea.Cmd
-		m.input, inputCmd = m.input.Update(msg)
-		// When typing, show suggestions if available
-		if len(step.Suggestions) > 0 && m.input.Value() == "" {
-			m.showSuggestions = true
-		}
-		return StepModalActionNone, inputCmd
 	}
 
-	return StepModalActionNone, nil
+	if key.Matches(msg, Keys.Escape) {
+		return m.handleEscapeKey(), nil
+	}
+
+	return StepModalActionNone, m.handleTextInput(msg, step)
 }
 
 // View renders the step modal
@@ -381,64 +374,7 @@ func (m *StepModal) View() string {
 
 	// Suggestions section
 	if len(step.Suggestions) > 0 {
-		totalSuggestions := len(step.Suggestions)
-
-		// Clamp scroll offset
-		maxOffset := totalSuggestions - maxVisibleStepSuggestions
-		if maxOffset < 0 {
-			maxOffset = 0
-		}
-		if m.scrollOffset > maxOffset {
-			m.scrollOffset = maxOffset
-		}
-		if m.scrollOffset < 0 {
-			m.scrollOffset = 0
-		}
-
-		// Add scroll indicator if needed
-		if totalSuggestions > maxVisibleStepSuggestions {
-			endIdx := m.scrollOffset + maxVisibleStepSuggestions
-			if endIdx > totalSuggestions {
-				endIdx = totalSuggestions
-			}
-			content.WriteString(DimStyle.Render(fmt.Sprintf("[%d-%d/%d]", m.scrollOffset+1, endIdx, totalSuggestions)))
-			content.WriteString("\n")
-		}
-
-		// Render visible suggestions
-		endIdx := m.scrollOffset + maxVisibleStepSuggestions
-		if endIdx > totalSuggestions {
-			endIdx = totalSuggestions
-		}
-		for i := m.scrollOffset; i < endIdx; i++ {
-			s := step.Suggestions[i]
-			if i == m.selectedIdx && m.showSuggestions {
-				content.WriteString(ValueStyle.Render("> " + s.Label))
-			} else {
-				content.WriteString(DimStyle.Render("  " + s.Label))
-			}
-			if s.Description != "" {
-				content.WriteString(DimStyle.Render(" - " + s.Description))
-			}
-			if s.Source != "" {
-				content.WriteString(DimStyle.Render(" [" + s.Source + "]"))
-			}
-			if s.Warning != "" {
-				warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#e0af68"))
-				content.WriteString(warningStyle.Render(" !" + s.Warning))
-			}
-			content.WriteString("\n")
-		}
-
-		// Scroll hints
-		if totalSuggestions > maxVisibleStepSuggestions {
-			hint := RenderScrollHint(m.scrollOffset > 0, m.scrollOffset < maxOffset, "  ")
-			if hint != "" {
-				content.WriteString(hint)
-				content.WriteString("\n")
-			}
-		}
-		content.WriteString("\n")
+		m.renderSuggestionsSection(&content, step.Suggestions)
 	}
 
 	// Input section
@@ -455,26 +391,89 @@ func (m *StepModal) View() string {
 	}
 
 	// Footer hints
-	var footer string
-	if step.FooterHints != "" {
-		footer = DimStyle.Render("\n" + step.FooterHints)
-	} else {
-		var hints []string
-		if len(step.Suggestions) > 0 {
-			hints = append(hints, "tab suggestions")
-		}
-		if m.IsLastStep() {
-			hints = append(hints, "enter confirm")
-		} else {
-			hints = append(hints, "enter next")
-		}
-		if m.currentStep > 0 {
-			hints = append(hints, "backspace back")
-		}
-		hints = append(hints, "esc cancel")
-		footer = DimStyle.Render("\n" + strings.Join(hints, "  "))
-	}
+	footer := m.buildFooterHints(step)
 
 	dialog := DialogStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, content.String(), footer))
 	return m.CenterDialog(dialog)
+}
+
+func (m *StepModal) buildFooterHints(step StepModalStep) string {
+	if step.FooterHints != "" {
+		return DimStyle.Render("\n" + step.FooterHints)
+	}
+
+	var hints []string
+	if len(step.Suggestions) > 0 {
+		hints = append(hints, "tab suggestions")
+	}
+	if m.IsLastStep() {
+		hints = append(hints, "enter confirm")
+	} else {
+		hints = append(hints, "enter next")
+	}
+	if m.currentStep > 0 {
+		hints = append(hints, "backspace back")
+	}
+	hints = append(hints, "esc cancel")
+	return DimStyle.Render("\n" + strings.Join(hints, "  "))
+}
+
+func (m *StepModal) renderSuggestionsSection(content *strings.Builder, suggestions []StepSuggestion) {
+	totalSuggestions := len(suggestions)
+	maxOffset := max(totalSuggestions-maxVisibleStepSuggestions, 0)
+
+	m.clampScrollOffset(maxOffset)
+
+	if totalSuggestions > maxVisibleStepSuggestions {
+		endIdx := min(m.scrollOffset+maxVisibleStepSuggestions, totalSuggestions)
+		content.WriteString(DimStyle.Render(fmt.Sprintf("[%d-%d/%d]", m.scrollOffset+1, endIdx, totalSuggestions)))
+		content.WriteString("\n")
+	}
+
+	m.renderVisibleSuggestions(content, suggestions)
+
+	if totalSuggestions > maxVisibleStepSuggestions {
+		if hint := RenderScrollHint(m.scrollOffset > 0, m.scrollOffset < maxOffset, "  "); hint != "" {
+			content.WriteString(hint)
+			content.WriteString("\n")
+		}
+	}
+	content.WriteString("\n")
+}
+
+func (m *StepModal) clampScrollOffset(maxOffset int) {
+	if m.scrollOffset > maxOffset {
+		m.scrollOffset = maxOffset
+	}
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+}
+
+func (m *StepModal) renderVisibleSuggestions(content *strings.Builder, suggestions []StepSuggestion) {
+	endIdx := min(m.scrollOffset+maxVisibleStepSuggestions, len(suggestions))
+	warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#e0af68"))
+
+	for i := m.scrollOffset; i < endIdx; i++ {
+		s := suggestions[i]
+		m.renderSuggestionLine(content, s, i, warningStyle)
+	}
+}
+
+func (m *StepModal) renderSuggestionLine(content *strings.Builder, s StepSuggestion, idx int, warningStyle lipgloss.Style) {
+	if idx == m.selectedIdx && m.showSuggestions {
+		content.WriteString(ValueStyle.Render("> " + s.Label))
+	} else {
+		content.WriteString(DimStyle.Render("  " + s.Label))
+	}
+	if s.Description != "" {
+		content.WriteString(DimStyle.Render(" - " + s.Description))
+	}
+	if s.Source != "" {
+		content.WriteString(DimStyle.Render(" [" + s.Source + "]"))
+	}
+	if s.Warning != "" {
+		content.WriteString(warningStyle.Render(" !" + s.Warning))
+	}
+	content.WriteString("\n")
 }

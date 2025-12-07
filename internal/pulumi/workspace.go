@@ -22,7 +22,7 @@ func IsWorkspace(dir string) bool {
 
 // FindWorkspaces searches for Pulumi.yaml files starting from the given directory
 // and returns a list of workspace paths. It searches recursively down the directory tree.
-func FindWorkspaces(startDir string, currentWorkDir string) ([]WorkspaceInfo, error) {
+func FindWorkspaces(startDir, currentWorkDir string) ([]WorkspaceInfo, error) {
 	var workspaces []WorkspaceInfo
 
 	// Resolve absolute paths for comparison
@@ -91,11 +91,9 @@ func getProjectName(pulumiYamlPath string) (string, error) {
 	}
 
 	// Simple YAML parsing - just look for "name:" line
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "name:") {
-			name := strings.TrimPrefix(line, "name:")
+		if name, ok := strings.CutPrefix(line, "name:"); ok {
 			name = strings.TrimSpace(name)
 			// Remove quotes if present
 			name = strings.Trim(name, "\"'")

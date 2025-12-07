@@ -76,7 +76,7 @@ func (m *StackInitModal) configureSteps() {
 		},
 	}
 
-	m.StepModal.SetSteps(steps)
+	m.SetSteps(steps)
 }
 
 // Show shows the modal and resets state
@@ -118,7 +118,7 @@ func (m *StackInitModal) SetStackFiles(files []pulumi.StackFileInfo) {
 		suggestions = append(suggestions, s)
 	}
 
-	m.StepModal.SetStepSuggestions(stepStackName, suggestions)
+	m.SetStepSuggestions(stepStackName, suggestions)
 	m.updateSecretsProviderSuggestions()
 }
 
@@ -131,7 +131,7 @@ func (m *StackInitModal) updateBackendInfo() {
 	if m.backendUser != "" {
 		info = append(info, InfoLine{Label: "User", Value: m.backendUser})
 	}
-	m.StepModal.SetStepInfoLines(stepStackName, info)
+	m.SetStepInfoLines(stepStackName, info)
 }
 
 // updateSecretsProviderSuggestions builds the secrets provider suggestions list
@@ -159,7 +159,7 @@ func (m *StackInitModal) updateSecretsProviderSuggestions() {
 		}
 	}
 
-	m.StepModal.SetStepSuggestions(stepSecretsProvider, suggestions)
+	m.SetStepSuggestions(stepSecretsProvider, suggestions)
 }
 
 // Update handles key events and manages step transitions
@@ -176,40 +176,40 @@ func (m *StackInitModal) Update(msg tea.KeyMsg) (StepModalAction, tea.Cmd) {
 
 // onStepTransition handles updates needed when moving between steps
 func (m *StackInitModal) onStepTransition() {
-	currentStep := m.StepModal.CurrentStep()
+	currentStep := m.CurrentStep()
 
 	switch currentStep {
 	case stepSecretsProvider:
 		// Update info for step 2 with selected stack
-		stackName := m.StepModal.GetResult(stepStackName)
+		stackName := m.GetResult(stepStackName)
 		info := []InfoLine{
 			{Label: "Stack", Value: stackName},
 		}
-		m.StepModal.SetStepInfoLines(stepSecretsProvider, info)
+		m.SetStepInfoLines(stepSecretsProvider, info)
 
 		// Set warning if stack has existing encryption
 		if m.stacksWithEncryption[stackName] {
-			m.StepModal.SetStepWarning(stepSecretsProvider,
+			m.SetStepWarning(stepSecretsProvider,
 				"Stack '"+stackName+"' already has encryption configured. Re-initializing may cause issues with existing secrets.")
 		} else {
-			m.StepModal.SetStepWarning(stepSecretsProvider, "")
+			m.SetStepWarning(stepSecretsProvider, "")
 		}
 
 	case stepPassphrase:
 		// Update info for step 3
-		stackName := m.StepModal.GetResult(stepStackName)
-		provider := m.StepModal.GetResult(stepSecretsProvider)
+		stackName := m.GetResult(stepStackName)
+		provider := m.GetResult(stepSecretsProvider)
 		info := []InfoLine{
 			{Label: "Stack", Value: stackName},
 			{Label: "Secrets Provider", Value: provider},
 		}
-		m.StepModal.SetStepInfoLines(stepPassphrase, info)
+		m.SetStepInfoLines(stepPassphrase, info)
 	}
 }
 
 // NeedsPassphrase returns true if the passphrase step should be shown
 func (m *StackInitModal) NeedsPassphrase() bool {
-	provider := m.StepModal.GetResult(stepSecretsProvider)
+	provider := m.GetResult(stepSecretsProvider)
 	// Passphrase provider needs a passphrase, unless env var is set
 	// Note: empty string "" is a valid passphrase, so we check if the key exists at all
 	if provider == "passphrase" || provider == "" {
@@ -235,17 +235,17 @@ func (m *StackInitModal) ShouldSkipPassphrase() bool {
 
 // GetStackName returns the selected/entered stack name
 func (m *StackInitModal) GetStackName() string {
-	return m.StepModal.GetResult(stepStackName)
+	return m.GetResult(stepStackName)
 }
 
 // GetSecretsProvider returns the selected/entered secrets provider
 func (m *StackInitModal) GetSecretsProvider() string {
-	return m.StepModal.GetResult(stepSecretsProvider)
+	return m.GetResult(stepSecretsProvider)
 }
 
 // GetPassphrase returns the entered passphrase
 func (m *StackInitModal) GetPassphrase() string {
-	return m.StepModal.GetResult(stepPassphrase)
+	return m.GetResult(stepPassphrase)
 }
 
 // IsComplete returns true if all required steps have been completed

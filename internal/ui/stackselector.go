@@ -52,11 +52,12 @@ func NewStackSelector() *StackSelector {
 
 		// Regular stack items
 		var name string
-		if item.Current {
+		switch {
+		case item.Current:
 			name = ValueStyle.Render(item.Name) + DimStyle.Render(" (current)")
-		} else if isCursor {
+		case isCursor:
 			name = ValueStyle.Render(item.Name)
-		} else {
+		default:
 			name = DimStyle.Render(item.Name)
 		}
 		return cursor + name

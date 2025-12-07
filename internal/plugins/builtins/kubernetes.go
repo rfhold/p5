@@ -107,7 +107,7 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 		if strings.Contains(kubeconfig, "apiVersion:") || strings.Contains(kubeconfig, "\"apiVersion\"") {
 			tmpFile, err := os.CreateTemp("", "p5-kubeconfig-*.yaml")
 			if err == nil {
-				tmpFile.WriteString(kubeconfig)
+				_, _ = tmpFile.WriteString(kubeconfig)
 				tmpFile.Close()
 				tempKubeconfig = tmpFile.Name()
 				defer os.Remove(tempKubeconfig)
@@ -120,28 +120,8 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 	}
 
 	// Add namespace for namespaced resources
-	namespace := ""
-
 	if !isClusterScoped {
-		// Priority: resource metadata > provider inputs > stack config > program config
-		// Kubernetes resources store namespace in metadata.namespace (JSON serialized)
-		namespace = extractK8sNamespace(req.Inputs["metadata"])
-		if namespace == "" {
-			namespace = req.ProviderInputs["namespace"]
-		}
-		if namespace == "" {
-			namespace = req.StackConfig["kubernetes:namespace"]
-		}
-		if namespace == "" {
-			namespace = req.ProgramConfig["kubernetes:namespace"]
-		}
-
-		if namespace != "" {
-			args = append(args, "-n", namespace)
-		} else {
-			// Get from all namespaces if no specific namespace
-			args = append(args, "--all-namespaces")
-		}
+		args = appendNamespaceArgs(args, req)
 	}
 
 	// Run kubectl
@@ -176,15 +156,16 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 	for _, item := range resources.Items {
 		var importID, description string
 
-		if isClusterScoped {
+		switch {
+		case isClusterScoped:
 			// Cluster-scoped: just the name
 			importID = item.Metadata.Name
 			description = "Cluster resource"
-		} else if item.Metadata.Namespace != "" {
+		case item.Metadata.Namespace != "":
 			// Namespaced: namespace/name format
 			importID = item.Metadata.Namespace + "/" + item.Metadata.Name
 			description = "Namespace: " + item.Metadata.Namespace
-		} else {
+		default:
 			// Fallback to just name
 			importID = item.Metadata.Name
 			description = ""
@@ -198,4 +179,26 @@ func (p *KubernetesPlugin) GetImportSuggestions(ctx context.Context, req *plugin
 	}
 
 	return plugin.ImportSuggestionsSuccess(suggestions), nil
+}
+
+func appendNamespaceArgs(args []string, req *plugin.ImportSuggestionsRequest) []string {
+	namespace := resolveK8sNamespace(req)
+	if namespace != "" {
+		return append(args, "-n", namespace)
+	}
+	return append(args, "--all-namespaces")
+}
+
+func resolveK8sNamespace(req *plugin.ImportSuggestionsRequest) string {
+	// Priority: resource metadata > provider inputs > stack config > program config
+	if ns := extractK8sNamespace(req.Inputs["metadata"]); ns != "" {
+		return ns
+	}
+	if ns := req.ProviderInputs["namespace"]; ns != "" {
+		return ns
+	}
+	if ns := req.StackConfig["kubernetes:namespace"]; ns != "" {
+		return ns
+	}
+	return req.ProgramConfig["kubernetes:namespace"]
 }

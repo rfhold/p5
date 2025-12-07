@@ -77,7 +77,7 @@ func (m Model) handleStackSelected(msg stackSelectedMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleWorkspacesList handles the loaded list of workspaces
-func (m Model) handleWorkspacesList(msg workspacesListMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleWorkspacesList(msg workspacesListMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	items := ConvertWorkspacesToItems(msg, m.ctx.Cwd)
 	m.ui.WorkspaceSelector.SetWorkspaces(items)
 	return m, nil

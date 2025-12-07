@@ -215,7 +215,7 @@ func (p *AuthPluginGRPC) GRPCServer(broker *goplugin.GRPCBroker, s *grpc.Server)
 }
 
 // GRPCClient returns the gRPC client (host side)
-func (p *AuthPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *AuthPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return &GRPCClient{client: proto.NewAuthPluginClient(c)}, nil
 }
 
@@ -254,7 +254,7 @@ func (p *ImportHelperPluginGRPC) GRPCServer(broker *goplugin.GRPCBroker, s *grpc
 }
 
 // GRPCClient returns the gRPC client (host side)
-func (p *ImportHelperPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *ImportHelperPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return &ImportHelperGRPCClient{client: proto.NewImportHelperPluginClient(c)}, nil
 }
 
@@ -293,7 +293,7 @@ func (p *ResourceOpenerPluginGRPC) GRPCServer(broker *goplugin.GRPCBroker, s *gr
 }
 
 // GRPCClient returns the gRPC client (host side)
-func (p *ResourceOpenerPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *ResourceOpenerPluginGRPC) GRPCClient(ctx context.Context, broker *goplugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return &ResourceOpenerGRPCClient{client: proto.NewResourceOpenerPluginClient(c)}, nil
 }
 

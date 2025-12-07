@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,7 +121,7 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]an
 	data, err := os.ReadFile(stackConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil // No stack config is fine
+			return map[string]any{}, nil // No stack config is fine
 		}
 		return nil, fmt.Errorf("failed to read stack config: %w", err)
 	}
@@ -133,17 +134,17 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]an
 	// Look for config -> p5:plugins -> {pluginName}
 	configRaw, ok := raw["config"].(map[string]any)
 	if !ok {
-		return nil, nil
+		return map[string]any{}, nil
 	}
 
 	p5Plugins, ok := configRaw["p5:plugins"].(map[string]any)
 	if !ok {
-		return nil, nil
+		return map[string]any{}, nil
 	}
 
 	pluginConfig, ok := p5Plugins[pluginName].(map[string]any)
 	if !ok {
-		return nil, nil
+		return map[string]any{}, nil
 	}
 
 	// Look for .config nesting to match global and program config structure
@@ -228,58 +229,42 @@ func MergeConfigs(global *GlobalConfig, program *P5Config) *P5Config {
 	}
 
 	// Start with global config
-	for name, cfg := range global.Plugins {
-		merged.Plugins[name] = cfg
-	}
+	maps.Copy(merged.Plugins, global.Plugins)
 
 	// Override with program config
 	for name, cfg := range program.Plugins {
 		if existing, ok := merged.Plugins[name]; ok {
-			// Merge configs - program config takes precedence
-			mergedPlugin := existing
-
-			// Cmd from program overrides global
-			if cfg.Cmd != "" {
-				mergedPlugin.Cmd = cfg.Cmd
-			}
-
-			// Args from program overrides global
-			if len(cfg.Args) > 0 {
-				mergedPlugin.Args = cfg.Args
-			}
-
-			// Merge config maps (program values override global)
-			if mergedPlugin.Config == nil {
-				mergedPlugin.Config = make(map[string]any)
-			}
-			for k, v := range cfg.Config {
-				mergedPlugin.Config[k] = v
-			}
-
-			// Refresh settings from program override global
-			if cfg.Refresh != nil {
-				mergedPlugin.Refresh = cfg.Refresh
-			}
-
-			// Import helper settings from program override global
-			if cfg.ImportHelper {
-				mergedPlugin.ImportHelper = cfg.ImportHelper
-			}
-			if cfg.UseAuthEnv {
-				mergedPlugin.UseAuthEnv = cfg.UseAuthEnv
-			}
-
-			// Resource opener settings from program override global
-			if cfg.ResourceOpener {
-				mergedPlugin.ResourceOpener = cfg.ResourceOpener
-			}
-
-			merged.Plugins[name] = mergedPlugin
+			merged.Plugins[name] = mergePluginConfig(existing, cfg)
 		} else {
-			// New plugin from program config
 			merged.Plugins[name] = cfg
 		}
 	}
 
 	return merged
+}
+
+func mergePluginConfig(base, override PluginConfig) PluginConfig {
+	if override.Cmd != "" {
+		base.Cmd = override.Cmd
+	}
+	if len(override.Args) > 0 {
+		base.Args = override.Args
+	}
+	if base.Config == nil {
+		base.Config = make(map[string]any)
+	}
+	maps.Copy(base.Config, override.Config)
+	if override.Refresh != nil {
+		base.Refresh = override.Refresh
+	}
+	if override.ImportHelper {
+		base.ImportHelper = override.ImportHelper
+	}
+	if override.UseAuthEnv {
+		base.UseAuthEnv = override.UseAuthEnv
+	}
+	if override.ResourceOpener {
+		base.ResourceOpener = override.ResourceOpener
+	}
+	return base
 }

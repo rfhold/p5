@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -27,20 +28,20 @@ func isComputedPlaceholder(s string) bool {
 }
 
 // formatDiffValue formats a value for display in the diff view
-func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, indent int) string {
+func formatDiffValue(value any, style lipgloss.Style, maxWidth, indent int) string {
 	if value == nil {
 		return style.Render("null")
 	}
 
 	switch v := value.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if len(v) == 0 {
 			return style.Render("{}")
 		}
 		// For inline display, show abbreviated - expanded view handled separately
 		return style.Render(fmt.Sprintf("{...%d keys}", len(v)))
 
-	case []interface{}:
+	case []any:
 		if len(v) == 0 {
 			return style.Render("[]")
 		}
@@ -51,10 +52,7 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 		}
 		result := "[" + strings.Join(items, ", ") + "]"
 		// Truncate if too long
-		maxLen := maxWidth - (indent * 2)
-		if maxLen < DefaultMaxStringLength {
-			maxLen = DefaultMaxStringLength
-		}
+		maxLen := max(maxWidth-(indent*2), DefaultMaxStringLength)
 		if len(result) > maxLen {
 			return style.Render(result[:maxLen-3] + "...")
 		}
@@ -67,10 +65,7 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 			return OpUpdateStyle.Render("~[computed]")
 		}
 		// Truncate long strings
-		maxLen := maxWidth - (indent * 2) - MinFormattedStringLength
-		if maxLen < MinFormattedStringLength {
-			maxLen = MinFormattedStringLength
-		}
+		maxLen := max(maxWidth-(indent*2)-MinFormattedStringLength, MinFormattedStringLength)
 		if len(v) > maxLen {
 			return style.Render(fmt.Sprintf("%q...", v[:maxLen-3]))
 		}
@@ -85,7 +80,7 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 	case float64:
 		// Check if it's actually an integer
 		if v == float64(int64(v)) {
-			return style.Render(fmt.Sprintf("%d", int64(v)))
+			return style.Render(strconv.FormatInt(int64(v), 10))
 		}
 		return style.Render(fmt.Sprintf("%v", v))
 
@@ -95,14 +90,14 @@ func formatDiffValue(value interface{}, style lipgloss.Style, maxWidth int, inde
 }
 
 // formatArrayItem formats a single array item for inline display
-func formatArrayItem(item interface{}) string {
+func formatArrayItem(item any) string {
 	switch v := item.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if len(v) == 0 {
 			return "{}"
 		}
 		return fmt.Sprintf("{...%d keys}", len(v))
-	case []interface{}:
+	case []any:
 		if len(v) == 0 {
 			return "[]"
 		}
@@ -120,7 +115,7 @@ func formatArrayItem(item interface{}) string {
 		return "false"
 	case float64:
 		if v == float64(int64(v)) {
-			return fmt.Sprintf("%d", int64(v))
+			return strconv.FormatInt(int64(v), 10)
 		}
 		return fmt.Sprintf("%v", v)
 	case nil:
@@ -128,24 +123,4 @@ func formatArrayItem(item interface{}) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
-}
-
-// wrapText wraps text to fit within maxWidth
-func wrapText(text string, maxWidth int) string {
-	if maxWidth <= 0 {
-		maxWidth = 40
-	}
-	if len(text) <= maxWidth {
-		return text
-	}
-
-	var lines []string
-	for len(text) > maxWidth {
-		lines = append(lines, text[:maxWidth])
-		text = text[maxWidth:]
-	}
-	if len(text) > 0 {
-		lines = append(lines, text)
-	}
-	return strings.Join(lines, "\n")
 }

@@ -145,91 +145,90 @@ func (m *ImportModal) ensureSelectedVisible() {
 	}
 }
 
+func (m *ImportModal) handleEnterKey() (confirmed bool) {
+	if len(m.suggestions) > 0 && m.showSuggestions {
+		m.input.SetValue(m.suggestions[m.selectedIdx].ID)
+		m.showSuggestions = false
+		return false
+	}
+	if m.GetImportID() != "" {
+		m.ModalBase.Hide()
+		m.input.Blur()
+		return true
+	}
+	return false
+}
+
+func (m *ImportModal) handleNavigationKey(direction, pageSize int) {
+	if len(m.suggestions) == 0 || !m.showSuggestions {
+		return
+	}
+	m.selectedIdx += direction * pageSize
+	m.selectedIdx = m.clampSelectedIndex(pageSize)
+	m.ensureSelectedVisible()
+}
+
+func (m *ImportModal) clampSelectedIndex(pageSize int) int {
+	wrapAround := pageSize == 1
+	if m.selectedIdx < 0 {
+		if wrapAround {
+			return len(m.suggestions) - 1
+		}
+		return 0
+	}
+	if m.selectedIdx >= len(m.suggestions) {
+		if wrapAround {
+			return 0
+		}
+		return len(m.suggestions) - 1
+	}
+	return m.selectedIdx
+}
+
+func (m *ImportModal) handleEscapeKey() {
+	if m.showSuggestions {
+		m.showSuggestions = false
+		return
+	}
+	m.ModalBase.Hide()
+	m.input.Blur()
+}
+
 // Update handles key events and returns true if import was confirmed, false if cancelled
 func (m *ImportModal) Update(msg tea.KeyMsg) (confirmed bool, cmd tea.Cmd) {
 	if !m.Visible() {
 		return false, nil
 	}
 
-	switch {
-	case msg.String() == "enter":
-		// If we have suggestions and one is selected, use it
-		if len(m.suggestions) > 0 && m.showSuggestions {
-			m.input.SetValue(m.suggestions[m.selectedIdx].ID)
-			m.showSuggestions = false
-			return false, nil
-		}
-		// Otherwise confirm import if we have an ID
-		if m.GetImportID() != "" {
-			m.ModalBase.Hide()
-			m.input.Blur()
-			return true, nil
-		}
-	case msg.String() == "up":
-		// Navigate suggestions if they exist and are shown
-		if len(m.suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx--
-			if m.selectedIdx < 0 {
-				m.selectedIdx = len(m.suggestions) - 1
-			}
-			m.ensureSelectedVisible()
-			return false, nil
-		}
+	switch msg.String() {
+	case "enter":
+		return m.handleEnterKey(), nil
+	case "up":
+		m.handleNavigationKey(-1, 1)
 		return false, nil
-	case msg.String() == "down":
-		// Navigate suggestions if they exist and are shown
-		if len(m.suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx++
-			if m.selectedIdx >= len(m.suggestions) {
-				m.selectedIdx = 0
-			}
-			m.ensureSelectedVisible()
-			return false, nil
-		}
+	case "down":
+		m.handleNavigationKey(1, 1)
 		return false, nil
-	case msg.String() == "pgup":
-		// Scroll suggestions list up
-		if len(m.suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx -= 8
-			if m.selectedIdx < 0 {
-				m.selectedIdx = 0
-			}
-			m.ensureSelectedVisible()
-		}
+	case "pgup":
+		m.handleNavigationKey(-1, 8)
 		return false, nil
-	case msg.String() == "pgdown":
-		// Scroll suggestions list down
-		if len(m.suggestions) > 0 && m.showSuggestions {
-			m.selectedIdx += 8
-			if m.selectedIdx >= len(m.suggestions) {
-				m.selectedIdx = len(m.suggestions) - 1
-			}
-			m.ensureSelectedVisible()
-		}
+	case "pgdown":
+		m.handleNavigationKey(1, 8)
 		return false, nil
-	case msg.String() == "tab":
-		// Toggle suggestion selection mode
+	case "tab":
 		if len(m.suggestions) > 0 {
 			m.showSuggestions = !m.showSuggestions
 		}
 		return false, nil
-	case key.Matches(msg, Keys.Escape):
-		// If suggestions selection is active, deactivate it first
-		if m.showSuggestions {
-			m.showSuggestions = false
-			return false, nil
-		}
-		m.ModalBase.Hide()
-		m.input.Blur()
-		return false, nil
-	default:
-		// Forward to text input
-		var inputCmd tea.Cmd
-		m.input, inputCmd = m.input.Update(msg)
-		return false, inputCmd
 	}
 
-	return false, nil
+	if key.Matches(msg, Keys.Escape) {
+		m.handleEscapeKey()
+		return false, nil
+	}
+
+	m.input, cmd = m.input.Update(msg)
+	return false, cmd
 }
 
 // View renders the import modal
@@ -249,21 +248,19 @@ func (m *ImportModal) View() string {
 
 	// Suggestions section with scrolling
 	content.WriteString(LabelStyle.Render("Suggestions"))
-	if m.loadingSuggestions {
+	switch {
+	case m.loadingSuggestions:
 		content.WriteString("\n")
 		content.WriteString(DimStyle.Render("  Loading..."))
-	} else if len(m.suggestions) == 0 {
+	case len(m.suggestions) == 0:
 		content.WriteString("\n")
 		content.WriteString(DimStyle.Render("  No suggestions available"))
-	} else {
+	default:
 		// Calculate visible suggestions based on scroll
 		totalSuggestions := len(m.suggestions)
 
 		// Clamp scroll offset
-		maxOffset := totalSuggestions - maxVisibleSuggestions
-		if maxOffset < 0 {
-			maxOffset = 0
-		}
+		maxOffset := max(totalSuggestions-maxVisibleSuggestions, 0)
 		scrollOffset := m.ScrollOffset()
 		if scrollOffset > maxOffset {
 			scrollOffset = maxOffset
@@ -276,19 +273,13 @@ func (m *ImportModal) View() string {
 
 		// Add scroll indicator to header if needed
 		if totalSuggestions > maxVisibleSuggestions {
-			endIdx := scrollOffset + maxVisibleSuggestions
-			if endIdx > totalSuggestions {
-				endIdx = totalSuggestions
-			}
+			endIdx := min(scrollOffset+maxVisibleSuggestions, totalSuggestions)
 			content.WriteString(DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", scrollOffset+1, endIdx, totalSuggestions)))
 		}
 		content.WriteString("\n")
 
 		// Render visible suggestions
-		endIdx := scrollOffset + maxVisibleSuggestions
-		if endIdx > totalSuggestions {
-			endIdx = totalSuggestions
-		}
+		endIdx := min(scrollOffset+maxVisibleSuggestions, totalSuggestions)
 		for i := scrollOffset; i < endIdx; i++ {
 			s := m.suggestions[i]
 			if i == m.selectedIdx && m.showSuggestions {

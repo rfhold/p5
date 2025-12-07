@@ -11,7 +11,7 @@ type AuthContext struct {
 
 // ShouldRefreshCredentials determines if credentials should be refreshed for a plugin
 // based on context changes and refresh trigger settings
-func (m *Manager) ShouldRefreshCredentials(pluginName string, newWorkDir, newStackName, newProgramName string, newProgramConfig, newStackConfig map[string]any) bool {
+func (m *Manager) ShouldRefreshCredentials(pluginName, newWorkDir, newStackName, newProgramName string, newProgramConfig, newStackConfig map[string]any) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

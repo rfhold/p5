@@ -1,5 +1,7 @@
 package ui
 
+import "slices"
+
 // FocusLayer represents what component currently owns keyboard input
 type FocusLayer int
 
@@ -89,12 +91,7 @@ func (f *FocusStack) Clear() {
 
 // Has returns true if the given layer is anywhere in the stack
 func (f *FocusStack) Has(layer FocusLayer) bool {
-	for _, l := range f.stack {
-		if l == layer {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(f.stack, layer)
 }
 
 // Remove removes a specific layer from anywhere in the stack.

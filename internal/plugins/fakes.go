@@ -167,7 +167,7 @@ func (f *FakePluginProvider) HasImportHelpers() bool {
 
 // ResourceOpener interface implementation
 
-func (f *FakePluginProvider) OpenResource(ctx context.Context, req *OpenResourceRequest) (*OpenResourceResponse, string, error) {
+func (f *FakePluginProvider) OpenResource(ctx context.Context, req *OpenResourceRequest) (resp *OpenResourceResponse, pluginName string, err error) {
 	f.Calls.OpenResource = append(f.Calls.OpenResource, req)
 	if f.OpenResourceFunc != nil {
 		return f.OpenResourceFunc(ctx, req)
@@ -211,7 +211,7 @@ func (f *FakePluginProvider) GetMergedConfig() *P5Config {
 	return f.MergedConfig
 }
 
-func (f *FakePluginProvider) ShouldRefreshCredentials(pluginName string, newWorkDir, newStackName, newProgramName string, newProgramConfig, newStackConfig map[string]any) bool {
+func (f *FakePluginProvider) ShouldRefreshCredentials(pluginName, newWorkDir, newStackName, newProgramName string, newProgramConfig, newStackConfig map[string]any) bool {
 	f.Calls.ShouldRefreshCredentials = append(f.Calls.ShouldRefreshCredentials, ShouldRefreshCredentialsCall{
 		PluginName:       pluginName,
 		NewWorkDir:       newWorkDir,

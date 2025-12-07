@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -152,7 +153,8 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 
 	// Use injected StackOperator - it owns the channel and returns receive-only
 	// Create a child context for preview so it can be cancelled independently
-	previewCtx, _ := context.WithCancel(m.appCtx)
+	previewCtx, previewCancel := context.WithCancel(m.appCtx)
+	m.previewCancel = previewCancel
 	m.previewCh = m.deps.StackOperator.Preview(previewCtx, workDir, stackName, op, opts)
 
 	return waitForPreviewEvent(m.previewCh)
@@ -171,7 +173,7 @@ func (m *Model) maybeConfirmExecution(op pulumi.OperationType) tea.Cmd {
 	m.ui.ConfirmModal.SetLabels("Cancel", "Execute")
 	m.ui.ConfirmModal.SetKeys("n", "y")
 	m.ui.ConfirmModal.Show(
-		fmt.Sprintf("Execute %s", op.String()),
+		"Execute "+op.String(),
 		fmt.Sprintf("Run %s without previewing changes first?", op.String()),
 		"This will apply changes to your infrastructure.",
 	)
@@ -336,7 +338,7 @@ func (m *Model) fetchStackHistory() tea.Cmd {
 }
 
 // fetchImportSuggestions queries plugins for import suggestions
-func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, parentURN, providerURN string, inputs, providerInputs map[string]interface{}) tea.Cmd {
+func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, parentURN, providerURN string, inputs, providerInputs map[string]any) tea.Cmd {
 	if m.deps == nil || m.deps.PluginProvider == nil {
 		return func() tea.Msg {
 			return importSuggestionsMsg(nil)
@@ -571,7 +573,7 @@ func (m *Model) initStack(name, secretsProvider, passphrase string) tea.Cmd {
 }
 
 // fetchOpenResourceAction queries plugins for an action to open the resource
-func (m *Model) fetchOpenResourceAction(resourceType, resourceName, resourceURN, providerURN string, inputs, outputs, providerInputs map[string]interface{}) tea.Cmd {
+func (m *Model) fetchOpenResourceAction(resourceType, resourceName, resourceURN, providerURN string, inputs, outputs, providerInputs map[string]any) tea.Cmd {
 	if m.deps == nil || m.deps.PluginProvider == nil {
 		return func() tea.Msg {
 			return openResourceActionMsg{Response: nil, PluginName: ""}
@@ -672,12 +674,10 @@ func mapToEnvSlice(m map[string]string) []string {
 }
 
 // mergeEnvMaps merges multiple env maps, with later maps taking precedence
-func mergeEnvMaps(maps ...map[string]string) map[string]string {
+func mergeEnvMaps(envMaps ...map[string]string) map[string]string {
 	result := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			result[k] = v
-		}
+	for _, m := range envMaps {
+		maps.Copy(result, m)
 	}
 	return result
 }

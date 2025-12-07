@@ -35,12 +35,12 @@ func GetStackResources(ctx context.Context, workDir, stackName string, env map[s
 	// Parse the deployment to get resources with inputs and outputs
 	var deployment struct {
 		Resources []struct {
-			URN      string                 `json:"urn"`
-			Type     string                 `json:"type"`
-			Provider string                 `json:"provider"`
-			Parent   string                 `json:"parent"`
-			Inputs   map[string]interface{} `json:"inputs"`
-			Outputs  map[string]interface{} `json:"outputs"`
+			URN      string         `json:"urn"`
+			Type     string         `json:"type"`
+			Provider string         `json:"provider"`
+			Parent   string         `json:"parent"`
+			Inputs   map[string]any `json:"inputs"`
+			Outputs  map[string]any `json:"outputs"`
 		} `json:"resources"`
 	}
 
@@ -49,7 +49,7 @@ func GetStackResources(ctx context.Context, workDir, stackName string, env map[s
 	}
 
 	// First pass: build provider inputs map (provider URN -> inputs)
-	providerInputs := make(map[string]map[string]interface{})
+	providerInputs := make(map[string]map[string]any)
 	for _, r := range deployment.Resources {
 		// Provider resources have type like "pulumi:providers:kubernetes"
 		if strings.HasPrefix(r.Type, "pulumi:providers:") {
@@ -114,7 +114,7 @@ func looksLikeUUID(s string) bool {
 	}
 	if len(s) == 32 {
 		for _, c := range s {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
 				return false
 			}
 		}

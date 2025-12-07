@@ -147,10 +147,7 @@ func (m *ModalBase) RenderScrollableDialog(params ScrollableDialogContent) Scrol
 		}
 
 		// Get visible portion
-		endIdx := scrollOffset + maxHeight
-		if endIdx > totalLines {
-			endIdx = totalLines
-		}
+		endIdx := min(scrollOffset+maxHeight, totalLines)
 		visibleContent = strings.Join(contentLines[scrollOffset:endIdx], "\n")
 	} else {
 		scrollOffset = 0
@@ -161,7 +158,7 @@ func (m *ModalBase) RenderScrollableDialog(params ScrollableDialogContent) Scrol
 	title := params.Title
 	if canScroll {
 		scrollInfo := DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", scrollOffset+1, scrollOffset+visibleLines, totalLines))
-		title = title + scrollInfo
+		title += scrollInfo
 	}
 
 	// Build footer with scroll hints if needed using unified function

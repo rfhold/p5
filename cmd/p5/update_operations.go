@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"maps"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -51,7 +52,7 @@ func (m Model) handleInitPreview(msg initPreviewMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleStackResources handles loaded stack resources.
-func (m Model) handleStackResources(msg stackResourcesMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleStackResources(msg stackResourcesMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	items := ConvertResourcesToItems(msg)
 
 	m.ui.ResourceList.SetItems(items)
@@ -80,6 +81,7 @@ func (m Model) handlePreviewEvent(msg previewEventMsg) (tea.Model, tea.Cmd) {
 	if result.HasError {
 		m.ui.ResourceList.SetError(result.Error)
 		m.ui.Header.SetSummary(m.ui.ResourceList.Summary(), ui.HeaderError)
+		m.previewCancel = nil
 		if result.InitDone {
 			m.transitionTo(InitComplete)
 		}
@@ -89,6 +91,7 @@ func (m Model) handlePreviewEvent(msg previewEventMsg) (tea.Model, tea.Cmd) {
 	if event.Done {
 		m.ui.ResourceList.SetLoading(false, "")
 		m.ui.Header.SetSummary(m.ui.ResourceList.Summary(), ui.HeaderDone)
+		m.previewCancel = nil
 		if result.InitDone {
 			m.transitionTo(InitComplete)
 		}
@@ -191,7 +194,7 @@ func (m Model) handleStateDeleteResult(msg stateDeleteResultMsg) (tea.Model, tea
 }
 
 // handleStackHistory handles loaded stack history
-func (m Model) handleStackHistory(msg stackHistoryMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleStackHistory(msg stackHistoryMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	items := ConvertHistoryToItems(msg)
 
 	m.ui.HistoryList.SetItems(items)
@@ -200,14 +203,14 @@ func (m Model) handleStackHistory(msg stackHistoryMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleImportSuggestions handles import suggestions from plugins
-func (m Model) handleImportSuggestions(msg importSuggestionsMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleImportSuggestions(msg importSuggestionsMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	suggestions := ConvertImportSuggestions(msg)
 	m.ui.ImportModal.SetSuggestions(suggestions)
 	return m, nil
 }
 
 // handleImportSuggestionsError handles import suggestions error
-func (m Model) handleImportSuggestionsError(msg importSuggestionsErrMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleImportSuggestionsError(_ importSuggestionsErrMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	m.ui.ImportModal.SetSuggestions(nil)
 	return m, nil
 }
@@ -225,7 +228,7 @@ func (m Model) handleOpenResourceAction(msg openResourceActionMsg) (tea.Model, t
 	}
 
 	if resp.Error != "" {
-		return m, m.ui.Toast.Show(fmt.Sprintf("Open resource failed: %s", resp.Error))
+		return m, m.ui.Toast.Show("Open resource failed: " + resp.Error)
 	}
 
 	action := resp.Action
@@ -242,9 +245,7 @@ func (m Model) handleOpenResourceAction(msg openResourceActionMsg) (tea.Model, t
 	case proto.OpenActionType_OPEN_ACTION_TYPE_EXEC:
 		// Convert proto env map to Go map
 		env := make(map[string]string)
-		for k, v := range action.Env {
-			env[k] = v
-		}
+		maps.Copy(env, action.Env)
 		return m, openWithExec(action.Command, action.Args, env)
 	default:
 		return m, m.ui.Toast.Show("Unknown open action type")
@@ -253,13 +254,13 @@ func (m Model) handleOpenResourceAction(msg openResourceActionMsg) (tea.Model, t
 
 // handleOpenResourceError handles errors from plugin open resource query
 func (m Model) handleOpenResourceError(msg openResourceErrMsg) (tea.Model, tea.Cmd) {
-	return m, m.ui.Toast.Show(fmt.Sprintf("Open resource failed: %s", error(msg).Error()))
+	return m, m.ui.Toast.Show("Open resource failed: " + error(msg).Error())
 }
 
 // handleOpenResourceExecDone handles completion of an exec-based open action
 func (m Model) handleOpenResourceExecDone(msg openResourceExecDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.Error != nil {
-		return m, m.ui.Toast.Show(fmt.Sprintf("Program exited with error: %s", msg.Error.Error()))
+		return m, m.ui.Toast.Show("Program exited with error: " + msg.Error.Error())
 	}
 	return m, nil
 }

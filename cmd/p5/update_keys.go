@@ -214,58 +214,71 @@ func (m Model) updateDetailsPanel(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // updateMain handles keys when no modal is active
 func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Help toggle
-	if key.Matches(msg, ui.Keys.Help) {
+	// Global keys: help, escape, quit
+	if model, cmd, handled := m.handleGlobalKeys(msg); handled {
+		return model, cmd
+	}
+
+	// View toggles: details, stack selector, workspace selector, history
+	if model, cmd, handled := m.handleViewToggles(msg); handled {
+		return model, cmd
+	}
+
+	// Resource actions: import, delete from state, open
+	if model, cmd, handled := m.handleResourceActions(msg); handled {
+		return model, cmd
+	}
+
+	// Operation keys: preview and execute
+	if model, cmd, handled := m.handleOperationKeys(msg); handled {
+		return model, cmd
+	}
+
+	// Forward keys to appropriate list for cursor/selection handling
+	return m.handleListNavigation(msg)
+}
+
+func (m Model) handleGlobalKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, ui.Keys.Help):
 		m.showHelp()
-		return m, nil
-	}
-
-	// Escape handling
-	if key.Matches(msg, ui.Keys.Escape) {
-		return m.handleEscape()
-	}
-
-	// Quit
-	if key.Matches(msg, ui.Keys.Quit) {
+		return m, nil, true
+	case key.Matches(msg, ui.Keys.Escape):
+		model, cmd := m.handleEscape()
+		return model, cmd, true
+	case key.Matches(msg, ui.Keys.Quit):
 		m.quitting = true
-		return m, tea.Quit
+		return m, tea.Quit, true
 	}
+	return m, nil, false
+}
 
-	// Details panel toggle
-	if key.Matches(msg, ui.Keys.ToggleDetails) {
+func (m Model) handleViewToggles(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, ui.Keys.ToggleDetails):
 		m.toggleDetailsPanel()
-		return m, nil
-	}
-
-	// Stack selector toggle
-	if key.Matches(msg, ui.Keys.SelectStack) {
+		return m, nil, true
+	case key.Matches(msg, ui.Keys.SelectStack):
 		m.showStackSelector()
-		return m, m.fetchStacksList()
-	}
-
-	// Workspace selector toggle
-	if key.Matches(msg, ui.Keys.SelectWorkspace) {
+		return m, m.fetchStacksList(), true
+	case key.Matches(msg, ui.Keys.SelectWorkspace):
 		m.showWorkspaceSelector()
-		return m, m.fetchWorkspacesList()
+		return m, m.fetchWorkspacesList(), true
+	case key.Matches(msg, ui.Keys.ViewHistory):
+		return m, m.switchToHistoryView(), true
 	}
+	return m, nil, false
+}
 
-	// History view toggle
-	if key.Matches(msg, ui.Keys.ViewHistory) {
-		return m, m.switchToHistoryView()
-	}
-
-	// Import resource (only in preview view for create operations)
-	if key.Matches(msg, ui.Keys.Import) {
+func (m Model) handleResourceActions(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, ui.Keys.Import):
 		item := m.ui.ResourceList.SelectedItem()
 		if CanImportResource(m.ui.ViewMode, item) {
 			m.showImportModal(item.Type, item.Name, item.URN, item.Parent)
-			// Fetch import suggestions from plugins
-			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Provider, item.Inputs, item.ProviderInputs)
+			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Provider, item.Inputs, item.ProviderInputs), true
 		}
-	}
-
-	// Delete from state (only in stack view, not for pulumi:pulumi:Stack)
-	if key.Matches(msg, ui.Keys.DeleteFromState) {
+	case key.Matches(msg, ui.Keys.DeleteFromState):
 		item := m.ui.ResourceList.SelectedItem()
 		if CanDeleteFromState(m.ui.ViewMode, item) {
 			m.ui.ConfirmModal.SetLabels("Cancel", "Delete")
@@ -278,43 +291,34 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				item.Type,
 			)
 			m.showConfirmModal()
-			return m, nil
+			return m, nil, true
 		}
-	}
-
-	// Open resource (requires resource opener plugins)
-	if key.Matches(msg, ui.Keys.OpenResource) {
+	case key.Matches(msg, ui.Keys.OpenResource):
 		item := m.ui.ResourceList.SelectedItem()
 		hasOpeners := m.deps != nil && m.deps.PluginProvider != nil && m.deps.PluginProvider.HasResourceOpeners()
 		if CanOpenResource(m.ui.ViewMode, item, hasOpeners) {
-			return m, m.fetchOpenResourceAction(item.Type, item.Name, item.URN, item.Provider, item.Inputs, item.Outputs, item.ProviderInputs)
+			return m, m.fetchOpenResourceAction(item.Type, item.Name, item.URN, item.Provider, item.Inputs, item.Outputs, item.ProviderInputs), true
 		}
 	}
+	return m, nil, false
+}
 
-	// Preview operations (lowercase u/r/d)
-	if key.Matches(msg, ui.Keys.PreviewUp) {
-		return m, m.startPreview(pulumi.OperationUp)
+func (m Model) handleOperationKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, ui.Keys.PreviewUp):
+		return m, m.startPreview(pulumi.OperationUp), true
+	case key.Matches(msg, ui.Keys.PreviewRefresh):
+		return m, m.startPreview(pulumi.OperationRefresh), true
+	case key.Matches(msg, ui.Keys.PreviewDestroy):
+		return m, m.startPreview(pulumi.OperationDestroy), true
+	case key.Matches(msg, ui.Keys.ExecuteUp):
+		return m, m.maybeConfirmExecution(pulumi.OperationUp), true
+	case key.Matches(msg, ui.Keys.ExecuteRefresh):
+		return m, m.maybeConfirmExecution(pulumi.OperationRefresh), true
+	case key.Matches(msg, ui.Keys.ExecuteDestroy):
+		return m, m.maybeConfirmExecution(pulumi.OperationDestroy), true
 	}
-	if key.Matches(msg, ui.Keys.PreviewRefresh) {
-		return m, m.startPreview(pulumi.OperationRefresh)
-	}
-	if key.Matches(msg, ui.Keys.PreviewDestroy) {
-		return m, m.startPreview(pulumi.OperationDestroy)
-	}
-
-	// Execute operations (ctrl+u/r/d)
-	if key.Matches(msg, ui.Keys.ExecuteUp) {
-		return m, m.maybeConfirmExecution(pulumi.OperationUp)
-	}
-	if key.Matches(msg, ui.Keys.ExecuteRefresh) {
-		return m, m.maybeConfirmExecution(pulumi.OperationRefresh)
-	}
-	if key.Matches(msg, ui.Keys.ExecuteDestroy) {
-		return m, m.maybeConfirmExecution(pulumi.OperationDestroy)
-	}
-
-	// Forward keys to appropriate list for cursor/selection handling
-	return m.handleListNavigation(msg)
+	return m, nil, false
 }
 
 // handleEscape handles escape key presses based on current state

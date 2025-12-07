@@ -27,127 +27,91 @@ func NewDiffRenderer(maxWidth int) *DiffRenderer {
 	return &DiffRenderer{maxWidth: maxWidth}
 }
 
+type diffState struct {
+	oldInputs, newInputs   map[string]any
+	oldOutputs, newOutputs map[string]any
+}
+
+func getDiffStateForOperation(resource *ResourceItem) diffState {
+	switch resource.Op {
+	case OpCreate:
+		return diffState{
+			oldInputs: nil, newInputs: resource.Inputs,
+			oldOutputs: nil, newOutputs: resource.Outputs,
+		}
+	case OpDelete:
+		return getDiffStateForDelete(resource)
+	case OpUpdate, OpReplace, OpCreateReplace, OpDeleteReplace:
+		return diffState{
+			oldInputs: resource.OldInputs, newInputs: resource.Inputs,
+			oldOutputs: resource.OldOutputs, newOutputs: resource.Outputs,
+		}
+	case OpSame, OpRefresh:
+		return getDiffStateForSameRefresh(resource)
+	default:
+		return diffState{
+			oldInputs: resource.Inputs, newInputs: resource.Inputs,
+			oldOutputs: resource.Outputs, newOutputs: resource.Outputs,
+		}
+	}
+}
+
+func getDiffStateForDelete(resource *ResourceItem) diffState {
+	oldInputs := resource.OldInputs
+	if oldInputs == nil {
+		oldInputs = resource.Inputs
+	}
+	oldOutputs := resource.OldOutputs
+	if oldOutputs == nil {
+		oldOutputs = resource.Outputs
+	}
+	return diffState{oldInputs: oldInputs, newInputs: nil, oldOutputs: oldOutputs, newOutputs: nil}
+}
+
+func getDiffStateForSameRefresh(resource *ResourceItem) diffState {
+	inputs := resource.Inputs
+	if inputs == nil {
+		inputs = resource.OldInputs
+	}
+	oldOutputs := resource.OldOutputs
+	newOutputs := resource.Outputs
+	if oldOutputs == nil && newOutputs == nil {
+		oldOutputs = resource.Outputs
+		newOutputs = resource.Outputs
+	}
+	return diffState{oldInputs: inputs, newInputs: inputs, oldOutputs: oldOutputs, newOutputs: newOutputs}
+}
+
+func collectKeys(maps ...map[string]any) map[string]bool {
+	keys := make(map[string]bool)
+	for _, m := range maps {
+		for k := range m {
+			keys[k] = true
+		}
+	}
+	return keys
+}
+
 // RenderCombinedProperties renders inputs and outputs in a single unified diff view
 // Properties that exist in both inputs and outputs are shown once (from inputs for diff)
 // Output-only properties (computed values like id, arn) are shown separately at the end
 func (r *DiffRenderer) RenderCombinedProperties(resource *ResourceItem) string {
-	var b strings.Builder
+	state := getDiffStateForOperation(resource)
 
-	// Determine old and new states based on operation
-	var oldInputs, newInputs, oldOutputs, newOutputs map[string]interface{}
-
-	switch resource.Op {
-	case OpCreate:
-		// Create: no old state, new inputs and outputs
-		oldInputs = nil
-		newInputs = resource.Inputs
-		oldOutputs = nil
-		newOutputs = resource.Outputs
-
-	case OpDelete:
-		// Delete: old state being removed
-		oldInputs = resource.OldInputs
-		if oldInputs == nil {
-			oldInputs = resource.Inputs
-		}
-		newInputs = nil
-		oldOutputs = resource.OldOutputs
-		if oldOutputs == nil {
-			oldOutputs = resource.Outputs
-		}
-		newOutputs = nil
-
-	case OpUpdate, OpReplace, OpCreateReplace, OpDeleteReplace:
-		// Update/Replace: diff between old and new
-		oldInputs = resource.OldInputs
-		newInputs = resource.Inputs
-		oldOutputs = resource.OldOutputs
-		newOutputs = resource.Outputs
-
-	case OpSame, OpRefresh:
-		// Same/Refresh: inputs don't change, but outputs might (e.g., stack outputs)
-		// We diff OldOutputs vs Outputs to show any changes in computed values
-		inputs := resource.Inputs
-		if inputs == nil {
-			inputs = resource.OldInputs
-		}
-		oldInputs = inputs
-		newInputs = inputs
-		// For outputs, use old vs new to detect changes (e.g., timestamps in stack outputs)
-		oldOutputs = resource.OldOutputs
-		newOutputs = resource.Outputs
-		// Fallback if both are nil
-		if oldOutputs == nil && newOutputs == nil {
-			oldOutputs = resource.Outputs
-			newOutputs = resource.Outputs
-		}
-
-	default:
-		// Unknown: show current state
-		oldInputs = resource.Inputs
-		newInputs = resource.Inputs
-		oldOutputs = resource.Outputs
-		newOutputs = resource.Outputs
-	}
-
-	// If no data at all
-	if oldInputs == nil && newInputs == nil && oldOutputs == nil && newOutputs == nil {
+	if state.oldInputs == nil && state.newInputs == nil && state.oldOutputs == nil && state.newOutputs == nil {
 		return DimStyle.Render("No properties available")
 	}
 
-	// Find which keys are input-only, output-only, or both
-	inputKeys := make(map[string]bool)
-	outputKeys := make(map[string]bool)
+	inputKeys := collectKeys(state.oldInputs, state.newInputs)
+	outputKeys := collectKeys(state.oldOutputs, state.newOutputs)
 
-	for k := range oldInputs {
-		inputKeys[k] = true
-	}
-	for k := range newInputs {
-		inputKeys[k] = true
-	}
-	for k := range oldOutputs {
-		outputKeys[k] = true
-	}
-	for k := range newOutputs {
-		outputKeys[k] = true
-	}
+	var b strings.Builder
 
-	// Render inputs (these are the user-specified values)
 	if len(inputKeys) > 0 {
-		b.WriteString(r.renderDiffMap(oldInputs, newInputs, 0))
+		b.WriteString(r.renderDiffMap(state.oldInputs, state.newInputs, 0))
 	}
 
-	// Find output-only keys (computed values not in inputs)
-	var outputOnlyKeys []string
-	for k := range outputKeys {
-		if !inputKeys[k] {
-			outputOnlyKeys = append(outputOnlyKeys, k)
-		}
-	}
-	sortStrings(outputOnlyKeys)
-
-	// Render output-only properties with a label
-	if len(outputOnlyKeys) > 0 {
-		if len(inputKeys) > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(DimStyle.Render("── Computed ──"))
-		b.WriteString("\n")
-
-		// Build maps with only output-only keys
-		oldOutputOnly := make(map[string]interface{})
-		newOutputOnly := make(map[string]interface{})
-		for _, k := range outputOnlyKeys {
-			if v, ok := oldOutputs[k]; ok {
-				oldOutputOnly[k] = v
-			}
-			if v, ok := newOutputs[k]; ok {
-				newOutputOnly[k] = v
-			}
-		}
-
-		b.WriteString(r.renderDiffMap(oldOutputOnly, newOutputOnly, 0))
-	}
+	b.WriteString(r.renderOutputOnlyProperties(state, inputKeys, outputKeys))
 
 	result := b.String()
 	if result == "" {
@@ -156,22 +120,53 @@ func (r *DiffRenderer) RenderCombinedProperties(resource *ResourceItem) string {
 	return result
 }
 
+func (r *DiffRenderer) renderOutputOnlyProperties(state diffState, inputKeys, outputKeys map[string]bool) string {
+	var outputOnlyKeys []string
+	for k := range outputKeys {
+		if !inputKeys[k] {
+			outputOnlyKeys = append(outputOnlyKeys, k)
+		}
+	}
+	sortStrings(outputOnlyKeys)
+
+	if len(outputOnlyKeys) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	if len(inputKeys) > 0 {
+		b.WriteString("\n")
+	}
+	b.WriteString(DimStyle.Render("── Computed ──"))
+	b.WriteString("\n")
+
+	oldOutputOnly := make(map[string]any)
+	newOutputOnly := make(map[string]any)
+	for _, k := range outputOnlyKeys {
+		if v, ok := state.oldOutputs[k]; ok {
+			oldOutputOnly[k] = v
+		}
+		if v, ok := state.newOutputs[k]; ok {
+			newOutputOnly[k] = v
+		}
+	}
+
+	b.WriteString(r.renderDiffMap(oldOutputOnly, newOutputOnly, 0))
+	return b.String()
+}
+
 // renderDiffMap renders a diff between two maps, showing added/removed/changed values
-func (r *DiffRenderer) renderDiffMap(oldMap, newMap map[string]interface{}, indent int) string {
+func (r *DiffRenderer) renderDiffMap(oldMap, newMap map[string]any, indent int) string {
 	var b strings.Builder
 	indentStr := strings.Repeat("  ", indent)
 
 	// Collect all keys from both maps
 	allKeys := make(map[string]bool)
-	if oldMap != nil {
-		for k := range oldMap {
-			allKeys[k] = true
-		}
+	for k := range oldMap {
+		allKeys[k] = true
 	}
-	if newMap != nil {
-		for k := range newMap {
-			allKeys[k] = true
-		}
+	for k := range newMap {
+		allKeys[k] = true
 	}
 
 	// Sort keys for consistent output, excluding internal __ prefixed keys
@@ -187,13 +182,14 @@ func (r *DiffRenderer) renderDiffMap(oldMap, newMap map[string]interface{}, inde
 		oldVal, hasOld := getMapValue(oldMap, key)
 		newVal, hasNew := getMapValue(newMap, key)
 
-		if !hasOld && hasNew {
+		switch {
+		case !hasOld && hasNew:
 			// Added
 			b.WriteString(r.renderDiffValue(key, nil, newVal, DiffAdded, indentStr, indent))
-		} else if hasOld && !hasNew {
+		case hasOld && !hasNew:
 			// Removed
 			b.WriteString(r.renderDiffValue(key, oldVal, nil, DiffRemoved, indentStr, indent))
-		} else if hasOld && hasNew {
+		case hasOld && hasNew:
 			// Both exist - check if changed
 			if valuesEqual(oldVal, newVal) {
 				// Unchanged - show dimmed
@@ -208,57 +204,41 @@ func (r *DiffRenderer) renderDiffMap(oldMap, newMap map[string]interface{}, inde
 	return b.String()
 }
 
+// renderStyledValue renders a value with consistent styling for add/remove/unchanged operations
+func (r *DiffRenderer) renderStyledValue(b *strings.Builder, key string, val any, style lipgloss.Style, prefix, indentStr string, indent int) {
+	if valMap, isMap := val.(map[string]any); isMap && len(valMap) > 0 {
+		b.WriteString(style.Render(indentStr + prefix + " "))
+		b.WriteString(style.Render(key + ":"))
+		b.WriteString("\n")
+		b.WriteString(r.renderObjectExpanded(valMap, style, prefix, indent+1))
+	} else if valArr, isArr := val.([]any); isArr && len(valArr) > 0 {
+		b.WriteString(style.Render(indentStr + prefix + " "))
+		b.WriteString(style.Render(key + ":"))
+		b.WriteString("\n")
+		b.WriteString(r.renderArrayExpanded(valArr, style, prefix, indent+1))
+	} else {
+		b.WriteString(style.Render(indentStr + prefix + " "))
+		b.WriteString(style.Render(key + ": "))
+		b.WriteString(formatDiffValue(val, style, r.maxWidth, indent))
+		b.WriteString("\n")
+	}
+}
+
 // renderDiffValue renders a single key-value pair with appropriate diff styling
-func (r *DiffRenderer) renderDiffValue(key string, oldVal, newVal interface{}, diffType DiffType, indentStr string, indent int) string {
+func (r *DiffRenderer) renderDiffValue(key string, oldVal, newVal any, diffType DiffType, indentStr string, indent int) string {
 	var b strings.Builder
 
 	switch diffType {
 	case DiffAdded:
-		// Check if it's a map - expand it
-		if newMap, isMap := newVal.(map[string]interface{}); isMap && len(newMap) > 0 {
-			b.WriteString(OpCreateStyle.Render(indentStr + "+ "))
-			b.WriteString(OpCreateStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderObjectExpanded(newMap, OpCreateStyle, "+", indent+1))
-		} else if newArr, isArr := newVal.([]interface{}); isArr && len(newArr) > 0 {
-			// Expand arrays too
-			b.WriteString(OpCreateStyle.Render(indentStr + "+ "))
-			b.WriteString(OpCreateStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderArrayExpanded(newArr, OpCreateStyle, "+", indent+1))
-		} else {
-			// Green + for added
-			b.WriteString(OpCreateStyle.Render(indentStr + "+ "))
-			b.WriteString(OpCreateStyle.Render(key + ": "))
-			b.WriteString(formatDiffValue(newVal, OpCreateStyle, r.maxWidth, indent))
-			b.WriteString("\n")
-		}
+		r.renderStyledValue(&b, key, newVal, OpCreateStyle, "+", indentStr, indent)
 
 	case DiffRemoved:
-		// Check if it's a map - expand it
-		if oldMap, isMap := oldVal.(map[string]interface{}); isMap && len(oldMap) > 0 {
-			b.WriteString(OpDeleteStyle.Render(indentStr + "- "))
-			b.WriteString(OpDeleteStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderObjectExpanded(oldMap, OpDeleteStyle, "-", indent+1))
-		} else if oldArr, isArr := oldVal.([]interface{}); isArr && len(oldArr) > 0 {
-			// Expand arrays too
-			b.WriteString(OpDeleteStyle.Render(indentStr + "- "))
-			b.WriteString(OpDeleteStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderArrayExpanded(oldArr, OpDeleteStyle, "-", indent+1))
-		} else {
-			// Red - for removed
-			b.WriteString(OpDeleteStyle.Render(indentStr + "- "))
-			b.WriteString(OpDeleteStyle.Render(key + ": "))
-			b.WriteString(formatDiffValue(oldVal, OpDeleteStyle, r.maxWidth, indent))
-			b.WriteString("\n")
-		}
+		r.renderStyledValue(&b, key, oldVal, OpDeleteStyle, "-", indentStr, indent)
 
 	case DiffModified:
 		// Check if both are maps - if so, recurse
-		oldMap, oldIsMap := oldVal.(map[string]interface{})
-		newMap, newIsMap := newVal.(map[string]interface{})
+		oldMap, oldIsMap := oldVal.(map[string]any)
+		newMap, newIsMap := newVal.(map[string]any)
 
 		if oldIsMap && newIsMap {
 			// Recurse into nested maps
@@ -268,8 +248,8 @@ func (r *DiffRenderer) renderDiffValue(key string, oldVal, newVal interface{}, d
 			b.WriteString(r.renderDiffMap(oldMap, newMap, indent+1))
 		} else {
 			// Check if both are arrays - if so, show element-level diff
-			oldArr, oldIsArr := oldVal.([]interface{})
-			newArr, newIsArr := newVal.([]interface{})
+			oldArr, oldIsArr := oldVal.([]any)
+			newArr, newIsArr := newVal.([]any)
 
 			if oldIsArr && newIsArr {
 				// Show array diff with element-level changes
@@ -289,45 +269,25 @@ func (r *DiffRenderer) renderDiffValue(key string, oldVal, newVal interface{}, d
 		}
 
 	case DiffUnchanged:
-		// Check if it's a map - expand it
-		if newMap, isMap := newVal.(map[string]interface{}); isMap && len(newMap) > 0 {
-			b.WriteString(DimStyle.Render(indentStr + "  "))
-			b.WriteString(DimStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderObjectExpanded(newMap, DimStyle, " ", indent+1))
-		} else if newArr, isArr := newVal.([]interface{}); isArr && len(newArr) > 0 {
-			// Expand arrays too for unchanged
-			b.WriteString(DimStyle.Render(indentStr + "  "))
-			b.WriteString(DimStyle.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderArrayExpanded(newArr, DimStyle, " ", indent+1))
-		} else {
-			// Dimmed for unchanged
-			b.WriteString(DimStyle.Render(indentStr + "  "))
-			b.WriteString(DimStyle.Render(key + ": "))
-			b.WriteString(formatDiffValue(newVal, DimStyle, r.maxWidth, indent))
-			b.WriteString("\n")
-		}
+		r.renderStyledValue(&b, key, newVal, DimStyle, " ", indentStr, indent)
 	}
 
 	return b.String()
 }
 
 // renderArrayDiff renders a diff between two arrays showing element-level changes
-func (r *DiffRenderer) renderArrayDiff(oldArr, newArr []interface{}, indent int) string {
+func (r *DiffRenderer) renderArrayDiff(oldArr, newArr []any, indent int) string {
 	var b strings.Builder
 	indentStr := strings.Repeat("  ", indent)
 
-	maxLen := len(oldArr)
-	if len(newArr) > maxLen {
-		maxLen = len(newArr)
-	}
+	maxLen := max(len(newArr), len(oldArr))
 
-	for i := 0; i < maxLen; i++ {
+	for i := range maxLen {
 		hasOld := i < len(oldArr)
 		hasNew := i < len(newArr)
 
-		if hasOld && hasNew {
+		switch {
+		case hasOld && hasNew:
 			oldVal := oldArr[i]
 			newVal := newArr[i]
 
@@ -338,8 +298,8 @@ func (r *DiffRenderer) renderArrayDiff(oldArr, newArr []interface{}, indent int)
 				b.WriteString("\n")
 			} else {
 				// Check if both are maps - recurse
-				oldMap, oldIsMap := oldVal.(map[string]interface{})
-				newMap, newIsMap := newVal.(map[string]interface{})
+				oldMap, oldIsMap := oldVal.(map[string]any)
+				newMap, newIsMap := newVal.(map[string]any)
 
 				if oldIsMap && newIsMap {
 					b.WriteString(OpUpdateStyle.Render(fmt.Sprintf("%s~ [%d]:", indentStr, i)))
@@ -354,12 +314,12 @@ func (r *DiffRenderer) renderArrayDiff(oldArr, newArr []interface{}, indent int)
 					b.WriteString("\n")
 				}
 			}
-		} else if hasOld {
+		case hasOld:
 			// Removed element (old array was longer)
 			b.WriteString(OpDeleteStyle.Render(fmt.Sprintf("%s- [%d]: ", indentStr, i)))
 			b.WriteString(formatDiffValue(oldArr[i], OpDeleteStyle, r.maxWidth, indent+1))
 			b.WriteString("\n")
-		} else if hasNew {
+		case hasNew:
 			// Added element (new array is longer)
 			b.WriteString(OpCreateStyle.Render(fmt.Sprintf("%s+ [%d]: ", indentStr, i)))
 			b.WriteString(formatDiffValue(newArr[i], OpCreateStyle, r.maxWidth, indent+1))
@@ -371,7 +331,7 @@ func (r *DiffRenderer) renderArrayDiff(oldArr, newArr []interface{}, indent int)
 }
 
 // renderObjectExpanded renders all keys of an object with consistent styling
-func (r *DiffRenderer) renderObjectExpanded(obj map[string]interface{}, style lipgloss.Style, prefix string, indent int) string {
+func (r *DiffRenderer) renderObjectExpanded(obj map[string]any, style lipgloss.Style, prefix string, indent int) string {
 	var b strings.Builder
 	indentStr := strings.Repeat("  ", indent)
 
@@ -385,42 +345,24 @@ func (r *DiffRenderer) renderObjectExpanded(obj map[string]interface{}, style li
 	sortStrings(keys)
 
 	for _, key := range keys {
-		val := obj[key]
-
-		// Check if value is a nested map
-		if nestedMap, isMap := val.(map[string]interface{}); isMap && len(nestedMap) > 0 {
-			b.WriteString(style.Render(indentStr + prefix + " "))
-			b.WriteString(style.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderObjectExpanded(nestedMap, style, prefix, indent+1))
-		} else if nestedArr, isArr := val.([]interface{}); isArr && len(nestedArr) > 0 {
-			b.WriteString(style.Render(indentStr + prefix + " "))
-			b.WriteString(style.Render(key + ":"))
-			b.WriteString("\n")
-			b.WriteString(r.renderArrayExpanded(nestedArr, style, prefix, indent+1))
-		} else {
-			b.WriteString(style.Render(indentStr + prefix + " "))
-			b.WriteString(style.Render(key + ": "))
-			b.WriteString(formatDiffValue(val, style, r.maxWidth, indent))
-			b.WriteString("\n")
-		}
+		r.renderStyledValue(&b, key, obj[key], style, prefix, indentStr, indent)
 	}
 
 	return b.String()
 }
 
 // renderArrayExpanded renders all elements of an array with consistent styling
-func (r *DiffRenderer) renderArrayExpanded(arr []interface{}, style lipgloss.Style, prefix string, indent int) string {
+func (r *DiffRenderer) renderArrayExpanded(arr []any, style lipgloss.Style, prefix string, indent int) string {
 	var b strings.Builder
 	indentStr := strings.Repeat("  ", indent)
 
 	for i, val := range arr {
 		// Check if value is a nested map
-		if nestedMap, isMap := val.(map[string]interface{}); isMap && len(nestedMap) > 0 {
+		if nestedMap, isMap := val.(map[string]any); isMap && len(nestedMap) > 0 {
 			b.WriteString(style.Render(fmt.Sprintf("%s%s [%d]:", indentStr, prefix, i)))
 			b.WriteString("\n")
 			b.WriteString(r.renderObjectExpanded(nestedMap, style, prefix, indent+1))
-		} else if nestedArr, isArr := val.([]interface{}); isArr && len(nestedArr) > 0 {
+		} else if nestedArr, isArr := val.([]any); isArr && len(nestedArr) > 0 {
 			b.WriteString(style.Render(fmt.Sprintf("%s%s [%d]:", indentStr, prefix, i)))
 			b.WriteString("\n")
 			b.WriteString(r.renderArrayExpanded(nestedArr, style, prefix, indent+1))

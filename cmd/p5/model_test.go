@@ -238,7 +238,6 @@ func TestOperationStateString(t *testing.T) {
 	}
 }
 
-
 // TestTransitionTo verifies the transitionTo method correctly updates InitState.
 func TestTransitionTo(t *testing.T) {
 	deps := newTestDependencies()
@@ -281,7 +280,10 @@ func TestHandleWorkspaceCheckValid(t *testing.T) {
 
 	// Simulate receiving a valid workspace check message
 	result, _ := m.handleWorkspaceCheck(workspaceCheckMsg(true))
-	resultModel := result.(Model)
+	resultModel, ok := result.(Model)
+	if !ok {
+		t.Fatal("expected result to be Model type")
+	}
 
 	if resultModel.state.InitState != InitLoadingPlugins {
 		t.Errorf("expected state %v after valid workspace check, got %v",
@@ -300,7 +302,10 @@ func TestHandleWorkspaceCheckInvalid(t *testing.T) {
 
 	// Simulate receiving an invalid workspace check message
 	result, _ := m.handleWorkspaceCheck(workspaceCheckMsg(false))
-	resultModel := result.(Model)
+	resultModel, ok := result.(Model)
+	if !ok {
+		t.Fatal("expected result to be Model type")
+	}
 
 	// Should still be in CheckingWorkspace (waiting for workspace selection)
 	if resultModel.state.InitState != InitCheckingWorkspace {
@@ -327,9 +332,12 @@ func TestHandleError(t *testing.T) {
 	m.transitionTo(InitLoadingPlugins)
 
 	// Simulate receiving an error
-	testErr := errMsg(errorString("test error"))
+	testErr := errMsg(testError("test error"))
 	result, _ := m.handleError(testErr)
-	resultModel := result.(Model)
+	resultModel, ok := result.(Model)
+	if !ok {
+		t.Fatal("expected result to be Model type")
+	}
 
 	// Should transition to InitComplete to allow user interaction
 	if resultModel.state.InitState != InitComplete {
@@ -356,7 +364,10 @@ func TestHandlePluginInitDoneWithStackName(t *testing.T) {
 
 	// Simulate plugin init done
 	result, _ := m.handlePluginInitDone(pluginInitDoneMsg{results: nil, err: nil})
-	resultModel := result.(Model)
+	resultModel, ok := result.(Model)
+	if !ok {
+		t.Fatal("expected result to be Model")
+	}
 
 	if resultModel.state.InitState != InitLoadingResources {
 		t.Errorf("expected state %v when stack specified, got %v",
@@ -378,7 +389,10 @@ func TestHandlePluginInitDoneWithoutStackName(t *testing.T) {
 
 	// Simulate plugin init done
 	result, _ := m.handlePluginInitDone(pluginInitDoneMsg{results: nil, err: nil})
-	resultModel := result.(Model)
+	resultModel, ok := result.(Model)
+	if !ok {
+		t.Fatal("expected result to be Model")
+	}
 
 	if resultModel.state.InitState != InitLoadingStacks {
 		t.Errorf("expected state %v when no stack specified, got %v",
@@ -386,11 +400,10 @@ func TestHandlePluginInitDoneWithoutStackName(t *testing.T) {
 	}
 }
 
-// errorString is a simple error type for testing.
-type errorString string
+// testError is a simple error type for testing.
+type testError string
 
-func (e errorString) Error() string { return string(e) }
-
+func (e testError) Error() string { return string(e) }
 
 // TestProcessPreviewEvent_AddsStep verifies step events produce ResourceItems.
 func TestProcessPreviewEvent_AddsStep(t *testing.T) {
@@ -401,7 +414,7 @@ func TestProcessPreviewEvent_AddsStep(t *testing.T) {
 			Name:   "mybucket",
 			Op:     pulumi.OpCreate,
 			Parent: "",
-			Inputs: map[string]interface{}{"bucket": "my-bucket"},
+			Inputs: map[string]any{"bucket": "my-bucket"},
 		},
 	}
 
@@ -426,7 +439,7 @@ func TestProcessPreviewEvent_AddsStep(t *testing.T) {
 
 // TestProcessPreviewEvent_HandlesError verifies error events set error state.
 func TestProcessPreviewEvent_HandlesError(t *testing.T) {
-	testErr := errorString("preview failed")
+	testErr := testError("preview failed")
 	event := pulumi.PreviewEvent{
 		Error: testErr,
 	}
@@ -495,10 +508,10 @@ func TestProcessPreviewEvent_MergesOldState(t *testing.T) {
 			Type:   "aws:s3:Bucket",
 			Name:   "mybucket",
 			Op:     pulumi.OpUpdate,
-			Inputs: map[string]interface{}{"bucket": "new-bucket"},
+			Inputs: map[string]any{"bucket": "new-bucket"},
 			Old: &pulumi.StepState{
-				Inputs:  map[string]interface{}{"bucket": "old-bucket"},
-				Outputs: map[string]interface{}{"id": "bucket-123"},
+				Inputs:  map[string]any{"bucket": "old-bucket"},
+				Outputs: map[string]any{"id": "bucket-123"},
 			},
 		},
 	}
@@ -526,8 +539,8 @@ func TestProcessPreviewEvent_DeleteUsesOldState(t *testing.T) {
 			Op:     pulumi.OpDelete,
 			Inputs: nil, // No new inputs for delete
 			Old: &pulumi.StepState{
-				Inputs:  map[string]interface{}{"bucket": "old-bucket"},
-				Outputs: map[string]interface{}{"id": "bucket-123"},
+				Inputs:  map[string]any{"bucket": "old-bucket"},
+				Outputs: map[string]any{"id": "bucket-123"},
 			},
 		},
 	}
@@ -554,7 +567,6 @@ func TestProcessPreviewEvent_NotInitLoading(t *testing.T) {
 	}
 }
 
-
 // TestProcessOperationEvent_AddsItem verifies operation events produce ResourceItems.
 func TestProcessOperationEvent_AddsItem(t *testing.T) {
 	event := pulumi.OperationEvent{
@@ -580,7 +592,7 @@ func TestProcessOperationEvent_AddsItem(t *testing.T) {
 
 // TestProcessOperationEvent_HandlesError verifies error events set error state.
 func TestProcessOperationEvent_HandlesError(t *testing.T) {
-	testErr := errorString("operation failed")
+	testErr := testError("operation failed")
 	event := pulumi.OperationEvent{
 		Error: testErr,
 	}
@@ -657,7 +669,6 @@ func TestProcessOperationEvent_TransitionsFromStarting(t *testing.T) {
 	}
 }
 
-
 // TestConvertResourcesToItems_Basic verifies basic resource conversion.
 func TestConvertResourcesToItems_Basic(t *testing.T) {
 	resources := []pulumi.ResourceInfo{
@@ -666,8 +677,8 @@ func TestConvertResourcesToItems_Basic(t *testing.T) {
 			Type:    "aws:s3:Bucket",
 			Name:    "mybucket",
 			Parent:  "",
-			Inputs:  map[string]interface{}{"bucket": "my-bucket"},
-			Outputs: map[string]interface{}{"id": "bucket-123"},
+			Inputs:  map[string]any{"bucket": "my-bucket"},
+			Outputs: map[string]any{"id": "bucket-123"},
 		},
 		{
 			URN:    "urn:pulumi:dev::test::aws:s3:BucketObject::myfile",
@@ -714,7 +725,6 @@ func TestConvertResourcesToItems_Empty(t *testing.T) {
 		t.Errorf("expected 0 items, got %d", len(items))
 	}
 }
-
 
 // TestConvertHistoryToItems_Basic verifies basic history conversion.
 func TestConvertHistoryToItems_Basic(t *testing.T) {
@@ -797,7 +807,6 @@ func TestConvertHistoryToItems_Empty(t *testing.T) {
 	}
 }
 
-
 // TestConvertImportSuggestions_Basic verifies basic suggestion conversion.
 func TestConvertImportSuggestions_Basic(t *testing.T) {
 	suggestions := []*plugins.AggregatedImportSuggestion{
@@ -848,7 +857,6 @@ func TestConvertImportSuggestions_Empty(t *testing.T) {
 	}
 }
 
-
 // TestSummarizePluginAuthResults_AllSuccess verifies successful auth summary.
 func TestSummarizePluginAuthResults_AllSuccess(t *testing.T) {
 	results := []plugins.AuthenticateResult{
@@ -873,7 +881,7 @@ func TestSummarizePluginAuthResults_AllSuccess(t *testing.T) {
 func TestSummarizePluginAuthResults_WithErrors(t *testing.T) {
 	results := []plugins.AuthenticateResult{
 		{PluginName: "aws", Credentials: &plugins.Credentials{Env: map[string]string{"AWS_KEY": "xxx"}}},
-		{PluginName: "kubernetes", Error: errorString("auth failed")},
+		{PluginName: "kubernetes", Error: testError("auth failed")},
 	}
 
 	summary := SummarizePluginAuthResults(results)
@@ -912,11 +920,10 @@ func TestSummarizePluginAuthResults_Empty(t *testing.T) {
 	if summary.HasErrors {
 		t.Error("expected HasErrors=false for empty input")
 	}
-	if summary.AuthenticatedPlugins != nil && len(summary.AuthenticatedPlugins) != 0 {
+	if len(summary.AuthenticatedPlugins) != 0 {
 		t.Error("expected empty AuthenticatedPlugins")
 	}
 }
-
 
 // TestConvertStacksToItems_Basic verifies multiple stacks with one current.
 func TestConvertStacksToItems_Basic(t *testing.T) {
@@ -989,7 +996,6 @@ func TestConvertStacksToItems_AllCurrent(t *testing.T) {
 		t.Errorf("expected CurrentStackName=%q (last wins), got %q", "prod", result.CurrentStackName)
 	}
 }
-
 
 // TestConvertWorkspacesToItems_Basic verifies basic conversion with valid cwd.
 func TestConvertWorkspacesToItems_Basic(t *testing.T) {
@@ -1078,7 +1084,6 @@ func TestConvertWorkspacesToItems_RelativePath(t *testing.T) {
 	}
 }
 
-
 // TestDetermineStackInitAction_NoStacks verifies returns ShowInit when no stacks exist.
 func TestDetermineStackInitAction_NoStacks(t *testing.T) {
 	action := DetermineStackInitAction(InitLoadingStacks, 0, "")
@@ -1160,7 +1165,6 @@ func TestStackInitActionString(t *testing.T) {
 		})
 	}
 }
-
 
 // TestDetermineEscapeAction_VisualMode verifies visual mode exit takes highest priority.
 func TestDetermineEscapeAction_VisualMode(t *testing.T) {
@@ -1291,7 +1295,6 @@ func TestEscapeActionString(t *testing.T) {
 	}
 }
 
-
 // TestCanImportResource_ValidCreate verifies import allowed for create op in preview.
 func TestCanImportResource_ValidCreate(t *testing.T) {
 	item := &ui.ResourceItem{
@@ -1345,7 +1348,6 @@ func TestCanImportResource_WrongOp(t *testing.T) {
 	}
 }
 
-
 // TestCanDeleteFromState_ValidResource verifies delete allowed for regular resource in stack view.
 func TestCanDeleteFromState_ValidResource(t *testing.T) {
 	item := &ui.ResourceItem{
@@ -1392,7 +1394,6 @@ func TestCanDeleteFromState_RootStack(t *testing.T) {
 		t.Error("expected CanDeleteFromState=false for pulumi:pulumi:Stack")
 	}
 }
-
 
 // TestFormatClipboardMessage_SingleNamed verifies single resource with name.
 func TestFormatClipboardMessage_SingleNamed(t *testing.T) {
@@ -1448,10 +1449,9 @@ func TestFormatClipboardMessage_Text(t *testing.T) {
 	}
 }
 
-
 // TestProcessPreviewEvent_ErrorDoesNotSetInitDoneOutsideInit verifies InitDone=false when not InitLoadingResources.
 func TestProcessPreviewEvent_ErrorDoesNotSetInitDoneOutsideInit(t *testing.T) {
-	testErr := errorString("preview failed")
+	testErr := testError("preview failed")
 	event := pulumi.PreviewEvent{
 		Error: testErr,
 	}
@@ -1496,7 +1496,7 @@ func TestProcessPreviewEvent_StepWithNilOld(t *testing.T) {
 			Type:   "aws:s3:Bucket",
 			Name:   "mybucket",
 			Op:     pulumi.OpCreate,
-			Inputs: map[string]interface{}{"bucket": "new-bucket"},
+			Inputs: map[string]any{"bucket": "new-bucket"},
 			Old:    nil, // No old state for create
 		},
 	}
@@ -1605,7 +1605,7 @@ func TestConvertResourcesToItems_WithParent(t *testing.T) {
 func TestConvertResourcesToItems_LargeList(t *testing.T) {
 	// Create 1000 resources
 	resources := make([]pulumi.ResourceInfo, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		resources[i] = pulumi.ResourceInfo{
 			URN:  "urn:pulumi:dev::test::aws:s3:Bucket::bucket-" + testItoa(i),
 			Type: "aws:s3:Bucket",
@@ -1663,9 +1663,9 @@ func TestSummarizePluginAuthResults_EmptyEnv(t *testing.T) {
 // TestSummarizePluginAuthResults_MultipleErrors verifies multiple failed plugins.
 func TestSummarizePluginAuthResults_MultipleErrors(t *testing.T) {
 	results := []plugins.AuthenticateResult{
-		{PluginName: "aws", Error: errorString("aws auth failed")},
-		{PluginName: "kubernetes", Error: errorString("k8s auth failed")},
-		{PluginName: "gcp", Error: errorString("gcp auth failed")},
+		{PluginName: "aws", Error: testError("aws auth failed")},
+		{PluginName: "kubernetes", Error: testError("k8s auth failed")},
+		{PluginName: "gcp", Error: testError("gcp auth failed")},
 	}
 
 	summary := SummarizePluginAuthResults(results)

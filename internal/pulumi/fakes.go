@@ -102,8 +102,8 @@ func (f *FakeStackOperator) WithOperationEvents(events ...OperationEvent) *FakeS
 	makeFunc := func() func(ctx context.Context, workDir, stackName string, opts OperationOptions) <-chan OperationEvent {
 		return func(ctx context.Context, workDir, stackName string, opts OperationOptions) <-chan OperationEvent {
 			ch := make(chan OperationEvent, len(events))
-			for _, e := range events {
-				ch <- e
+			for i := range events {
+				ch <- events[i]
 			}
 			close(ch)
 			return ch

@@ -85,17 +85,12 @@ func main() {
 	}
 
 	// Create production dependencies
-	deps, err := NewProductionDependencies(ctx.WorkDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing dependencies: %v\n", err)
-		os.Exit(1)
-	}
+	deps := NewProductionDependencies(ctx.WorkDir)
 
 	// Create application-level context with cancellation for graceful shutdown.
 	// This context is passed through to all async operations, enabling them to
 	// be cancelled when the application exits (via signal or user quit).
 	appCtx, appCancel := context.WithCancel(context.Background())
-	defer appCancel()
 
 	// Handle OS signals for graceful shutdown
 	sigCh := make(chan os.Signal, 1)
@@ -106,7 +101,9 @@ func main() {
 	}()
 
 	p := tea.NewProgram(initialModel(appCtx, ctx, deps), tea.WithAltScreen(), tea.WithMouseCellMotion())
-	if _, err := p.Run(); err != nil {
+	_, err = p.Run()
+	appCancel() // Cancel context before potential exit
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

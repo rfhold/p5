@@ -28,9 +28,7 @@ func TestStack_ShowResourceDetails(t *testing.T) {
 
 	h.WaitFor("RandomId", 30*time.Second)
 
-	// Navigate down to RandomId (sorted order: provider, Stack > RandomId, RandomString)
-	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-	time.Sleep(100 * time.Millisecond)
+	// Navigate down to RandomId (sequence order: Stack > RandomId, RandomString, then Provider)
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(100 * time.Millisecond)
 
@@ -114,9 +112,7 @@ func TestStack_RemoveFromState(t *testing.T) {
 
 	h.WaitFor("RandomId", 30*time.Second)
 
-	// Navigate down to RandomId (sorted order: provider, Stack, RandomId)
-	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-	time.Sleep(100 * time.Millisecond)
+	// Navigate down to RandomId (sequence order: Stack > RandomId, RandomString, then Provider)
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	time.Sleep(100 * time.Millisecond)
 

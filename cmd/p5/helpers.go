@@ -126,11 +126,13 @@ func joinWithSeparator(parts []string, sep string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	result := parts[0]
+	var b strings.Builder
+	b.WriteString(parts[0])
 	for i := 1; i < len(parts); i++ {
-		result += sep + parts[i]
+		b.WriteString(sep)
+		b.WriteString(parts[i])
 	}
-	return result
+	return b.String()
 }
 
 // placeOverlay places an overlay string at the specified x,y position on the background

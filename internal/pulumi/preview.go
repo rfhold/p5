@@ -11,12 +11,12 @@ import (
 
 // RunPreview runs a pulumi preview and streams events to the channel
 // If stackName is empty, it will use the currently selected stack
-func RunPreview(ctx context.Context, workDir string, stackName string, eventCh chan<- PreviewEvent) {
+func RunPreview(ctx context.Context, workDir, stackName string, eventCh chan<- PreviewEvent) {
 	RunUpPreview(ctx, workDir, stackName, OperationOptions{}, eventCh)
 }
 
 // RunUpPreview runs a pulumi up preview with options
-func RunUpPreview(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
+func RunUpPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
 	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
@@ -52,7 +52,7 @@ func RunUpPreview(ctx context.Context, workDir string, stackName string, opts Op
 }
 
 // RunRefreshPreview runs a pulumi refresh preview
-func RunRefreshPreview(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
+func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
 	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
@@ -81,7 +81,7 @@ func RunRefreshPreview(ctx context.Context, workDir string, stackName string, op
 }
 
 // RunDestroyPreview runs a pulumi destroy preview
-func RunDestroyPreview(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
+func RunDestroyPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
 	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)

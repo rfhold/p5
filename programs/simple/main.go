@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/local"
@@ -29,7 +29,7 @@ func main() {
 		}
 
 		// Create a command with delete that always replaces due to timestamp trigger
-		timestamp := fmt.Sprintf("%d", time.Now().Unix())
+		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 		replaceCmd, err := local.NewCommand(ctx, "replace-command", &local.CommandArgs{
 			Create: pulumi.String("echo 'Creating resource...' && sleep 2 && echo 'Created!'"),
 			Delete: pulumi.String("echo 'Deleting resource...' && sleep 2 && echo 'Deleted!'"),
@@ -64,7 +64,7 @@ func main() {
 			"config": pulumi.Map{
 				"enabled":   pulumi.Bool(true),
 				"maxRetry":  pulumi.Int(3),
-				"timestamp": pulumi.String(fmt.Sprintf("%d", time.Now().Unix())),
+				"timestamp": pulumi.String(strconv.FormatInt(time.Now().Unix(), 10)),
 				"nested": pulumi.Map{
 					"updatedAt": pulumi.String(time.Now().Format(time.RFC3339)),
 					"tags":      pulumi.ToStringArray([]string{"test", "simple", "pulumi"}),

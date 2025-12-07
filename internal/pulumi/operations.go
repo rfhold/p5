@@ -11,7 +11,7 @@ import (
 )
 
 // RunUp executes pulumi up
-func RunUp(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
+func RunUp(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
 	defer close(eventCh)
 
 	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
@@ -42,7 +42,7 @@ func RunUp(ctx context.Context, workDir string, stackName string, opts Operation
 }
 
 // RunRefresh executes pulumi refresh
-func RunRefresh(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
+func RunRefresh(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
 	defer close(eventCh)
 
 	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
@@ -70,7 +70,7 @@ func RunRefresh(ctx context.Context, workDir string, stackName string, opts Oper
 }
 
 // RunDestroy executes pulumi destroy
-func RunDestroy(ctx context.Context, workDir string, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
+func RunDestroy(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
 	defer close(eventCh)
 
 	stack, err := selectStack(ctx, workDir, stackName, opts.Env)

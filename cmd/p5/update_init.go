@@ -45,7 +45,7 @@ func (m Model) handlePluginInitDone(msg pluginInitDoneMsg) (tea.Model, tea.Cmd) 
 	} else if len(msg.results) > 0 {
 		summary := SummarizePluginAuthResults(msg.results)
 		if len(summary.AuthenticatedPlugins) > 0 {
-			cmds = append(cmds, m.ui.Toast.Show(fmt.Sprintf("Authenticated: %s", strings.Join(summary.AuthenticatedPlugins, ", "))))
+			cmds = append(cmds, m.ui.Toast.Show("Authenticated: "+strings.Join(summary.AuthenticatedPlugins, ", ")))
 		}
 	}
 
@@ -77,10 +77,10 @@ func (m Model) handlePluginAuthResult(msg pluginAuthResultMsg) (tea.Model, tea.C
 	summary := SummarizePluginAuthResults(msg)
 
 	if summary.HasErrors {
-		return m, m.ui.Toast.Show(fmt.Sprintf("Plugin auth failed: %s", strings.Join(summary.ErrorMessages, "; ")))
+		return m, m.ui.Toast.Show("Plugin auth failed: " + strings.Join(summary.ErrorMessages, "; "))
 	}
 	if len(summary.AuthenticatedPlugins) > 0 {
-		return m, m.ui.Toast.Show(fmt.Sprintf("Authenticated: %s", strings.Join(summary.AuthenticatedPlugins, ", ")))
+		return m, m.ui.Toast.Show("Authenticated: " + strings.Join(summary.AuthenticatedPlugins, ", "))
 	}
 	return m, nil
 }
@@ -91,7 +91,7 @@ func (m Model) handlePluginAuthError(msg pluginAuthErrorMsg) (tea.Model, tea.Cmd
 }
 
 // handleProjectInfo handles project info loaded from Pulumi
-func (m Model) handleProjectInfo(msg projectInfoMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleProjectInfo(msg projectInfoMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	m.ui.Header.SetData(&ui.HeaderData{
 		ProgramName: msg.ProgramName,
 		StackName:   msg.StackName,
@@ -101,7 +101,7 @@ func (m Model) handleProjectInfo(msg projectInfoMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleError handles general errors.
-func (m Model) handleError(msg errMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleError(msg errMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	log.Printf("[init] error in state %s: %v", m.state.InitState, msg)
 	m.ui.Header.SetError(msg)
 	m.ui.ResourceList.SetError(msg)
@@ -115,7 +115,7 @@ func (m Model) handleError(msg errMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleWhoAmI handles backend connection info for stack init
-func (m Model) handleWhoAmI(msg whoAmIMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleWhoAmI(msg whoAmIMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	if msg != nil {
 		m.ui.StackInitModal.SetBackendInfo(msg.User, msg.URL)
 	}
@@ -123,7 +123,7 @@ func (m Model) handleWhoAmI(msg whoAmIMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleStackFiles handles stack config files list for stack init
-func (m Model) handleStackFiles(msg stackFilesMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleStackFiles(msg stackFilesMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	m.ui.StackInitModal.SetStackFiles(msg)
 	return m, nil
 }

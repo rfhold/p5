@@ -3,6 +3,7 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"strings"
 
@@ -64,7 +65,7 @@ func (p *K9sPlugin) OpenResource(ctx context.Context, req *plugin.OpenResourceRe
 			// It's YAML/JSON content - write to temp file
 			tmpFile, err := os.CreateTemp("", "p5-kubeconfig-*.yaml")
 			if err == nil {
-				tmpFile.WriteString(kubeconfig)
+				_, _ = tmpFile.WriteString(kubeconfig)
 				tmpFile.Close()
 				// Note: This temp file will persist until k9s exits
 				// k9s runs in foreground so cleanup would happen after
@@ -109,9 +110,7 @@ func (p *K9sPlugin) OpenResource(ctx context.Context, req *plugin.OpenResourceRe
 	args = append(args, "--command", kind)
 
 	// Pass through auth environment if provided
-	for k, v := range req.AuthEnv {
-		env[k] = v
-	}
+	maps.Copy(env, req.AuthEnv)
 
 	return plugin.OpenExecResponse("k9s", args, env), nil
 }
