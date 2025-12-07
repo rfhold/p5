@@ -3,10 +3,10 @@
 │ Stack  4 resources                                                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
                                                                                                                         
-    [ ] pulumi:providers:random  default_4_16_2                                                                         
-  > [ ] pulumi:pulumi:Stack  multi-test  [T]                                                                            
-    ├─ [ ] random:index/randomId:RandomId  base-id                                                                      
+    [ ] pulumi:pulumi:Stack  multi-test                                                                                 
+  > ├─ [ ] random:index/randomId:RandomId  base-id  [T][R]                                                              
     └─ [ ] random:index/randomString:RandomString  derived-string                                                       
+    [ ] pulumi:providers:random  default_4_16_2                                                                         
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -36,4 +36,4 @@
                                                                                                                         
                                                                                                                         
                                                                                                                         
- T:1  C clear all u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help  q 
+ T:1 R:1  C clear all u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help

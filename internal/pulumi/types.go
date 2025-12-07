@@ -25,20 +25,21 @@ const (
 
 // PreviewStep represents a single resource operation in the preview
 type PreviewStep struct {
-	URN     string
-	Op      ResourceOp
-	Type    string
-	Name    string
-	Parent  string
-	Inputs  map[string]interface{} // New state inputs (for create/update)
-	Outputs map[string]interface{} // New state outputs (for create/update)
-	Old     *StepState             // Old state (for update/delete)
+	URN      string
+	Op       ResourceOp
+	Type     string
+	Name     string
+	Parent   string
+	Sequence int            // Event sequence number from Pulumi engine (for ordering)
+	Inputs   map[string]any // New state inputs (for create/update)
+	Outputs  map[string]any // New state outputs (for create/update)
+	Old      *StepState     // Old state (for update/delete)
 }
 
 // StepState holds resource state for old/new comparison
 type StepState struct {
-	Inputs  map[string]interface{}
-	Outputs map[string]interface{}
+	Inputs  map[string]any
+	Outputs map[string]any
 }
 
 // PreviewEvent is sent for each resource during preview
@@ -93,14 +94,15 @@ type OperationEvent struct {
 	Type       string     // Resource type
 	Name       string     // Resource name
 	Parent     string     // Parent URN for component hierarchy
+	Sequence   int        // Event sequence number from Pulumi engine (for ordering)
 	Status     StepStatus // pending/running/success/failed
 	Error      error
 	Done       bool
-	Message    string                 // Diagnostic/log message
-	Inputs     map[string]interface{} // Resource inputs (from ResourcePreEvent)
-	Outputs    map[string]interface{} // Resource outputs (from ResOutputsEvent)
-	OldInputs  map[string]interface{} // Previous inputs (for updates/deletes)
-	OldOutputs map[string]interface{} // Previous outputs (for updates/deletes)
+	Message    string         // Diagnostic/log message
+	Inputs     map[string]any // Resource inputs (from ResourcePreEvent)
+	Outputs    map[string]any // Resource outputs (from ResOutputsEvent)
+	OldInputs  map[string]any // Previous inputs (for updates/deletes)
+	OldOutputs map[string]any // Previous outputs (for updates/deletes)
 }
 
 // StepStatus represents execution progress status
@@ -129,10 +131,10 @@ type ResourceInfo struct {
 	Type           string
 	Name           string
 	Provider       string
-	Parent         string                 // Parent resource URN (empty for root resources)
-	Inputs         map[string]interface{} // Resource inputs/args
-	Outputs        map[string]interface{} // Resource outputs
-	ProviderInputs map[string]interface{} // Configuration from the provider resource
+	Parent         string         // Parent resource URN (empty for root resources)
+	Inputs         map[string]any // Resource inputs/args
+	Outputs        map[string]any // Resource outputs
+	ProviderInputs map[string]any // Configuration from the provider resource
 }
 
 // StackInfo holds information about a stack

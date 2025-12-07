@@ -5,7 +5,7 @@
 
 
 
-  > ├─ [ ] random:index/randomId:RandomId  base-id                                                                      
+  > └─ [ ] random:index/randomString:RandomString  derived-string                                                       
 
 
 

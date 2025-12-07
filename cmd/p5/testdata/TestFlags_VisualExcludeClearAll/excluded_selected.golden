@@ -3,10 +3,10 @@
 │ Stack  4 resources                                                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
                                                                                                                         
+    [ ] pulumi:pulumi:Stack  multi-test                                                                                 
+    ├─ [ ] random:index/randomId:RandomId  base-id  [E]                                                                 
+  > └─ [ ] random:index/randomString:RandomString  derived-string  [E]                                                  
     [ ] pulumi:providers:random  default_4_16_2                                                                         
-    [ ] pulumi:pulumi:Stack  multi-test  [E]                                                                            
-  > ├─ [ ] random:index/randomId:RandomId  base-id  [E]                                                                 
-    └─ [ ] random:index/randomString:RandomString  derived-string                                                       
                                                                                                                         
                                                                                                                         
                                                                                                                         

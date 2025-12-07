@@ -3,10 +3,10 @@
 │ Stack  4 resources                                                                                                   │
 
 
-  > [ ] pulumi:providers:random  default_4_16_2                                                                         
-    [ ] pulumi:pulumi:Stack  multi-stack-dev                                                                            
+  > [ ] pulumi:pulumi:Stack  multi-stack-dev                                                                            
     ├─ [ ] random:index/randomId:RandomId  base-id                                                                      
     └─ [ ] random:index/randomString:RandomString  derived-string                                                       
+    [ ] pulumi:providers:random  default_4_16_2                                                                         
 
 
 

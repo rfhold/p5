@@ -3,9 +3,9 @@
 │ ◐  Execute Up  +3                                                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-  > [+] pulumi:providers:random  default_4_16_2 created
-    [+] pulumi:pulumi:Stack  simple-test created
+  > [+] pulumi:pulumi:Stack  simple-test created
     └─ [+] random:index/randomId:RandomId  test-id created
+    [+] pulumi:providers:random  default_4_16_2 created
 
 
 

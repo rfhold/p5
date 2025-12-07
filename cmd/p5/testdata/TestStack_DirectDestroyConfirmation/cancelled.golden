@@ -3,9 +3,9 @@
 │ Stack  3 resources                                                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-  > [ ] pulumi:providers:random  default_4_16_2                                                                         
-    [ ] pulumi:pulumi:Stack  simple-test                                                                                
+  > [ ] pulumi:pulumi:Stack  simple-test                                                                                
     └─ [ ] random:index/randomId:RandomId  test-id                                                                      
+    [ ] pulumi:providers:random  default_4_16_2                                                                         
 
 
 

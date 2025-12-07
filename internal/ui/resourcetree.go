@@ -17,22 +17,24 @@ func organizeItemsAsTree(items []ResourceItem) []ResourceItem {
 	childrenOf := make(map[string][]int) // parent URN -> indices of children
 	rootIndices := make([]int, 0)
 
-	for i, item := range items {
-		if item.Parent == "" {
+	for i := range items {
+		if items[i].Parent == "" {
 			rootIndices = append(rootIndices, i)
 		} else {
-			childrenOf[item.Parent] = append(childrenOf[item.Parent], i)
+			childrenOf[items[i].Parent] = append(childrenOf[items[i].Parent], i)
 		}
 	}
 
-	// Sort roots and children by URN for deterministic ordering
+	// Sort roots and children by Sequence for deterministic ordering
+	// Sequence is assigned by the Pulumi engine and reflects the natural order
+	// resources are registered (Stack first, then providers, then user resources)
 	sort.Slice(rootIndices, func(i, j int) bool {
-		return items[rootIndices[i]].URN < items[rootIndices[j]].URN
+		return items[rootIndices[i]].Sequence < items[rootIndices[j]].Sequence
 	})
 	for parent := range childrenOf {
 		children := childrenOf[parent]
 		sort.Slice(children, func(i, j int) bool {
-			return items[children[i]].URN < items[children[j]].URN
+			return items[children[i]].Sequence < items[children[j]].Sequence
 		})
 	}
 
@@ -69,8 +71,8 @@ func (r *ResourceList) ensureParentExists(parentURN string) {
 	}
 
 	// Check if parent already exists
-	for _, item := range r.items {
-		if item.URN == parentURN {
+	for i := range r.items {
+		if r.items[i].URN == parentURN {
 			return // Parent exists
 		}
 	}
@@ -148,22 +150,22 @@ func (r *ResourceList) rebuildVisibleIndex() {
 		visibleURNs := make(map[string]bool)
 
 		// First pass: mark all items with changes
-		for _, item := range r.items {
-			if item.Op != OpSame {
-				visibleURNs[item.URN] = true
+		for i := range r.items {
+			if r.items[i].Op != OpSame {
+				visibleURNs[r.items[i].URN] = true
 			}
 		}
 
 		// Second pass: mark all ancestors of changed items
-		for _, item := range r.items {
-			if item.Op != OpSame && item.Parent != "" {
-				r.markAncestorsVisible(item.Parent, visibleURNs)
+		for i := range r.items {
+			if r.items[i].Op != OpSame && r.items[i].Parent != "" {
+				r.markAncestorsVisible(r.items[i].Parent, visibleURNs)
 			}
 		}
 
 		// Third pass: add visible items in order
-		for i, item := range r.items {
-			if visibleURNs[item.URN] {
+		for i := range r.items {
+			if visibleURNs[r.items[i].URN] {
 				r.visibleIdx = append(r.visibleIdx, i)
 			}
 		}
@@ -171,10 +173,7 @@ func (r *ResourceList) rebuildVisibleIndex() {
 
 	// Clamp cursor
 	if r.cursor >= len(r.visibleIdx) {
-		r.cursor = len(r.visibleIdx) - 1
-		if r.cursor < 0 {
-			r.cursor = 0
-		}
+		r.cursor = max(len(r.visibleIdx)-1, 0)
 	}
 	r.ensureCursorVisible()
 }
@@ -190,10 +189,10 @@ func (r *ResourceList) markAncestorsVisible(parentURN string, visibleURNs map[st
 	visibleURNs[parentURN] = true
 
 	// Find the parent item and recurse to its parent
-	for _, item := range r.items {
-		if item.URN == parentURN {
-			if item.Parent != "" {
-				r.markAncestorsVisible(item.Parent, visibleURNs)
+	for i := range r.items {
+		if r.items[i].URN == parentURN {
+			if r.items[i].Parent != "" {
+				r.markAncestorsVisible(r.items[i].Parent, visibleURNs)
 			}
 			return
 		}
@@ -212,8 +211,8 @@ func (r *ResourceList) buildAncestorIsLast(itemIdx int) []bool {
 
 	// Build a URN -> item index map for quick lookup
 	urnToIdx := make(map[string]int)
-	for i, it := range r.items {
-		urnToIdx[it.URN] = i
+	for i := range r.items {
+		urnToIdx[r.items[i].URN] = i
 	}
 
 	// Trace back through parent chain

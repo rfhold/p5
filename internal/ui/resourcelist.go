@@ -23,18 +23,19 @@ type ResourceItem struct {
 	URN            string
 	Type           string
 	Name           string
-	Op             ResourceOp             // OpSame for stack view, actual op for preview/exec
-	Status         ItemStatus             // Execution progress
-	Parent         string                 // Parent URN for component hierarchy
-	Depth          int                    // Nesting depth (0 = root)
-	IsLast         bool                   // True if this is the last child of its parent
-	CurrentOp      ResourceOp             // Current step being executed (for replace: create-replacement or delete-replaced)
-	Inputs         map[string]interface{} // Resource inputs/args from stack state
-	Outputs        map[string]interface{} // Resource outputs from stack state
-	OldInputs      map[string]interface{} // Previous inputs (for updates/deletes)
-	OldOutputs     map[string]interface{} // Previous outputs (for updates/deletes)
-	Provider       string                 // Provider reference string (URN::ID format)
-	ProviderInputs map[string]interface{} // Provider's configuration inputs
+	Op             ResourceOp     // OpSame for stack view, actual op for preview/exec
+	Status         ItemStatus     // Execution progress
+	Parent         string         // Parent URN for component hierarchy
+	Sequence       int            // Event sequence number from Pulumi engine (for ordering)
+	Depth          int            // Nesting depth (0 = root)
+	IsLast         bool           // True if this is the last child of its parent
+	CurrentOp      ResourceOp     // Current step being executed (for replace: create-replacement or delete-replaced)
+	Inputs         map[string]any // Resource inputs/args from stack state
+	Outputs        map[string]any // Resource outputs from stack state
+	OldInputs      map[string]any // Previous inputs (for updates/deletes)
+	OldOutputs     map[string]any // Previous outputs (for updates/deletes)
+	Provider       string         // Provider reference string (URN::ID format)
+	ProviderInputs map[string]any // Provider's configuration inputs
 }
 
 // PreviewState represents the current state of the preview (for backwards compatibility)
@@ -139,50 +140,51 @@ func (r *ResourceList) AddItem(item ResourceItem) {
 	}
 
 	// Check if item with same URN already exists
-	for i, existing := range r.items {
-		if existing.URN == item.URN {
-			// Update existing item - keep the most significant op
-			// Replace-related ops should consolidate to OpReplace
-			if isReplaceOp(item.Op) {
-				r.items[i].Op = OpReplace
-				// Track the current step being executed (create-replacement or delete-replaced)
-				r.items[i].CurrentOp = item.Op
-			} else if item.Op != OpSame {
-				r.items[i].Op = item.Op
-				r.items[i].CurrentOp = item.Op
-			}
-			// Update parent if set
-			if item.Parent != "" {
-				r.items[i].Parent = item.Parent
-			}
-			// Update status if set
-			if item.Status != StatusNone {
-				r.items[i].Status = item.Status
-			}
-			// For delete-replaced ops, don't overwrite inputs/outputs since they
-			// contain OLD values (we want to preserve NEW values from create-replacement)
-			isDeleteReplaced := item.Op == OpDeleteReplace
-			// Merge inputs if provided (but not from delete-replaced if we already have them)
-			if item.Inputs != nil && !(isDeleteReplaced && r.items[i].Inputs != nil) {
-				r.items[i].Inputs = item.Inputs
-			}
-			// Merge outputs if provided (but not from delete-replaced if we already have them)
-			if item.Outputs != nil && !(isDeleteReplaced && r.items[i].Outputs != nil) {
-				r.items[i].Outputs = item.Outputs
-			}
-			// Only set old inputs/outputs on first event for this resource
-			// (subsequent events for same resource shouldn't overwrite)
-			if item.OldInputs != nil && r.items[i].OldInputs == nil {
-				r.items[i].OldInputs = item.OldInputs
-			}
-			if item.OldOutputs != nil && r.items[i].OldOutputs == nil {
-				r.items[i].OldOutputs = item.OldOutputs
-			}
-			// Reorganize as tree and rebuild visible index
-			r.items = organizeItemsAsTree(r.items)
-			r.rebuildVisibleIndex()
-			return
+	for i := range r.items {
+		if r.items[i].URN != item.URN {
+			continue
 		}
+		// Update existing item - keep the most significant op
+		// Replace-related ops should consolidate to OpReplace
+		if isReplaceOp(item.Op) {
+			r.items[i].Op = OpReplace
+			// Track the current step being executed (create-replacement or delete-replaced)
+			r.items[i].CurrentOp = item.Op
+		} else if item.Op != OpSame {
+			r.items[i].Op = item.Op
+			r.items[i].CurrentOp = item.Op
+		}
+		// Update parent if set
+		if item.Parent != "" {
+			r.items[i].Parent = item.Parent
+		}
+		// Update status if set
+		if item.Status != StatusNone {
+			r.items[i].Status = item.Status
+		}
+		// For delete-replaced ops, don't overwrite inputs/outputs since they
+		// contain OLD values (we want to preserve NEW values from create-replacement)
+		isDeleteReplaced := item.Op == OpDeleteReplace
+		// Merge inputs if provided (but not from delete-replaced if we already have them)
+		if item.Inputs != nil && (!isDeleteReplaced || r.items[i].Inputs == nil) {
+			r.items[i].Inputs = item.Inputs
+		}
+		// Merge outputs if provided (but not from delete-replaced if we already have them)
+		if item.Outputs != nil && (!isDeleteReplaced || r.items[i].Outputs == nil) {
+			r.items[i].Outputs = item.Outputs
+		}
+		// Only set old inputs/outputs on first event for this resource
+		// (subsequent events for same resource shouldn't overwrite)
+		if item.OldInputs != nil && r.items[i].OldInputs == nil {
+			r.items[i].OldInputs = item.OldInputs
+		}
+		if item.OldOutputs != nil && r.items[i].OldOutputs == nil {
+			r.items[i].OldOutputs = item.OldOutputs
+		}
+		// Reorganize as tree and rebuild visible index
+		r.items = organizeItemsAsTree(r.items)
+		r.rebuildVisibleIndex()
+		return
 	}
 
 	// New item - add it
@@ -253,53 +255,55 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		// Navigation
-		case key.Matches(msg, Keys.Up):
-			r.moveCursor(-1)
-		case key.Matches(msg, Keys.Down):
-			r.moveCursor(1)
-		case key.Matches(msg, Keys.PageUp):
-			r.moveCursor(-r.visibleHeight())
-		case key.Matches(msg, Keys.PageDown):
-			r.moveCursor(r.visibleHeight())
-		case key.Matches(msg, Keys.Home):
-			r.cursor = 0
-			r.ensureCursorVisible()
-		case key.Matches(msg, Keys.End):
-			r.cursor = len(r.visibleIdx) - 1
-			r.ensureCursorVisible()
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return nil
+	}
 
-		// Visual mode
-		case key.Matches(msg, Keys.VisualMode):
-			if !r.visualMode {
-				r.visualMode = true
-				r.visualStart = r.cursor
-			}
-		case key.Matches(msg, Keys.Escape):
-			r.visualMode = false
+	switch {
+	// Navigation
+	case key.Matches(keyMsg, Keys.Up):
+		r.moveCursor(-1)
+	case key.Matches(keyMsg, Keys.Down):
+		r.moveCursor(1)
+	case key.Matches(keyMsg, Keys.PageUp):
+		r.moveCursor(-r.visibleHeight())
+	case key.Matches(keyMsg, Keys.PageDown):
+		r.moveCursor(r.visibleHeight())
+	case key.Matches(keyMsg, Keys.Home):
+		r.cursor = 0
+		r.ensureCursorVisible()
+	case key.Matches(keyMsg, Keys.End):
+		r.cursor = len(r.visibleIdx) - 1
+		r.ensureCursorVisible()
 
-		// Flag toggles
-		case key.Matches(msg, Keys.ToggleTarget):
-			r.toggleFlag("target")
-		case key.Matches(msg, Keys.ToggleReplace):
-			r.toggleFlag("replace")
-		case key.Matches(msg, Keys.ToggleExclude):
-			r.toggleFlag("exclude")
-		case key.Matches(msg, Keys.ClearFlags):
-			r.clearFlags()
-		case key.Matches(msg, Keys.ClearAllFlags):
-			r.ClearAllFlags()
-			r.visualMode = false
-
-		// Copy resource(s) as JSON
-		case key.Matches(msg, Keys.CopyResource):
-			return r.CopyResourceJSON()
-		case key.Matches(msg, Keys.CopyAllResources):
-			return r.CopyAllResourcesJSON()
+	// Visual mode
+	case key.Matches(keyMsg, Keys.VisualMode):
+		if !r.visualMode {
+			r.visualMode = true
+			r.visualStart = r.cursor
 		}
+	case key.Matches(keyMsg, Keys.Escape):
+		r.visualMode = false
+
+	// Flag toggles
+	case key.Matches(keyMsg, Keys.ToggleTarget):
+		r.toggleFlag("target")
+	case key.Matches(keyMsg, Keys.ToggleReplace):
+		r.toggleFlag("replace")
+	case key.Matches(keyMsg, Keys.ToggleExclude):
+		r.toggleFlag("exclude")
+	case key.Matches(keyMsg, Keys.ClearFlags):
+		r.clearFlags()
+	case key.Matches(keyMsg, Keys.ClearAllFlags):
+		r.ClearAllFlags()
+		r.visualMode = false
+
+	// Copy resource(s) as JSON
+	case key.Matches(keyMsg, Keys.CopyResource):
+		return r.CopyResourceJSON()
+	case key.Matches(keyMsg, Keys.CopyAllResources):
+		return r.CopyAllResourcesJSON()
 	}
 
 	return nil
@@ -332,8 +336,8 @@ func (r *ResourceList) getSelectedIndices() []int {
 // Summary returns the current summary
 func (r *ResourceList) Summary() ResourceSummary {
 	summary := ResourceSummary{}
-	for _, item := range r.items {
-		switch item.Op {
+	for i := range r.items {
+		switch r.items[i].Op {
 		case OpSame:
 			summary.Same++
 		case OpCreate:

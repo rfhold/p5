@@ -33,11 +33,12 @@ func processPreviewEvents(pulumiEvents <-chan events.EngineEvent, eventCh chan<-
 		if e.ResourcePreEvent != nil {
 			meta := e.ResourcePreEvent.Metadata
 			step := &PreviewStep{
-				URN:    meta.URN,
-				Op:     ResourceOp(meta.Op),
-				Type:   meta.Type,
-				Name:   ExtractResourceName(meta.URN),
-				Parent: extractParent(meta),
+				URN:      meta.URN,
+				Op:       ResourceOp(meta.Op),
+				Type:     meta.Type,
+				Name:     ExtractResourceName(meta.URN),
+				Parent:   extractParent(meta),
+				Sequence: e.Sequence,
 			}
 			if meta.New != nil {
 				step.Inputs = meta.New.Inputs
@@ -54,10 +55,11 @@ func processPreviewEvents(pulumiEvents <-chan events.EngineEvent, eventCh chan<-
 		if e.ResOutputsEvent != nil {
 			meta := e.ResOutputsEvent.Metadata
 			step := &PreviewStep{
-				URN:  meta.URN,
-				Op:   ResourceOp(meta.Op),
-				Type: meta.Type,
-				Name: ExtractResourceName(meta.URN),
+				URN:      meta.URN,
+				Op:       ResourceOp(meta.Op),
+				Type:     meta.Type,
+				Name:     ExtractResourceName(meta.URN),
+				Sequence: e.Sequence,
 			}
 			if meta.New != nil {
 				step.Outputs = meta.New.Outputs
@@ -73,12 +75,13 @@ func processOperationEvents(pulumiEvents <-chan events.EngineEvent, eventCh chan
 		if e.ResourcePreEvent != nil {
 			meta := e.ResourcePreEvent.Metadata
 			ev := OperationEvent{
-				URN:    meta.URN,
-				Op:     ResourceOp(meta.Op),
-				Type:   meta.Type,
-				Name:   ExtractResourceName(meta.URN),
-				Parent: extractParent(meta),
-				Status: StepRunning,
+				URN:      meta.URN,
+				Op:       ResourceOp(meta.Op),
+				Type:     meta.Type,
+				Name:     ExtractResourceName(meta.URN),
+				Parent:   extractParent(meta),
+				Sequence: e.Sequence,
+				Status:   StepRunning,
 			}
 
 			switch mode {
@@ -101,12 +104,13 @@ func processOperationEvents(pulumiEvents <-chan events.EngineEvent, eventCh chan
 		if e.ResOutputsEvent != nil {
 			meta := e.ResOutputsEvent.Metadata
 			ev := OperationEvent{
-				URN:    meta.URN,
-				Op:     ResourceOp(meta.Op),
-				Type:   meta.Type,
-				Name:   ExtractResourceName(meta.URN),
-				Parent: extractParent(meta),
-				Status: StepSuccess,
+				URN:      meta.URN,
+				Op:       ResourceOp(meta.Op),
+				Type:     meta.Type,
+				Name:     ExtractResourceName(meta.URN),
+				Parent:   extractParent(meta),
+				Sequence: e.Sequence,
+				Status:   StepSuccess,
 			}
 			if mode != OperationModeDestroy && meta.New != nil {
 				ev.Outputs = meta.New.Outputs
@@ -115,8 +119,9 @@ func processOperationEvents(pulumiEvents <-chan events.EngineEvent, eventCh chan
 		}
 		if e.DiagnosticEvent != nil && e.DiagnosticEvent.Severity == "error" {
 			eventCh <- OperationEvent{
-				Message: e.DiagnosticEvent.Message,
-				Status:  StepFailed,
+				Message:  e.DiagnosticEvent.Message,
+				Sequence: e.Sequence,
+				Status:   StepFailed,
 			}
 		}
 	}
