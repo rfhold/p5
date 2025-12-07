@@ -73,6 +73,10 @@ func (m Model) updateImportModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// User confirmed import, execute it
 		return m, m.executeImport()
 	}
+	// Check if modal was dismissed (ESC pressed)
+	if !m.ui.ImportModal.Visible() {
+		m.ui.Focus.Remove(ui.FocusImportModal)
+	}
 	return m, cmd
 }
 
@@ -111,6 +115,10 @@ func (m Model) updateWorkspaceSelector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, selectWorkspace(selectedWs.Path)
 		}
 	}
+	// Check if selector was dismissed (ESC pressed)
+	if !m.ui.WorkspaceSelector.Visible() {
+		m.ui.Focus.Remove(ui.FocusWorkspaceSelector)
+	}
 	return m, cmd
 }
 
@@ -133,6 +141,10 @@ func (m Model) updateStackSelector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if selectedStack != "" {
 			return m, m.selectStack(selectedStack)
 		}
+	}
+	// Check if selector was dismissed (ESC pressed)
+	if !m.ui.StackSelector.Visible() {
+		m.ui.Focus.Remove(ui.FocusStackSelector)
 	}
 	return m, cmd
 }
