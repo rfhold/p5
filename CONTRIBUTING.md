@@ -25,5 +25,13 @@ Native Go tools are defined in `go.mod` under the `tool` directive. Run with `go
 
 Run `go generate ./...` for code generation (e.g., protobuf).
 
+## Linting
+```bash
+go tool golangci-lint run ./...
+go tool golangci-lint run --fix ./...  # Auto-fix issues
+```
+
+Configuration is in `.golangci.yml`.
+
 ## Commits
 Use conventional commits (e.g., `feat:`, `fix:`, `docs:`, `test:`, `chore:`, `ci:`).

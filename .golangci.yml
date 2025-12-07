@@ -1,0 +1,159 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # Default (standard) linters
+    - errcheck          # Check for unchecked errors
+    - govet             # Reports suspicious constructs
+    - ineffassign       # Detects unused assignments
+    - staticcheck       # Comprehensive static analysis
+    - unused            # Checks for unused code
+
+    # Bug Detection
+    - asasalint         # Check for passing []any as any in variadic funcs
+    - bidichk           # Checks for dangerous unicode character sequences
+    - bodyclose         # Checks HTTP response body is closed
+    - durationcheck     # Check for two durations multiplied together
+    - errorlint         # Find error wrapping issues (Go 1.13+)
+    - fatcontext        # Detects nested contexts in loops/function literals
+    - nilerr            # Find code returning nil when error is not nil
+    - nilnesserr        # Reports err != nil checks returning different nil error
+    - nilnil            # Checks for simultaneous return of nil error and invalid value
+    - sqlclosecheck     # Checks sql.Rows, sql.Stmt, etc. are closed
+    - wastedassign      # Finds wasted assignment statements
+
+    # Performance
+    - copyloopvar       # Detects places where loop variables are copied
+    - intrange          # Find places for loops could use integer range
+    - perfsprint        # Checks fmt.Sprintf can be replaced with faster alternative
+
+    # Code Style & Consistency
+    - asciicheck        # Checks identifiers have no non-ASCII symbols
+    - errname           # Checks sentinel errors prefixed with Err, types with Error
+    - misspell          # Finds commonly misspelled English words
+    - predeclared       # Find code shadowing Go's predeclared identifiers
+    - tagalign          # Check struct tags are well aligned
+    - unconvert         # Remove unnecessary type conversions
+
+    # Security
+    - gosec             # Inspects source code for security problems
+
+    # Testing
+    - testifylint       # Checks usage of github.com/stretchr/testify
+    - thelper           # Detects test helpers without t.Helper()
+
+    # Modern Go
+    - exptostd          # Detects golang.org/x/exp funcs replaceable by std
+    - modernize         # Suggests simplifications using modern Go features
+    - usestdlibvars     # Detect possibility to use stdlib vars/constants
+
+    # Code Quality
+    - dupl              # Detects duplicate code fragments
+    - gocritic          # Diagnostics for bugs, performance, style issues
+    - mirror            # Reports wrong mirror patterns of bytes/strings
+    - nolintlint        # Reports ill-formed nolint directives
+    - unparam           # Reports unused function parameters
+
+    # Interfaces
+    - iface             # Detect incorrect interface use / interface pollution
+
+    # Errors
+    - err113            # Check error handling expressions
+    
+    # Logging
+    - loggercheck       # Checks key-value pairs for common loggers
+    - sloglint          # Ensure consistent code style with log/slog
+
+    # Complexity (medium priority)
+    - cyclop            # Checks cyclomatic complexity
+    - nestif            # Reports deeply nested if statements
+
+  settings:
+    cyclop:
+      max-complexity: 20  # TUI event handlers are inherently complex
+
+    dupl:
+      threshold: 150
+
+    errcheck:
+      check-type-assertions: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+        - evalOrder  # False positives for Bubble Tea's "return m, m.someFunc()" pattern
+        - hugeParam  # Too noisy for TUI apps (Model, lipgloss.Style, spinner.Model)
+        - caseOrder  # Specific error types must come before generic error in type switches
+
+    gosec:
+      excludes:
+        - G104  # Audit errors not checked (covered by errcheck)
+
+    nestif:
+      min-complexity: 5
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+
+    perfsprint:
+      err-error: true
+      errorf: true
+      sprintf1: true
+
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: false
+      context: scope
+      static-msg: false
+      no-raw-keys: false
+      key-naming-case: snake
+      args-on-sep-lines: false
+
+    tagalign:
+      align: true
+      sort: true
+      order:
+        - json
+        - yaml
+        - yml
+        - toml
+        - mapstructure
+        - binding
+        - validate
+
+    testifylint:
+      enable-all: true
+
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    paths:
+      - ".*\\.pb\\.go$"
+      - ".*_grpc\\.pb\\.go$"
+    rules:
+      # Exclude some linters from running on tests files
+      - path: _test\.go
+        linters:
+          - dupl
+          - err113
+          - unparam
+
+      # Exclude err113 for main packages (entry points)
+      - path: main\.go
+        linters:
+          - err113
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true
