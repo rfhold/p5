@@ -6,11 +6,7 @@ import (
 	"github.com/rfhold/p5/internal/ui"
 )
 
-// handleStacksList handles the loaded list of stacks
-// During initialization (InitLoadingStacks state), this determines whether to:
-// - Show stack init modal (no stacks exist)
-// - Show stack selector (stacks exist but none selected)
-// - Proceed to loading resources (stack already selected)
+// handleStacksList handles the loaded list of stacks during initialization.
 func (m Model) handleStacksList(msg stacksListMsg) (tea.Model, tea.Cmd) {
 	result := ConvertStacksToItems(msg)
 	items := result.Items

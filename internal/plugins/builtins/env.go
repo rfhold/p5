@@ -21,10 +21,7 @@ func init() {
 	})
 }
 
-// EnvPlugin provides environment variables from multiple sources:
-// - file: Load from a .env file
-// - static: Define env vars directly in config
-// - exec: Run a command that outputs env vars in .env format
+// EnvPlugin provides environment variables from .env files, static config, or command execution.
 type EnvPlugin struct {
 	plugins.BuiltinPluginBase
 }

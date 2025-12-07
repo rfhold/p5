@@ -117,10 +117,7 @@ func (p *K9sPlugin) OpenResource(ctx context.Context, req *plugin.OpenResourceRe
 }
 
 // extractK8sKind extracts the Kubernetes kind from a Pulumi resource type.
-// Input formats:
-//   - "kubernetes:core/v1:Pod" -> "pod"
-//   - "kubernetes:apps/v1:Deployment" -> "deployment"
-//   - "kubernetes:networking.k8s.io/v1:Ingress" -> "ingress"
+
 func extractK8sKind(resourceType string) string {
 	// Must start with "kubernetes:"
 	if !strings.HasPrefix(resourceType, "kubernetes:") {

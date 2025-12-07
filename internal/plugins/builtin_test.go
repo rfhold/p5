@@ -17,10 +17,6 @@ func (m *mockBuiltinPlugin) Authenticate(ctx context.Context, req *proto.Authent
 	return SuccessResponse(map[string]string{"TEST_VAR": "test_value"}, 3600), nil
 }
 
-// =============================================================================
-// Builtin Registry Tests
-// =============================================================================
-
 // TestIsBuiltin_Registered verifies returns true for registered plugins.
 func TestIsBuiltin_Registered(t *testing.T) {
 	// Save current registry and restore after test
@@ -139,10 +135,6 @@ func TestListBuiltins_Empty(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// BuiltinPluginBase Tests
-// =============================================================================
-
 // TestBuiltinPluginBase_Name verifies Name returns correct value.
 func TestBuiltinPluginBase_Name(t *testing.T) {
 	base := NewBuiltinPluginBase("my-plugin")
@@ -151,10 +143,6 @@ func TestBuiltinPluginBase_Name(t *testing.T) {
 		t.Errorf("expected Name=%q, got %q", "my-plugin", base.Name())
 	}
 }
-
-// =============================================================================
-// BuiltinPluginInstance Tests
-// =============================================================================
 
 // TestBuiltinPluginInstance_Authenticate verifies delegation to underlying plugin.
 func TestBuiltinPluginInstance_Authenticate(t *testing.T) {

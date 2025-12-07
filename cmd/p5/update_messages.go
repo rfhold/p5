@@ -8,11 +8,6 @@ import (
 )
 
 // handleMessage routes all non-key, non-window, non-mouse messages to appropriate handlers.
-// This is a thin router that delegates to domain-specific handlers in:
-// - update_init.go: initialization and plugin handlers
-// - update_operations.go: preview/execute operation handlers
-// - update_selection.go: stack/workspace selection handlers
-// - update_ui.go: toast/clipboard/resize handlers
 func (m Model) handleMessage(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Initialization messages

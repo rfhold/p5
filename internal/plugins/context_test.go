@@ -4,10 +4,6 @@ import (
 	"testing"
 )
 
-// =============================================================================
-// ShouldRefreshCredentials Tests
-// =============================================================================
-
 // Note: These tests use a Manager directly to test the ShouldRefreshCredentials
 // method. We can't easily extract the pure decision logic without significant
 // refactoring since it's tightly coupled to the Manager's internal state.
@@ -187,10 +183,6 @@ func TestShouldRefreshCredentials_ConfigChangeOnly(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// UpdateContext Tests
-// =============================================================================
-
 // TestUpdateContext_SetsFields verifies UpdateContext properly updates manager state.
 func TestUpdateContext_SetsFields(t *testing.T) {
 	m := &Manager{
@@ -216,10 +208,6 @@ func TestUpdateContext_SetsFields(t *testing.T) {
 		t.Errorf("expected ConfigHashes[aws]=%q, got %q", "hash123", m.currentContext.ConfigHashes["aws"])
 	}
 }
-
-// =============================================================================
-// InvalidateCredentialsForContext Tests
-// =============================================================================
 
 // TestInvalidateCredentialsForContext_NoCurrentContext verifies no panic with nil context.
 func TestInvalidateCredentialsForContext_NoCurrentContext(t *testing.T) {

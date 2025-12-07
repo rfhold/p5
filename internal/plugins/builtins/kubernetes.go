@@ -57,10 +57,7 @@ var clusterScopedKinds = map[string]bool{
 }
 
 // buildKubectlResource builds a kubectl resource identifier from apiVersion and kind.
-// Examples:
-//   - apiVersion: "v1", kind: "Namespace" -> "namespace"
-//   - apiVersion: "apps/v1", kind: "Deployment" -> "deployment.apps"
-//   - apiVersion: "networking.k8s.io/v1", kind: "Ingress" -> "ingress.networking.k8s.io"
+
 func buildKubectlResource(apiVersion, kind string) string {
 	kindLower := strings.ToLower(kind)
 

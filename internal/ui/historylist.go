@@ -247,9 +247,7 @@ func (h *HistoryList) renderItem(item HistoryItem, isCursor bool) string {
 	return line
 }
 
-// renderKind and renderResult are now shared functions in styles.go:
-// - RenderHistoryKind(kind string) string
-// - RenderHistoryResult(result string) string
+// renderKind and renderResult are now shared functions in styles.go.
 
 func (h *HistoryList) formatTime(timeStr string) string {
 	return FormatTimeStyled(timeStr, "2006-01-02 15:04", 16, DimStyle)

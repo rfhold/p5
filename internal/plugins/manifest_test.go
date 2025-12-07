@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-// =============================================================================
-// MergeConfigs Tests
-// =============================================================================
-
 // TestMergeConfigs_GlobalOnly verifies merging with only global config.
 func TestMergeConfigs_GlobalOnly(t *testing.T) {
 	global := &GlobalConfig{
@@ -248,10 +244,6 @@ func TestMergeConfigs_AddNewPluginFromProgram(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// RefreshTrigger Tests
-// =============================================================================
-
 // TestRefreshTrigger_DefaultValues verifies nil trigger uses defaults.
 func TestRefreshTrigger_DefaultValues(t *testing.T) {
 	var trigger *RefreshTrigger = nil
@@ -327,10 +319,6 @@ func TestRefreshTrigger_PartialNil(t *testing.T) {
 		t.Error("expected ShouldRefreshOnConfigChange=false (default)")
 	}
 }
-
-// =============================================================================
-// LoadP5Config Tests
-// =============================================================================
 
 // TestLoadP5Config_Valid verifies loading a valid Pulumi.yaml with p5 section.
 func TestLoadP5Config_Valid(t *testing.T) {
@@ -417,9 +405,7 @@ func TestLoadP5Config_FileNotFound(t *testing.T) {
 	}
 }
 
-// =============================================================================
 // LoadStackPluginConfig Tests
-// =============================================================================
 
 // TestLoadStackPluginConfig_Valid verifies loading valid stack config.
 func TestLoadStackPluginConfig_Valid(t *testing.T) {
@@ -486,9 +472,7 @@ func TestLoadStackPluginConfig_PluginNotFound(t *testing.T) {
 	}
 }
 
-// =============================================================================
 // LoadGlobalConfig Tests
-// =============================================================================
 
 // TestLoadGlobalConfig_Valid verifies loading p5.toml.
 func TestLoadGlobalConfig_Valid(t *testing.T) {
@@ -598,9 +582,7 @@ func TestLoadGlobalConfig_InvalidTOML(t *testing.T) {
 	}
 }
 
-// =============================================================================
 // loadGlobalConfigFile Tests
-// =============================================================================
 
 // TestLoadGlobalConfigFile_NilPlugins verifies nil plugins map is initialized.
 func TestLoadGlobalConfigFile_NilPlugins(t *testing.T) {

@@ -101,30 +101,14 @@ type AppContext struct {
 	StartView string // Initial view mode ("stack", "up", "refresh", "destroy")
 }
 
-// Model is the main application model.
-// It coordinates between pure application state (AppState), UI state (UIState),
-// and async operations. This separation enables easier testing.
+// Model is the main application model coordinating application state, UI state, and async operations.
 type Model struct {
-	// Application lifecycle context - passed to all async operations.
-	// This enables graceful cancellation when the app exits.
-	appCtx context.Context
-
-	// App context (configuration, replaces globals)
-	ctx AppContext
-
-	// Injected dependencies (enables testing)
-	deps *Dependencies
-
-	// Pure application state (testable without UI)
-	state *AppState
-
-	// UI component state (layout, focus, components)
-	ui *UIState
-
-	// Control flags
-	quitting bool
-
-	// Event channels for async operations (receive-only from StackOperator)
+	appCtx      context.Context
+	ctx         AppContext
+	deps        *Dependencies
+	state       *AppState
+	ui          *UIState
+	quitting    bool
 	previewCh   <-chan pulumi.PreviewEvent
 	operationCh <-chan pulumi.OperationEvent
 
@@ -134,10 +118,7 @@ type Model struct {
 }
 
 func initialModel(appCtx context.Context, ctx AppContext, deps *Dependencies) Model {
-	// Create shared state
 	state := NewAppState()
-
-	// Create UI state with shared flags reference
 	uiState := NewUIState(state.Flags)
 
 	m := Model{
@@ -148,7 +129,6 @@ func initialModel(appCtx context.Context, ctx AppContext, deps *Dependencies) Mo
 		ui:     uiState,
 	}
 
-	// Set initial view based on command argument
 	switch ctx.StartView {
 	case "up":
 		m.ui.ViewMode = ui.ViewPreview

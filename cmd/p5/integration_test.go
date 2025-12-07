@@ -1364,13 +1364,7 @@ func TestVisualMode_MultiSelectResources(t *testing.T) {
 	h.QuitWithKey(2 * time.Second)
 }
 
-// TestScenario_CompleteDeploymentCycle tests a realistic deployment workflow:
-// 1. View stack resources
-// 2. Run up preview
-// 3. Review changes
-// 4. View details of changed resource
-// 5. Execute deployment
-// 6. Verify completion
+// TestScenario_CompleteDeploymentCycle tests a realistic deployment workflow.
 func TestScenario_CompleteDeploymentCycle(t *testing.T) {
 	// Preview shows one new resource
 	previewSteps := []pulumi.PreviewStep{

@@ -178,11 +178,7 @@ func SupportedOpenTypesPatterns(patterns ...string) *SupportedOpenTypesResponse 
 // Serve starts the plugin server with the given implementation.
 // This should be called from the plugin's main() function.
 //
-// Example:
-//
-//	func main() {
-//	    plugin.Serve(&MyPlugin{})
-//	}
+
 func Serve(impl AuthPlugin) {
 	plugins := map[string]goplugin.Plugin{
 		"auth": &AuthPluginGRPC{Impl: impl},

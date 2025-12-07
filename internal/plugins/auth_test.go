@@ -5,10 +5,6 @@ import (
 	"time"
 )
 
-// =============================================================================
-// hashConfig Tests
-// =============================================================================
-
 // TestHashConfig_Deterministic verifies same input produces same hash.
 func TestHashConfig_Deterministic(t *testing.T) {
 	programConfig := map[string]any{"region": "us-east-1", "profile": "default"}
@@ -68,10 +64,6 @@ func TestHashConfig_NilMaps(t *testing.T) {
 		t.Error("both nil and empty should produce valid hashes")
 	}
 }
-
-// =============================================================================
-// convertToStringMap Tests
-// =============================================================================
 
 // TestConvertToStringMap_StringValues verifies strings pass through.
 func TestConvertToStringMap_StringValues(t *testing.T) {
@@ -184,10 +176,6 @@ func TestConvertToStringMap_NilMap(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(result))
 	}
 }
-
-// =============================================================================
-// Credentials.IsExpired Tests
-// =============================================================================
 
 // TestCredentials_IsExpired_AlwaysCall verifies AlwaysCall=true is always expired.
 func TestCredentials_IsExpired_AlwaysCall(t *testing.T) {

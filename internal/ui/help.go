@@ -80,12 +80,7 @@ func (h *HelpDialog) SetSize(width, height int) {
 	content := h.buildContent()
 	contentLines := strings.Count(content, "\n") + 1
 
-	// Calculate how much space the dialog chrome takes:
-	// - Border: 2 lines (top + bottom)
-	// - Padding: 2 lines (1 top + 1 bottom from DialogStyle)
-	// - Title + margin: 2 lines
-	// - Scroll indicator: 1 line (shown when scrollable)
-	// - Screen margin: 4 lines (2 top + 2 bottom for visual spacing)
+	// Calculate how much space the dialog chrome takes: border, padding, title, scroll indicator, and screen margins.
 	dialogChrome := 11
 
 	// Maximum viewport height that will fit on screen

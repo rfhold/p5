@@ -9,10 +9,6 @@ import (
 	"github.com/rfhold/p5/pkg/plugin"
 )
 
-// =============================================================================
-// buildKubectlResource Tests
-// =============================================================================
-
 func TestBuildKubectlResource_CoreAPI(t *testing.T) {
 	tests := []struct {
 		apiVersion string
@@ -86,10 +82,6 @@ func TestBuildKubectlResource_ExtendedAPIs(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// clusterScopedKinds Tests
-// =============================================================================
-
 func TestClusterScopedKinds_Known(t *testing.T) {
 	knownClusterScoped := []string{
 		"Namespace",
@@ -130,10 +122,6 @@ func TestClusterScopedKinds_NotClusterScoped(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// KubernetesPlugin Registration Tests
-// =============================================================================
-
 func TestKubernetesPlugin_Name(t *testing.T) {
 	p := &KubernetesPlugin{
 		BuiltinPluginBase: plugins.NewBuiltinPluginBase("kubernetes"),
@@ -163,10 +151,6 @@ func TestKubernetesPlugin_Authenticate(t *testing.T) {
 		t.Error("expected Success=true")
 	}
 }
-
-// =============================================================================
-// GetImportSuggestions Tests
-// =============================================================================
 
 func TestKubernetesPlugin_GetImportSuggestions_NotSupported(t *testing.T) {
 	p := &KubernetesPlugin{

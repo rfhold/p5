@@ -15,10 +15,6 @@ const (
 	testHeight = 24
 )
 
-// ============================================================================
-// Header Component Tests
-// ============================================================================
-
 func TestHeader_Loading(t *testing.T) {
 	h := NewHeader()
 	h.SetWidth(testWidth)
@@ -137,10 +133,6 @@ func TestHeader_HistoryView(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(h.View()))
 }
-
-// ============================================================================
-// ResourceList Component Tests
-// ============================================================================
 
 func TestResourceList_Empty(t *testing.T) {
 	r := NewResourceList(make(map[string]ResourceFlags))
@@ -329,20 +321,12 @@ func TestResourceList_TreeStructure(t *testing.T) {
 	golden.RequireEqual(t, []byte(r.View()))
 }
 
-// ============================================================================
-// HelpDialog Component Tests
-// ============================================================================
-
 func TestHelpDialog_View(t *testing.T) {
 	h := NewHelpDialog()
 	h.SetSize(testWidth, testHeight)
 
 	golden.RequireEqual(t, []byte(h.View()))
 }
-
-// ============================================================================
-// Toast Component Tests
-// ============================================================================
 
 func TestToast_Hidden(t *testing.T) {
 	toast := NewToast()
@@ -354,10 +338,6 @@ func TestToast_Visible(t *testing.T) {
 	toast.Show("Copied to clipboard!")
 	golden.RequireEqual(t, []byte(toast.View(testWidth)))
 }
-
-// ============================================================================
-// DiffRenderer Component Tests
-// ============================================================================
 
 func TestDiffRenderer_Create(t *testing.T) {
 	r := NewDiffRenderer(testWidth)
@@ -468,10 +448,6 @@ func TestDiffRenderer_NoProperties(t *testing.T) {
 	golden.RequireEqual(t, []byte(r.RenderCombinedProperties(resource)))
 }
 
-// ============================================================================
-// DetailPanel Component Tests
-// ============================================================================
-
 func TestDetailPanel_NotVisible(t *testing.T) {
 	d := NewDetailPanel()
 	d.SetSize(testWidth, testHeight)
@@ -533,10 +509,6 @@ func TestDetailPanel_WithRunningStatus(t *testing.T) {
 	golden.RequireEqual(t, []byte(d.View()))
 }
 
-// ============================================================================
-// ConfirmModal Component Tests
-// ============================================================================
-
 func TestConfirmModal_Basic(t *testing.T) {
 	m := NewConfirmModal()
 	m.SetSize(testWidth, testHeight)
@@ -563,10 +535,6 @@ func TestConfirmModal_CustomLabels(t *testing.T) {
 	golden.RequireEqual(t, []byte(m.View()))
 }
 
-// ============================================================================
-// ErrorModal Component Tests
-// ============================================================================
-
 func TestErrorModal_Basic(t *testing.T) {
 	m := NewErrorModal()
 	m.SetSize(testWidth, testHeight)
@@ -589,10 +557,6 @@ func TestErrorModal_LongDetails(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(m.View()))
 }
-
-// ============================================================================
-// HistoryList Component Tests
-// ============================================================================
 
 func TestHistoryList_Empty(t *testing.T) {
 	h := NewHistoryList()
@@ -682,10 +646,6 @@ func TestHistoryList_DifferentKinds(t *testing.T) {
 	golden.RequireEqual(t, []byte(h.View()))
 }
 
-// ============================================================================
-// HistoryDetailPanel Component Tests
-// ============================================================================
-
 func TestHistoryDetailPanel_NotVisible(t *testing.T) {
 	d := NewHistoryDetailPanel()
 	d.SetSize(testWidth, testHeight)
@@ -745,10 +705,6 @@ func TestHistoryDetailPanel_FailedUpdate(t *testing.T) {
 	golden.RequireEqual(t, []byte(d.View()))
 }
 
-// ============================================================================
-// ImportModal Component Tests
-// ============================================================================
-
 func TestImportModal_Basic(t *testing.T) {
 	m := NewImportModal()
 	m.SetSize(testWidth, testHeight)
@@ -789,10 +745,6 @@ func TestImportModal_WithError(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(m.View()))
 }
-
-// ============================================================================
-// SelectorDialog Component Tests
-// ============================================================================
 
 // testSelectorItem implements SelectorItem for testing
 type testSelectorItem struct {
@@ -857,10 +809,6 @@ func TestSelectorDialog_ManyItems(t *testing.T) {
 	golden.RequireEqual(t, []byte(s.View()))
 }
 
-// ============================================================================
-// StackSelector Component Tests
-// ============================================================================
-
 func TestStackSelector_Empty(t *testing.T) {
 	s := NewStackSelector()
 	s.SetSize(testWidth, testHeight)
@@ -896,10 +844,6 @@ func TestStackSelector_NoNewOption(t *testing.T) {
 	golden.RequireEqual(t, []byte(s.View()))
 }
 
-// ============================================================================
-// WorkspaceSelector Component Tests
-// ============================================================================
-
 func TestWorkspaceSelector_Empty(t *testing.T) {
 	s := NewWorkspaceSelector()
 	s.SetSize(testWidth, testHeight)
@@ -921,10 +865,6 @@ func TestWorkspaceSelector_WithWorkspaces(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(s.View()))
 }
-
-// ============================================================================
-// StepModal Component Tests
-// ============================================================================
 
 func TestStepModal_SingleStep(t *testing.T) {
 	m := NewStepModal("Configure")
@@ -1037,10 +977,6 @@ func TestStepModal_PasswordMode(t *testing.T) {
 	golden.RequireEqual(t, []byte(m.View()))
 }
 
-// ============================================================================
-// StackInitModal Component Tests
-// ============================================================================
-
 func TestStackInitModal_Initial(t *testing.T) {
 	m := NewStackInitModal()
 	m.SetSize(testWidth, testHeight)
@@ -1063,10 +999,6 @@ func TestStackInitModal_WithStackFiles(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(m.View()))
 }
-
-// ============================================================================
-// Helper types and variables for tests
-// ============================================================================
 
 // errTest is a simple test error
 type testError struct{}

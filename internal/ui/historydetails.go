@@ -144,9 +144,7 @@ func (d *HistoryDetailPanel) renderResourceChanges(b *strings.Builder) {
 	b.WriteString(DimStyle.Render(fmt.Sprintf("Total: %d resources", total)))
 }
 
-// renderKind and renderResult are now shared functions in styles.go:
-// - RenderHistoryKind(kind string) string
-// - RenderHistoryResult(result string) string
+// renderKind and renderResult are now shared functions in styles.go.
 
 func (d *HistoryDetailPanel) formatTime(timeStr string) string {
 	return FormatTime(timeStr, "2006-01-02 15:04:05")

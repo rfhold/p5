@@ -9,10 +9,6 @@ import (
 	"github.com/rfhold/p5/pkg/plugin"
 )
 
-// =============================================================================
-// Mock Resource Opener Plugin for Testing
-// =============================================================================
-
 // mockResourceOpenerPlugin implements both BuiltinPlugin and ResourceOpenerPlugin for testing
 type mockResourceOpenerPlugin struct {
 	BuiltinPluginBase
@@ -61,10 +57,6 @@ func (m *mockResourceOpenerPlugin) OpenResource(ctx context.Context, req *OpenRe
 	}
 	return OpenNotSupported(), nil
 }
-
-// =============================================================================
-// OpenResource Helper Function Tests
-// =============================================================================
 
 func TestOpenNotSupported(t *testing.T) {
 	resp := OpenNotSupported()
@@ -151,10 +143,6 @@ func TestSupportedOpenTypesPatterns(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Manager OpenResource Tests
-// =============================================================================
-
 func TestManager_OpenResource_NoPlugins(t *testing.T) {
 	mgr, _ := NewManager("")
 	mgr.mergedConfig = &P5Config{Plugins: make(map[string]PluginConfig)}
@@ -184,10 +172,6 @@ func TestManager_HasResourceOpeners_NoPlugins(t *testing.T) {
 		t.Error("expected HasResourceOpeners=false when no plugins")
 	}
 }
-
-// =============================================================================
-// FakePluginProvider OpenResource Tests
-// =============================================================================
 
 func TestFakePluginProvider_OpenResource_Default(t *testing.T) {
 	fake := &FakePluginProvider{
@@ -276,10 +260,6 @@ func TestFakePluginProvider_HasResourceOpeners(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// OpenAction Type Tests
-// =============================================================================
 
 func TestOpenActionType_Browser(t *testing.T) {
 	if proto.OpenActionType_OPEN_ACTION_TYPE_BROWSER != 1 {

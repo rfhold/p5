@@ -9,10 +9,6 @@ import (
 	"github.com/rfhold/p5/pkg/plugin"
 )
 
-// =============================================================================
-// extractK8sKind Tests
-// =============================================================================
-
 func TestExtractK8sKind_ValidResourceTypes(t *testing.T) {
 	tests := []struct {
 		resourceType string
@@ -68,10 +64,6 @@ func TestExtractK8sKind_InvalidResourceTypes(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// extractK8sNamespace Tests
-// =============================================================================
 
 func TestExtractK8sNamespace_ValidJSON(t *testing.T) {
 	tests := []struct {
@@ -136,10 +128,6 @@ func TestExtractK8sNamespace_InvalidJSON(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// isKubeconfigContent Tests
-// =============================================================================
 
 func TestIsKubeconfigContent_YAMLContent(t *testing.T) {
 	tests := []struct {
@@ -222,10 +210,6 @@ func TestIsKubeconfigContent_JSONContent(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// K9sPlugin Registration Tests
-// =============================================================================
-
 func TestK9sPlugin_Name(t *testing.T) {
 	p := &K9sPlugin{
 		BuiltinPluginBase: plugins.NewBuiltinPluginBase("k9s"),
@@ -256,10 +240,6 @@ func TestK9sPlugin_Authenticate(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// GetSupportedOpenTypes Tests
-// =============================================================================
-
 func TestK9sPlugin_GetSupportedOpenTypes(t *testing.T) {
 	p := &K9sPlugin{
 		BuiltinPluginBase: plugins.NewBuiltinPluginBase("k9s"),
@@ -289,10 +269,6 @@ func TestK9sPlugin_GetSupportedOpenTypes(t *testing.T) {
 		t.Errorf("expected pattern ^kubernetes:.* in %v", resp.ResourceTypePatterns)
 	}
 }
-
-// =============================================================================
-// OpenResource Tests
-// =============================================================================
 
 func TestK9sPlugin_OpenResource_ValidKubernetesResource(t *testing.T) {
 	p := &K9sPlugin{

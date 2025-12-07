@@ -14,10 +14,6 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 )
 
-// =============================================================================
-// Test Infrastructure
-// =============================================================================
-
 // TestStack wraps a Pulumi stack with cleanup functionality
 type TestStack struct {
 	Stack      auto.Stack
@@ -172,10 +168,6 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-// =============================================================================
-// Event Collection Helpers
-// =============================================================================
-
 // CollectPreviewEvents collects all events from a preview channel into a slice
 func CollectPreviewEvents(ch <-chan PreviewEvent) []PreviewEvent {
 	var events []PreviewEvent
@@ -193,10 +185,6 @@ func CollectOperationEvents(ch <-chan OperationEvent) []OperationEvent {
 	}
 	return events
 }
-
-// =============================================================================
-// Preview Operation Tests
-// =============================================================================
 
 func TestIntegration_Preview_Success(t *testing.T) {
 	if testing.Short() {
@@ -293,10 +281,6 @@ func TestIntegration_Preview_Cancellation(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Up Operation Tests
-// =============================================================================
-
 func TestIntegration_Up_Success(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -389,10 +373,6 @@ func TestIntegration_Up_Idempotent(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Refresh Operation Tests
-// =============================================================================
-
 func TestIntegration_Refresh_Success(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -426,10 +406,6 @@ func TestIntegration_Refresh_Success(t *testing.T) {
 		t.Error("expected Done event")
 	}
 }
-
-// =============================================================================
-// Stack Reader Tests
-// =============================================================================
 
 func TestIntegration_GetResources_Empty(t *testing.T) {
 	if testing.Short() {
@@ -507,10 +483,6 @@ func TestIntegration_GetResources_AfterUp(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Workspace Reader Tests
-// =============================================================================
-
 func TestIntegration_IsWorkspace_Valid(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -544,10 +516,6 @@ func TestIntegration_IsWorkspace_Invalid(t *testing.T) {
 		t.Error("expected temp directory without Pulumi.yaml to be invalid")
 	}
 }
-
-// =============================================================================
-// History Tests
-// =============================================================================
 
 func TestIntegration_History_AfterOperations(t *testing.T) {
 	if testing.Short() {
