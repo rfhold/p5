@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -108,6 +109,7 @@ func createTestModel(t *testing.T, opts ...testModelOption) Model {
 		StackInitializer: &pulumi.FakeStackInitializer{},
 		ResourceImporter: &pulumi.FakeResourceImporter{},
 		PluginProvider:   &plugins.FakePluginProvider{},
+		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 
 	appCtx := AppContext{
@@ -624,6 +626,7 @@ func (te *TestEnvironment) CreateModel(startView string) Model {
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   &plugins.FakePluginProvider{},
 		Env:              te.Env,
+		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 
 	appCtx := AppContext{

@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"path/filepath"
 	"testing"
 	"time"
@@ -13,6 +15,10 @@ import (
 	"github.com/rfhold/p5/internal/plugins"
 	"github.com/rfhold/p5/internal/pulumi"
 )
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
 
 func TestInit_NeedsWorkspaceSelection(t *testing.T) {
 	t.Parallel()
@@ -27,6 +33,7 @@ func TestInit_NeedsWorkspaceSelection(t *testing.T) {
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   &plugins.FakePluginProvider{},
 		Env:              te.Env,
+		Logger:           discardLogger(),
 	}
 
 	appCtx := AppContext{
@@ -68,6 +75,7 @@ func TestInit_MultipleStacksAutoSelectsCurrent(t *testing.T) {
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   &plugins.FakePluginProvider{},
 		Env:              te.Env,
+		Logger:           discardLogger(),
 	}
 
 	appCtx := AppContext{
@@ -102,6 +110,7 @@ func TestInit_CreateNewStack(t *testing.T) {
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   &plugins.FakePluginProvider{},
 		Env:              te.Env,
+		Logger:           discardLogger(),
 	}
 
 	appCtx := AppContext{
@@ -218,6 +227,7 @@ func TestInit_WorkspaceSelectionAndNavigate(t *testing.T) {
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   &plugins.FakePluginProvider{},
 		Env:              te.Env,
+		Logger:           discardLogger(),
 	}
 
 	appCtx := AppContext{
