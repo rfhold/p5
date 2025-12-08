@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"maps"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,7 +14,9 @@ import (
 // transitionOpTo transitions to a new operation state with debug logging.
 func (m *Model) transitionOpTo(newState OperationState) {
 	if m.state.OpState != newState {
-		log.Printf("[Op] %s → %s", m.state.OpState.String(), newState.String())
+		m.deps.Logger.Debug("operation state transition",
+			"from", m.state.OpState.String(),
+			"to", newState.String())
 		m.state.OpState = newState
 	}
 }
@@ -23,7 +24,9 @@ func (m *Model) transitionOpTo(newState OperationState) {
 // resetOperation resets the operation state machine to idle.
 func (m *Model) resetOperation() {
 	if m.state.OpState != OpIdle {
-		log.Printf("[Op] Reset: %s → Idle", m.state.OpState.String())
+		m.deps.Logger.Debug("operation reset",
+			"from", m.state.OpState.String(),
+			"to", "Idle")
 		m.state.OpState = OpIdle
 	}
 	if m.operationCancel != nil {
@@ -35,7 +38,9 @@ func (m *Model) resetOperation() {
 // Returns true if cancellation was initiated.
 func (m *Model) cancelOperation() bool {
 	if m.state.OpState == OpRunning && m.operationCancel != nil {
-		log.Printf("[Op] Cancel requested: Running → Cancelling")
+		m.deps.Logger.Debug("operation cancel requested",
+			"from", "Running",
+			"to", "Cancelling")
 		m.state.OpState = OpCancelling
 		m.operationCancel()
 		return true

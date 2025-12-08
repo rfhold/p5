@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/rfhold/p5/internal/plugins"
@@ -19,8 +20,14 @@ func newTestDependencies() *Dependencies {
 		StackInitializer: &pulumi.FakeStackInitializer{},
 		ResourceImporter: &pulumi.FakeResourceImporter{},
 		PluginProvider:   &plugins.FakePluginProvider{},
+		Logger:           slog.New(slog.NewTextHandler(discardWriter{}, nil)),
 	}
 }
+
+// discardWriter is an io.Writer that discards all output
+type discardWriter struct{}
+
+func (discardWriter) Write(p []byte) (int, error) { return len(p), nil }
 
 // TestInitialModelStartsInCheckingWorkspaceState verifies the model starts
 // in the correct initial state.

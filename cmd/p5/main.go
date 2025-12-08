@@ -4,8 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	_ "github.com/rfhold/p5/internal/plugins/builtins" // Register builtin plugins
+	"github.com/rfhold/p5/internal/telemetry"
 )
 
 // Package-level variables for CLI argument parsing.
@@ -52,10 +51,14 @@ func main() {
 	}
 	flag.Parse()
 
-	// Disable logging by default, enable with -debug flag
-	if !argDebug {
-		log.SetOutput(io.Discard)
+	// Initialize telemetry (configured via OTEL_* environment variables)
+	// Debug flag enables local stderr logging when OTEL endpoint is not configured
+	tel, err := telemetry.Setup(context.Background(), telemetry.Options{Debug: argDebug})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to setup telemetry: %v\n", err)
+		tel = telemetry.NewNoop()
 	}
+	defer tel.Shutdown(context.Background())
 
 	// Get current working directory (where app was launched from)
 	cwd, err := os.Getwd()
@@ -85,7 +88,7 @@ func main() {
 	}
 
 	// Create production dependencies
-	deps := NewProductionDependencies(ctx.WorkDir)
+	deps := NewProductionDependencies(ctx.WorkDir, tel.Logger)
 
 	// Create application-level context with cancellation for graceful shutdown.
 	// This context is passed through to all async operations, enabling them to

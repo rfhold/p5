@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,7 +13,9 @@ import (
 func (m *Model) transitionTo(newState InitState) {
 	oldState := m.state.InitState
 	m.state.InitState = newState
-	log.Printf("[init] %s → %s", oldState, newState)
+	m.deps.Logger.Debug("init state transition",
+		"from", oldState.String(),
+		"to", newState.String())
 }
 
 // startPluginAuth kicks off plugin authentication.
@@ -102,7 +103,9 @@ func (m Model) handleProjectInfo(msg projectInfoMsg) (tea.Model, tea.Cmd) { //no
 
 // handleError handles general errors.
 func (m Model) handleError(msg errMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
-	log.Printf("[init] error in state %s: %v", m.state.InitState, msg)
+	m.deps.Logger.Error("init error",
+		"state", m.state.InitState.String(),
+		"error", error(msg))
 	m.ui.Header.SetError(msg)
 	m.ui.ResourceList.SetError(msg)
 	m.state.Err = msg

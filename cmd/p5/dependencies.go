@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/rfhold/p5/internal/plugins"
@@ -17,12 +18,13 @@ type Dependencies struct {
 	StackInitializer pulumi.StackInitializer
 	ResourceImporter pulumi.ResourceImporter
 	PluginProvider   plugins.PluginProvider
+	Logger           *slog.Logger
 	Env              map[string]string // Environment variables to pass to Pulumi
 }
 
 // NewProductionDependencies creates dependencies configured for production use.
 // workDir is used to initialize the plugin manager for p5.toml discovery.
-func NewProductionDependencies(workDir string) *Dependencies {
+func NewProductionDependencies(workDir string, logger *slog.Logger) *Dependencies {
 	pluginMgr, err := plugins.NewManager(workDir)
 	if err != nil {
 		// Log but don't fail - plugins are optional
@@ -37,5 +39,6 @@ func NewProductionDependencies(workDir string) *Dependencies {
 		StackInitializer: pulumi.NewStackInitializer(),
 		ResourceImporter: pulumi.NewResourceImporter(),
 		PluginProvider:   pluginMgr,
+		Logger:           logger,
 	}
 }
