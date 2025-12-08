@@ -1,10 +1,11 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
-│ Stack  3 resources                                                                                                   │
+│ Program: multi  │  Stack: test  │  Runtime: go                                                                       │
+│ Stack  4 resources                                                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-  > [ ] pulumi:pulumi:Stack  simple-test
-    └─ [ ] random:index/randomId:RandomId  test-id
+    [ ] pulumi:pulumi:Stack  multi-test
+    ├─ [ ] random:index/randomId:RandomId  base-id
+  > └─ [ ] random:index/randomString:RandomString  derived-string
     [ ] pulumi:providers:random  default_4_16_2
 
 
@@ -35,5 +36,4 @@
 
 
 
-
-             u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help  q quit
+ VISUAL                                                                      T target  R replace  E exclude  esc cancel

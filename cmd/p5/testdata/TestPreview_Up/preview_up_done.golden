@@ -1,11 +1,11 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
-│ Stack  3 resources                                                                                                   │
+│ Preview Up  +3  done                                                                                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-  > [ ] pulumi:pulumi:Stack  simple-test
-    └─ [ ] random:index/randomId:RandomId  test-id
-    [ ] pulumi:providers:random  default_4_16_2
+  > [+] pulumi:pulumi:Stack  simple-test
+    └─ [+] random:index/randomId:RandomId  test-id
+    [+] pulumi:providers:random  default_4_16_2
 
 
 
@@ -36,4 +36,4 @@
 
 
 
-             u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help  q quit
+               ctrl+u execute  I import  esc back  v select  D details  s stack  w workspace  h history  ? help  q quit

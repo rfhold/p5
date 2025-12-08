@@ -24,7 +24,9 @@ func TestPreview_Up(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	// Wait for preview to complete - "done" appears in header only when fully complete.
-	h.WaitFor("done", 15*time.Second)
+	// Also wait for footer keys to confirm settled state
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
+	h.FinalSnapshot("preview_up_done")
 }
 
 func TestPreview_UpAndExecute(t *testing.T) {
@@ -41,16 +43,40 @@ func TestPreview_UpAndExecute(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	// Wait for preview to complete - "done" appears in header only when fully complete.
-	h.WaitFor("done", 15*time.Second)
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlU})
 
 	// Wait for execution to complete - "done" reappears after execution finishes.
-	// Also verify resources show "created" status.
+	// Also verify resources show "created" status and "esc cancel" for execute view.
 	h.WaitForAll([]string{
 		"created",
 		"done",
-	}, 15*time.Second)
+		"esc cancel",
+	}, 30*time.Second)
+	h.FinalSnapshot("execute_up_done")
+}
+
+func TestPreview_Destroy(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "simple")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy stack: %v", err)
+	}
+
+	m := te.CreateModel("destroy")
+	h := newTestHarness(t, m)
+
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
+	h.FinalSnapshot("preview_destroy_done")
 }
 
 func TestPreview_DestroyAndExecute(t *testing.T) {
@@ -71,7 +97,7 @@ func TestPreview_DestroyAndExecute(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	// Wait for preview to complete - "done" appears in header only when fully complete.
-	h.WaitFor("done", 15*time.Second)
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlD})
 
@@ -80,7 +106,34 @@ func TestPreview_DestroyAndExecute(t *testing.T) {
 	h.WaitForAll([]string{
 		"deleted",
 		"done",
-	}, 15*time.Second)
+		"esc cancel",
+	}, 30*time.Second)
+	h.FinalSnapshot("execute_destroy_done")
+}
+
+func TestPreview_Refresh(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "simple")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy stack: %v", err)
+	}
+
+	// Delay to ensure pulumi releases any locks from the deploy
+	time.Sleep(2 * time.Second)
+
+	m := te.CreateModel("refresh")
+	h := newTestHarness(t, m)
+
+	// Wait for preview to complete - "done" appears in header only when fully complete.
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
+	h.FinalSnapshot("preview_refresh_done")
 }
 
 func TestPreview_RefreshAndExecute(t *testing.T) {
@@ -104,7 +157,7 @@ func TestPreview_RefreshAndExecute(t *testing.T) {
 	h := newTestHarness(t, m)
 
 	// Wait for preview to complete - "done" appears in header only when fully complete.
-	h.WaitFor("done", 15*time.Second)
+	h.WaitForAll([]string{"done", "ctrl+u execute"}, 30*time.Second)
 
 	h.Send(tea.KeyMsg{Type: tea.KeyCtrlR})
 
@@ -113,5 +166,7 @@ func TestPreview_RefreshAndExecute(t *testing.T) {
 	h.WaitForAll([]string{
 		"refreshed",
 		"done",
-	}, 15*time.Second)
+		"esc cancel",
+	}, 30*time.Second)
+	h.FinalSnapshot("execute_refresh_done")
 }

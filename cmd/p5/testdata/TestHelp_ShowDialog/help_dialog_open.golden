@@ -1,0 +1,39 @@
+
+
+                                     ╭────────────────────────────────────────────╮
+                                     │                                            │
+                                     │  Keyboard Shortcuts [1-29/40]              │
+                                     │                                            │
+                                     │  Navigation                                │
+                                     │         ↑/k  Move up                       │
+                                     │         ↓/j  Move down                     │
+                                     │        pgup  Page up                       │
+                                     │        pgdn  Page down                     │
+                                     │           g  Go to top                     │
+                                     │           G  Go to bottom                  │
+                                     │                                            │
+                                     │                                            │
+                                     │  Selection                                 │
+                                     │           v  Visual select mode            │
+                                     │           T  Toggle target flag            │
+                                     │           R  Toggle replace flag           │
+                                     │           E  Toggle exclude flag           │
+                                     │           c  Clear flags on selection      │
+                                     │           C  Clear all flags               │
+                                     │         esc  Cancel selection / back       │
+                                     │                                            │
+                                     │                                            │
+                                     │  Operations                                │
+                                     │           u  Preview up                    │
+                                     │           r  Preview refresh               │
+                                     │           d  Preview destroy               │
+                                     │      ctrl+u  Execute up                    │
+                                     │      ctrl+r  Execute refresh               │
+                                     │      ctrl+d  Execute destroy               │
+                                     │           I  Import resource (in preview)  │
+                                     │           x  Delete from state             │
+                                     │           o  Open resource (external tool  │
+                                     │        ▼ more below                        │
+                                     │                                            │
+                                     ╰────────────────────────────────────────────╯
+

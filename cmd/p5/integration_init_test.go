@@ -49,6 +49,36 @@ func TestInit_NeedsWorkspaceSelection(t *testing.T) {
 	h.WaitAndSnapshot("Select Workspace", "workspace_selector_shown", 10*time.Second)
 }
 
+func TestInit_StackInitModal(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "simple")
+
+	deps := &Dependencies{
+		StackOperator:    pulumi.NewStackOperator(),
+		StackReader:      pulumi.NewStackReader(),
+		WorkspaceReader:  pulumi.NewWorkspaceReader(),
+		StackInitializer: pulumi.NewStackInitializer(),
+		ResourceImporter: pulumi.NewResourceImporter(),
+		PluginProvider:   &plugins.FakePluginProvider{},
+		Env:              te.Env,
+		Logger:           discardLogger(),
+	}
+
+	appCtx := AppContext{
+		Cwd:       te.WorkDir,
+		WorkDir:   te.WorkDir,
+		StackName: "",
+		StartView: "stack",
+	}
+
+	m := initialModel(context.Background(), appCtx, deps)
+	h := newTestHarness(t, m)
+
+	// Wait for stack init modal to appear with backend info loaded
+	h.WaitAndSnapshot("Backend:", "stack_init_modal", 10*time.Second)
+}
+
 func TestInit_MultipleStacksAutoSelectsCurrent(t *testing.T) {
 	t.Parallel()
 

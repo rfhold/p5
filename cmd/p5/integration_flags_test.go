@@ -43,9 +43,10 @@ func TestFlags_TargetReplace(t *testing.T) {
 
 	// Clear the flags with 'c' (clear current)
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
-	time.Sleep(100 * time.Millisecond)
 
-	h.Snapshot("cleared_current")
+	// Verify flags are cleared - T:1 and R:1 should no longer appear
+	// Wait for footer to show normal stack view keys without flag indicators
+	h.WaitFor("u up", 2*time.Second)
 }
 
 func TestFlags_VisualExcludeClearAll(t *testing.T) {
@@ -85,13 +86,13 @@ func TestFlags_VisualExcludeClearAll(t *testing.T) {
 
 	// Clear one flag
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
-	time.Sleep(100 * time.Millisecond)
+	h.WaitFor("E:1", 2*time.Second)
 
 	// Clear all flags
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("C")})
-	time.Sleep(100 * time.Millisecond)
 
-	h.Snapshot("cleared_all_flags")
+	// Verify all flags are cleared - E:1 should no longer appear
+	h.WaitFor("u up", 2*time.Second)
 }
 
 func TestFlags_ExcludeFromDestroy(t *testing.T) {

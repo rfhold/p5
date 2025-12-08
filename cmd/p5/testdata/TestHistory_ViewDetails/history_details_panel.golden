@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
+│ History  1 updates                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                            ╭──────────────────────────────────────────────────────────╮
+  > #1  update  succeeded  YYYY-MM-DD HH:MM  +2             │                                                          │
+                                                            │  Update #1                                               │
+                                                            │                                                          │
+                                                            │  Kind: update                                            │
+                                                            │  Result: succeeded                                       │
+                                                            │  Started: YYYY-MM-DD HH:MM:SS                            │
+                                                            │  Ended: YYYY-MM-DD HH:MM:SS                              │
+                                                            │  Duration: X.Xs                                          │
+                                                            │                                                          │
+                                                            │  ─── Resource Changes ───                                │
+                                                            │                                                          │
+                                                            │    + 2 created                                           │
+                                                            │                                                          │
+                                                            │  Total: 2 resources                                      │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            │                                                          │
+                                                            ╰──────────────────────────────────────────────────────────╯
+                                         esc back  v select  D details  s stack  w workspace  h history  ? help  q quit

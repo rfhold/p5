@@ -329,9 +329,15 @@ func normalizeDynamicContent(s string) string {
 	// Normalize result strings that look like random passwords/strings
 	result = normalizeLengthPreserving(result, `result:\s*"[^"]{10,}"`, `result: "<RANDOM-VALUE>"`)
 
-	// Normalize history timestamps (format: YYYY-MM-DD HH:MM)
+	// Normalize history timestamps (format: YYYY-MM-DD HH:MM or YYYY-MM-DD HH:MM:SS)
 	// These vary based on when the test runs
+	// Handle HH:MM:SS format first (more specific), then HH:MM
+	result = normalizePattern(result, `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`, `YYYY-MM-DD HH:MM:SS`)
 	result = normalizePattern(result, `\d{4}-\d{2}-\d{2} \d{2}:\d{2}`, `YYYY-MM-DD HH:MM`)
+
+	// Normalize duration values in history details (e.g., "1.0s", "2.5s")
+	// These can vary slightly between runs
+	result = normalizePattern(result, `Duration: \d+\.\d+s`, `Duration: X.Xs`)
 
 	// Normalize trailing whitespace on each line to avoid width-related differences
 	result = normalizeTrailingWhitespace(result)

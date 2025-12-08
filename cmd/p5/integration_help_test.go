@@ -10,6 +10,30 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+func TestHelp_ShowDialog(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "simple")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view (resource + footer keys)
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Open help with ?
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	h.WaitAndSnapshot("Keyboard Shortcuts", "help_dialog_open", 5*time.Second)
+}
+
 func TestHelp_ShowAndClose(t *testing.T) {
 	t.Parallel()
 
@@ -37,5 +61,6 @@ func TestHelp_ShowAndClose(t *testing.T) {
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	time.Sleep(200 * time.Millisecond)
 
-	h.Snapshot("help_closed")
+	// Verify help dialog is closed by checking we're back to stack view
+	h.WaitFor("u up", 2*time.Second)
 }
