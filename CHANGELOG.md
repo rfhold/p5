@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.0
+
+### Features
+* 7497c9943decd41d390ec84aad04101cd2c3d325 feat: add OpenTelemetry integration with slog logging
+### Bug Fixes
+* 522de0dbd7b9e00b31839cc68ea1a9eabb43b056 fix: add Logger to test Dependencies to prevent nil pointer panic
+* 2b8db6dc2679e1f1783d8909cb1e67c8f0163822 fix: resolve flaky integration tests with done indicator
+* a63354b76add58023dd679eb13b057bee242d2d2 fix: resource sequence ordering
+### Refactoring
+* 7da83fa5dd0ea3b973d5b3c71057bb25b26359e0 refactor: linter issues
+
 ## v0.3.1
 
 ### Bug Fixes
