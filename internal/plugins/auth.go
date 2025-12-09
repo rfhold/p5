@@ -54,7 +54,9 @@ type CredentialsSummary struct {
 	Error      string
 }
 
-// AuthenticateAll runs authentication for all plugins in parallel
+// AuthenticateAll runs authentication for all plugins.
+// If p5Config.Order is specified, plugins in that list authenticate sequentially in order.
+// Remaining plugins (not in order list) authenticate in parallel after ordered plugins complete.
 func (m *Manager) AuthenticateAll(ctx context.Context, programName, stackName string, p5Config *P5Config, workDir string) ([]AuthenticateResult, error) {
 	m.mu.RLock()
 	plugins := make(map[string]*PluginInstance, len(m.plugins))
@@ -65,54 +67,37 @@ func (m *Manager) AuthenticateAll(ctx context.Context, programName, stackName st
 		return nil, nil
 	}
 
-	// Run authentication in parallel
-	var wg sync.WaitGroup
-	results := make(chan AuthenticateResult, len(plugins))
 	configHashes := make(map[string]string)
-	var configHashesMu sync.Mutex
+	var allResults []AuthenticateResult
 
-	for name, pluginInst := range plugins {
-		// Check if we have valid cached credentials
-		m.mu.RLock()
-		creds, hasCreds := m.credentials[name]
-		m.mu.RUnlock()
+	// Get ordered plugin names
+	orderedNames := p5Config.GetOrderedPluginNames()
 
-		if hasCreds && !creds.IsExpired() {
-			// Use cached credentials
-			results <- AuthenticateResult{
-				PluginName:  name,
-				Credentials: creds,
-			}
+	// Determine which plugins should run sequentially vs in parallel
+	orderedSet := make(map[string]bool)
+	for _, name := range p5Config.Order {
+		orderedSet[name] = true
+	}
+
+	// Phase 1: Authenticate ordered plugins sequentially
+	for _, name := range orderedNames {
+		pluginInst, exists := plugins[name]
+		if !exists {
 			continue
 		}
 
-		// Need to authenticate
-		wg.Add(1)
-		go func(name string, pluginInst *PluginInstance) {
-			defer wg.Done()
+		// If this plugin is not in the explicit order list, skip for now (handle in parallel phase)
+		if !orderedSet[name] {
+			continue
+		}
 
-			result, hash := m.authenticateWithHash(ctx, name, pluginInst, programName, stackName, p5Config, workDir)
-			if hash != "" {
-				configHashesMu.Lock()
-				configHashes[name] = hash
-				configHashesMu.Unlock()
-			}
-			results <- result
-		}(name, pluginInst)
-	}
-
-	// Wait for all authentications to complete
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	// Collect results
-	var allResults []AuthenticateResult
-	for result := range results {
+		result, hash := m.authenticatePlugin(ctx, name, pluginInst, programName, stackName, p5Config, workDir)
+		if hash != "" {
+			configHashes[name] = hash
+		}
 		allResults = append(allResults, result)
 
-		// Cache successful credentials
+		// Cache successful credentials immediately so subsequent plugins can use them
 		if result.Error == nil && result.Credentials != nil {
 			m.mu.Lock()
 			m.credentials[result.PluginName] = result.Credentials
@@ -120,10 +105,90 @@ func (m *Manager) AuthenticateAll(ctx context.Context, programName, stackName st
 		}
 	}
 
+	// Phase 2: Authenticate remaining plugins in parallel
+	var remainingPlugins []struct {
+		name   string
+		plugin *PluginInstance
+	}
+	for _, name := range orderedNames {
+		if !orderedSet[name] {
+			if pluginInst, exists := plugins[name]; exists {
+				remainingPlugins = append(remainingPlugins, struct {
+					name   string
+					plugin *PluginInstance
+				}{name, pluginInst})
+			}
+		}
+	}
+
+	if len(remainingPlugins) > 0 {
+		var wg sync.WaitGroup
+		results := make(chan AuthenticateResult, len(remainingPlugins))
+		var configHashesMu sync.Mutex
+
+		for _, p := range remainingPlugins {
+			result, alreadyCached := m.checkCachedCredentials(p.name)
+			if alreadyCached {
+				results <- result
+				continue
+			}
+
+			wg.Add(1)
+			go func(name string, pluginInst *PluginInstance) {
+				defer wg.Done()
+				result, hash := m.authenticateWithHash(ctx, name, pluginInst, programName, stackName, p5Config, workDir)
+				if hash != "" {
+					configHashesMu.Lock()
+					configHashes[name] = hash
+					configHashesMu.Unlock()
+				}
+				results <- result
+			}(p.name, p.plugin)
+		}
+
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for result := range results {
+			allResults = append(allResults, result)
+			if result.Error == nil && result.Credentials != nil {
+				m.mu.Lock()
+				m.credentials[result.PluginName] = result.Credentials
+				m.mu.Unlock()
+			}
+		}
+	}
+
 	// Update context with new config hashes
 	m.UpdateContext(workDir, stackName, programName, configHashes)
 
 	return allResults, nil
+}
+
+// checkCachedCredentials returns cached credentials if valid, and whether cache was used
+func (m *Manager) checkCachedCredentials(name string) (AuthenticateResult, bool) {
+	m.mu.RLock()
+	creds, hasCreds := m.credentials[name]
+	m.mu.RUnlock()
+
+	if hasCreds && !creds.IsExpired() {
+		return AuthenticateResult{
+			PluginName:  name,
+			Credentials: creds,
+		}, true
+	}
+	return AuthenticateResult{}, false
+}
+
+// authenticatePlugin authenticates a single plugin, using cache if available
+func (m *Manager) authenticatePlugin(ctx context.Context, name string, pluginInst *PluginInstance, programName, stackName string, p5Config *P5Config, workDir string) (result AuthenticateResult, configHash string) {
+	// Check cache first
+	if cachedResult, cached := m.checkCachedCredentials(name); cached {
+		return cachedResult, ""
+	}
+	return m.authenticateWithHash(ctx, name, pluginInst, programName, stackName, p5Config, workDir)
 }
 
 // authenticateWithHash runs authentication for a single plugin and returns the config hash

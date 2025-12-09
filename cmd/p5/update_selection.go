@@ -8,7 +8,7 @@ import (
 
 // handleStacksList handles the loaded list of stacks during initialization.
 func (m Model) handleStacksList(msg stacksListMsg) (tea.Model, tea.Cmd) {
-	result := ConvertStacksToItems(msg)
+	result := MergeStacksAndFiles(msg.Stacks, msg.Files)
 	items := result.Items
 	currentStackName := result.CurrentStackName
 	m.ui.StackSelector.SetStacks(items)
@@ -38,13 +38,17 @@ func (m Model) handleStacksList(msg stacksListMsg) (tea.Model, tea.Cmd) {
 		if m.deps != nil && m.deps.PluginProvider != nil {
 			m.deps.PluginProvider.InvalidateAllCredentials()
 		}
-		cmds := []tea.Cmd{m.fetchProjectInfo(), m.authenticatePlugins()}
+
+		// Determine which operation to run after auth completes
+		var pendingOp PendingOperation
 		if m.ui.ViewMode == ui.ViewPreview {
-			cmds = append(cmds, m.initPreview(m.state.Operation))
+			pendingOp = PendingOperation{Type: "preview"}
 		} else {
-			cmds = append(cmds, m.initLoadStackResources())
+			pendingOp = PendingOperation{Type: "init_load_resources"}
 		}
-		return m, tea.Batch(cmds...)
+
+		// Start auth with lock - pending ops will execute when auth completes
+		return m, tea.Batch(m.fetchProjectInfo(), m.authenticatePluginsWithLock(pendingOp))
 	}
 
 	return m, nil
@@ -67,13 +71,17 @@ func (m Model) handleStackSelected(msg stackSelectedMsg) (tea.Model, tea.Cmd) {
 		mergedConfig := m.deps.PluginProvider.GetMergedConfig()
 		m.deps.PluginProvider.InvalidateCredentialsForContext(m.ctx.WorkDir, m.ctx.StackName, "", mergedConfig)
 	}
-	cmds := []tea.Cmd{m.fetchProjectInfo(), m.authenticatePlugins()}
+
+	// Determine which operation to run after auth completes
+	var pendingOp PendingOperation
 	if m.ui.ViewMode == ui.ViewPreview {
-		cmds = append(cmds, m.initPreview(m.state.Operation))
+		pendingOp = PendingOperation{Type: "preview"}
 	} else {
-		cmds = append(cmds, m.loadStackResources())
+		pendingOp = PendingOperation{Type: "load_resources"}
 	}
-	return m, tea.Batch(cmds...)
+
+	// Start auth with lock - pending ops will execute when auth completes
+	return m, tea.Batch(m.fetchProjectInfo(), m.authenticatePluginsWithLock(pendingOp))
 }
 
 // handleWorkspacesList handles the loaded list of workspaces

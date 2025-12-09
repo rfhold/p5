@@ -11,7 +11,10 @@ type errMsg error
 type previewEventMsg pulumi.PreviewEvent
 type operationEventMsg pulumi.OperationEvent
 type stackResourcesMsg []pulumi.ResourceInfo
-type stacksListMsg []pulumi.StackInfo
+type stacksListMsg struct {
+	Stacks []pulumi.StackInfo
+	Files  []pulumi.StackFileInfo
+}
 type stackSelectedMsg string
 type workspacesListMsg []pulumi.WorkspaceInfo
 type workspaceSelectedMsg string
@@ -23,6 +26,13 @@ type stateDeleteResultMsg *pulumi.CommandResult
 // Plugin-related messages
 type pluginAuthResultMsg []plugins.AuthenticateResult
 type pluginAuthErrorMsg error
+
+// authCompleteMsg is sent when plugin authentication completes (success or error)
+// This message always releases the auth busy lock and executes pending operations
+type authCompleteMsg struct {
+	results []plugins.AuthenticateResult
+	err     error
+}
 
 // pluginInitDoneMsg is sent when initial plugin auth completes
 type pluginInitDoneMsg struct {

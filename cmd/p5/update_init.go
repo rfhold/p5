@@ -58,18 +58,25 @@ func (m Model) handlePluginInitDone(msg pluginInitDoneMsg) (tea.Model, tea.Cmd) 
 		if m.deps != nil && m.deps.PluginProvider != nil {
 			m.deps.PluginProvider.InvalidateAllCredentials()
 		}
-		cmds = append(cmds, m.fetchProjectInfo(), m.authenticatePlugins())
+
+		// Determine which operation to run after auth completes
+		var pendingOp PendingOperation
 		if m.ui.ViewMode == ui.ViewPreview {
-			cmds = append(cmds, m.initPreview(m.state.Operation))
+			pendingOp = PendingOperation{Type: "preview"}
 		} else {
-			cmds = append(cmds, m.initLoadStackResources())
+			pendingOp = PendingOperation{Type: "init_load_resources"}
 		}
+
+		// Start auth with lock - pending ops will execute when auth completes
+		cmds = append(cmds, m.fetchProjectInfo(), m.authenticatePluginsWithLock(pendingOp))
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
-// handlePluginAuthResult handles completion of plugin re-authentication.
+// handlePluginAuthResult handles completion of plugin re-authentication (without lock).
+// Note: For auth with busy lock management, use authenticatePluginsWithLock which
+// returns authCompleteMsg instead.
 func (m Model) handlePluginAuthResult(msg pluginAuthResultMsg) (tea.Model, tea.Cmd) {
 	if m.deps != nil && m.deps.PluginProvider != nil {
 		m.deps.PluginProvider.ApplyEnvToProcess()
@@ -77,18 +84,57 @@ func (m Model) handlePluginAuthResult(msg pluginAuthResultMsg) (tea.Model, tea.C
 
 	summary := SummarizePluginAuthResults(msg)
 
+	var cmds []tea.Cmd
+
 	if summary.HasErrors {
-		return m, m.ui.Toast.Show("Plugin auth failed: " + strings.Join(summary.ErrorMessages, "; "))
+		cmds = append(cmds, m.ui.Toast.Show("Plugin auth failed: "+strings.Join(summary.ErrorMessages, "; ")))
+	} else if len(summary.AuthenticatedPlugins) > 0 {
+		cmds = append(cmds, m.ui.Toast.Show("Authenticated: "+strings.Join(summary.AuthenticatedPlugins, ", ")))
 	}
-	if len(summary.AuthenticatedPlugins) > 0 {
-		return m, m.ui.Toast.Show("Authenticated: " + strings.Join(summary.AuthenticatedPlugins, ", "))
+
+	if len(cmds) == 0 {
+		return m, nil
 	}
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
-// handlePluginAuthError handles plugin system errors
+// handlePluginAuthError handles plugin system errors (without lock).
+// Note: For auth with busy lock management, use authenticatePluginsWithLock which
+// returns authCompleteMsg instead.
 func (m Model) handlePluginAuthError(msg pluginAuthErrorMsg) (tea.Model, tea.Cmd) {
 	return m, m.ui.Toast.Show(fmt.Sprintf("Plugin error: %v", error(msg)))
+}
+
+// handleAuthComplete handles completion of plugin authentication with lock.
+// This always releases the auth busy lock and executes pending operations.
+func (m Model) handleAuthComplete(msg authCompleteMsg) (tea.Model, tea.Cmd) {
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		m.deps.PluginProvider.ApplyEnvToProcess()
+	}
+
+	var cmds []tea.Cmd
+
+	if msg.err != nil {
+		cmds = append(cmds, m.ui.Toast.Show(fmt.Sprintf("Plugin error: %v", msg.err)))
+	} else if len(msg.results) > 0 {
+		summary := SummarizePluginAuthResults(msg.results)
+		if summary.HasErrors {
+			cmds = append(cmds, m.ui.Toast.Show("Plugin auth failed: "+strings.Join(summary.ErrorMessages, "; ")))
+		} else if len(summary.AuthenticatedPlugins) > 0 {
+			cmds = append(cmds, m.ui.Toast.Show("Authenticated: "+strings.Join(summary.AuthenticatedPlugins, ", ")))
+		}
+	}
+
+	// Always release the busy lock and execute pending operations
+	pending := m.state.ClearBusy()
+	if len(pending) > 0 {
+		cmds = append(cmds, m.executePendingOps(pending))
+	}
+
+	if len(cmds) == 0 {
+		return m, nil
+	}
+	return m, tea.Batch(cmds...)
 }
 
 // handleProjectInfo handles project info loaded from Pulumi

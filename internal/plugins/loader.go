@@ -44,7 +44,9 @@ func (p *PluginInstance) Close() {
 	}
 }
 
-// LoadPlugins loads all plugins defined in the p5 config
+// LoadPlugins loads all plugins defined in the p5 config.
+// Plugins are loaded in the order specified by p5Config.Order, followed by any
+// remaining plugins not in the order list.
 func (m *Manager) LoadPlugins(ctx context.Context, p5Config *P5Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,8 +57,10 @@ func (m *Manager) LoadPlugins(ctx context.Context, p5Config *P5Config) error {
 	}
 	m.plugins = make(map[string]*PluginInstance)
 
-	// Load each plugin
-	for name, pluginConfig := range p5Config.Plugins {
+	// Load plugins in order
+	for _, name := range p5Config.GetOrderedPluginNames() {
+		pluginConfig := p5Config.Plugins[name]
+
 		// Check if this is a builtin plugin
 		if IsBuiltin(name) {
 			if err := m.loadBuiltinPlugin(name, pluginConfig); err != nil {

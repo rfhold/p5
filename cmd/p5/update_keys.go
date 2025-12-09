@@ -49,6 +49,10 @@ func (m Model) updateErrorModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) updateConfirmModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	confirmed, cancelled, cmd := m.ui.ConfirmModal.Update(msg)
 	if confirmed {
+		// Block confirmations while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil
+		}
 		// Check if this is a pending operation confirmation
 		if m.state.PendingOperation != nil {
 			op := *m.state.PendingOperation
@@ -70,6 +74,10 @@ func (m Model) updateConfirmModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) updateImportModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	confirmed, cmd := m.ui.ImportModal.Update(msg)
 	if confirmed {
+		// Block import while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil
+		}
 		// User confirmed import, execute it
 		return m, m.executeImport()
 	}
@@ -85,6 +93,10 @@ func (m Model) updateStackInitModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	action, cmd := m.ui.StackInitModal.Update(msg)
 	switch action {
 	case ui.StepModalActionConfirm:
+		// Block stack init while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil
+		}
 		// User completed all configured steps, init the stack
 		name := m.ui.StackInitModal.GetStackName()
 		provider := m.ui.StackInitModal.GetSecretsProvider()
@@ -94,6 +106,10 @@ func (m Model) updateStackInitModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// After secrets provider step (step 1 -> step 2), check if we should skip passphrase
 		currentStep := m.ui.StackInitModal.CurrentStep()
 		if currentStep == 2 && m.ui.StackInitModal.ShouldSkipPassphrase() {
+			// Block stack init while busy (e.g., waiting for auth)
+			if m.state.IsBusy() {
+				return m, nil
+			}
 			// Skip passphrase step, init directly
 			name := m.ui.StackInitModal.GetStackName()
 			provider := m.ui.StackInitModal.GetSecretsProvider()
@@ -259,18 +275,35 @@ func (m Model) handleViewToggles(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		m.toggleDetailsPanel()
 		return m, nil, true
 	case key.Matches(msg, ui.Keys.SelectStack):
+		// Block stack selection while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil, false
+		}
 		m.showStackSelector()
 		return m, m.fetchStacksList(), true
 	case key.Matches(msg, ui.Keys.SelectWorkspace):
+		// Block workspace selection while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil, false
+		}
 		m.showWorkspaceSelector()
 		return m, m.fetchWorkspacesList(), true
 	case key.Matches(msg, ui.Keys.ViewHistory):
+		// Block history view while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil, false
+		}
 		return m, m.switchToHistoryView(), true
 	}
 	return m, nil, false
 }
 
 func (m Model) handleResourceActions(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	// Block resource actions while busy (e.g., waiting for auth)
+	if m.state.IsBusy() {
+		return m, nil, false
+	}
+
 	switch {
 	case key.Matches(msg, ui.Keys.Import):
 		item := m.ui.ResourceList.SelectedItem()
@@ -304,6 +337,11 @@ func (m Model) handleResourceActions(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 }
 
 func (m Model) handleOperationKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+	// Block operations while busy (e.g., waiting for auth)
+	if m.state.IsBusy() {
+		return m, nil, false
+	}
+
 	switch {
 	case key.Matches(msg, ui.Keys.PreviewUp):
 		return m, m.startPreview(pulumi.OperationUp), true
@@ -334,6 +372,10 @@ func (m Model) handleEscape() (tea.Model, tea.Cmd) {
 		m.cancelOperation()
 		return m, nil
 	case EscapeActionNavigateBack:
+		// Block navigation while busy (e.g., waiting for auth)
+		if m.state.IsBusy() {
+			return m, nil
+		}
 		return m, m.switchToStackView()
 	}
 

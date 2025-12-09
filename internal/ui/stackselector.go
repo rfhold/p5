@@ -5,11 +5,20 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// StackSource indicates where the stack information comes from
+type StackSource int
+
+const (
+	StackSourceBackend StackSource = iota // Stack exists in the backend
+	StackSourceFile                       // Stack has a config file but may not exist in backend
+)
+
 // StackItem represents a stack in the selector
 type StackItem struct {
 	Name      string
 	Current   bool
-	IsNewItem bool // Special flag for "create new stack" option
+	IsNewItem bool        // Special flag for "create new stack" option
+	Source    StackSource // Where the stack information comes from
 }
 
 // Label implements SelectorItem
@@ -52,13 +61,20 @@ func NewStackSelector() *StackSelector {
 
 		// Regular stack items
 		var name string
+		var suffix string
+
+		// Add source indicator for file-only stacks
+		if item.Source == StackSourceFile {
+			suffix = DimStyle.Render(" (from file)")
+		}
+
 		switch {
 		case item.Current:
-			name = ValueStyle.Render(item.Name) + DimStyle.Render(" (current)")
+			name = ValueStyle.Render(item.Name) + DimStyle.Render(" (current)") + suffix
 		case isCursor:
-			name = ValueStyle.Render(item.Name)
+			name = ValueStyle.Render(item.Name) + suffix
 		default:
-			name = DimStyle.Render(item.Name)
+			name = DimStyle.Render(item.Name) + suffix
 		}
 		return cursor + name
 	})

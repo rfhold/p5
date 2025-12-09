@@ -75,6 +75,10 @@ type PluginConfig struct {
 // P5Config represents the p5 configuration section in Pulumi.yaml
 type P5Config struct {
 	Plugins map[string]PluginConfig `yaml:"plugins,omitempty"`
+	// Order specifies the execution order for plugin authentication.
+	// Plugins are authenticated sequentially in this order.
+	// Plugins not listed in order will run after ordered plugins (in non-deterministic order).
+	Order []string `yaml:"order,omitempty" toml:"order,omitempty"`
 }
 
 // LoadP5Config loads p5 configuration from a Pulumi.yaml file
@@ -176,6 +180,10 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (*StackPluginC
 // GlobalConfig represents the p5.toml global configuration
 type GlobalConfig struct {
 	Plugins map[string]PluginConfig `toml:"plugins"`
+	// Order specifies the execution order for plugin authentication.
+	// Plugins are authenticated sequentially in this order.
+	// Plugins not listed in order will run after ordered plugins (in non-deterministic order).
+	Order []string `toml:"order,omitempty"`
 }
 
 // LoadGlobalConfig loads p5.toml from either git root or launch directory
@@ -238,6 +246,7 @@ func MergeConfigs(global *GlobalConfig, program *P5Config) *P5Config {
 		program = &P5Config{Plugins: make(map[string]PluginConfig)}
 	}
 	if global == nil || len(global.Plugins) == 0 {
+		// Still need to handle order even if no global plugins
 		return program
 	}
 
@@ -257,7 +266,44 @@ func MergeConfigs(global *GlobalConfig, program *P5Config) *P5Config {
 		}
 	}
 
+	// Order: program config takes precedence if specified, otherwise use global
+	if len(program.Order) > 0 {
+		merged.Order = program.Order
+	} else if len(global.Order) > 0 {
+		merged.Order = global.Order
+	}
+
 	return merged
+}
+
+// GetOrderedPluginNames returns plugin names in execution order.
+// Plugins specified in Order come first (in that order), followed by
+// any remaining plugins not in the order list (in non-deterministic order).
+func (c *P5Config) GetOrderedPluginNames() []string {
+	if c == nil || len(c.Plugins) == 0 {
+		return nil
+	}
+
+	// Track which plugins we've added
+	seen := make(map[string]bool)
+	var result []string
+
+	// First, add plugins in the specified order (if they exist in Plugins map)
+	for _, name := range c.Order {
+		if _, exists := c.Plugins[name]; exists && !seen[name] {
+			result = append(result, name)
+			seen[name] = true
+		}
+	}
+
+	// Then add any remaining plugins not in the order list
+	for name := range c.Plugins {
+		if !seen[name] {
+			result = append(result, name)
+		}
+	}
+
+	return result
 }
 
 func mergePluginConfig(base, override PluginConfig) PluginConfig {

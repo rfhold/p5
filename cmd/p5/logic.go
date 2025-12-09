@@ -248,11 +248,49 @@ func ConvertStacksToItems(stacks []pulumi.StackInfo) StacksConversionResult {
 		result.Items = append(result.Items, ui.StackItem{
 			Name:    s.Name,
 			Current: s.Current,
+			Source:  ui.StackSourceBackend,
 		})
 		if s.Current {
 			result.CurrentStackName = s.Name
 		}
 	}
+	return result
+}
+
+// MergeStacksAndFiles merges backend stacks with file-based stacks.
+// Backend stacks take priority; file-only stacks are added with StackSourceFile.
+// Returns the merged items and the name of the current stack (if any).
+func MergeStacksAndFiles(stacks []pulumi.StackInfo, files []pulumi.StackFileInfo) StacksConversionResult {
+	result := StacksConversionResult{
+		Items: make([]ui.StackItem, 0, len(stacks)+len(files)),
+	}
+
+	// Track which stack names we've seen from the backend
+	seenStacks := make(map[string]bool)
+
+	// First add all backend stacks
+	for _, s := range stacks {
+		result.Items = append(result.Items, ui.StackItem{
+			Name:    s.Name,
+			Current: s.Current,
+			Source:  ui.StackSourceBackend,
+		})
+		seenStacks[s.Name] = true
+		if s.Current {
+			result.CurrentStackName = s.Name
+		}
+	}
+
+	// Then add file-only stacks (not in backend)
+	for _, f := range files {
+		if !seenStacks[f.Name] {
+			result.Items = append(result.Items, ui.StackItem{
+				Name:   f.Name,
+				Source: ui.StackSourceFile,
+			})
+		}
+	}
+
 	return result
 }
 

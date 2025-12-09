@@ -38,6 +38,9 @@ func (m Model) handleInitMessages(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case pluginAuthErrorMsg:
 		model, cmd := m.handlePluginAuthError(msg)
 		return model, cmd, true
+	case authCompleteMsg:
+		model, cmd := m.handleAuthComplete(msg)
+		return model, cmd, true
 	case projectInfoMsg:
 		model, cmd := m.handleProjectInfo(msg)
 		return model, cmd, true

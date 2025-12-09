@@ -431,6 +431,44 @@ func (m *Model) authenticatePlugins() tea.Cmd {
 	}
 }
 
+// authenticatePluginsWithLock sets the busy lock, queues an operation, and runs auth.
+// When auth completes (success or error), the lock is released and pending ops execute.
+func (m *Model) authenticatePluginsWithLock(pendingOp PendingOperation) tea.Cmd {
+	// Set busy lock before starting auth
+	m.state.SetBusy("auth")
+	m.state.QueueOperation(pendingOp)
+
+	if m.deps == nil || m.deps.PluginProvider == nil {
+		// No plugin provider - return completion immediately to release lock
+		return func() tea.Msg {
+			return authCompleteMsg{results: nil, err: nil}
+		}
+	}
+
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	pluginProvider := m.deps.PluginProvider
+	workspaceReader := m.deps.WorkspaceReader
+	appCtx := m.appCtx
+	opts := pulumi.ReadOptions{Env: m.deps.Env}
+
+	return func() tea.Msg {
+		// Get project info for the program name
+		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName, opts)
+		if err != nil {
+			return authCompleteMsg{results: nil, err: err}
+		}
+
+		results, err := pluginProvider.Initialize(
+			appCtx,
+			workDir,
+			info.ProgramName,
+			info.StackName,
+		)
+		return authCompleteMsg{results: results, err: err}
+	}
+}
+
 // waitForPreviewEvent waits for the next preview event
 func waitForPreviewEvent(ch <-chan pulumi.PreviewEvent) tea.Cmd {
 	return func() tea.Msg {
@@ -469,32 +507,34 @@ func (m *Model) fetchProjectInfo() tea.Cmd {
 	}
 }
 
-// fetchStacksList returns a command to load the list of available stacks
+// fetchStacksList returns a command to load the list of available stacks from both backend and config files
 func (m *Model) fetchStacksList() tea.Cmd {
 	workDir := m.ctx.WorkDir
 	stackReader := m.deps.StackReader
+	workspaceReader := m.deps.WorkspaceReader
 	appCtx := m.appCtx
 	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		stacks, err := stackReader.GetStacks(appCtx, workDir, opts)
-		if err != nil {
-			return errMsg(err)
+		// Get backend stacks (non-fatal if fails - we can still show file-based stacks)
+		stacks, _ := stackReader.GetStacks(appCtx, workDir, opts)
+
+		// Also get stack files (non-fatal if fails)
+		files, _ := workspaceReader.ListStackFiles(workDir)
+
+		return stacksListMsg{
+			Stacks: stacks,
+			Files:  files,
 		}
-		return stacksListMsg(stacks)
 	}
 }
 
-// selectStack sets the current stack and reloads data
+// selectStack returns a command that triggers stack selection.
+// This does NOT call Pulumi's SelectStack API because:
+// 1. Plugin auth needs to happen first to get correct env vars
+// 2. Operations explicitly pass the stack name with proper env vars
+// The stackSelectedMsg handler will trigger auth and load resources.
 func (m *Model) selectStack(name string) tea.Cmd {
-	workDir := m.ctx.WorkDir
-	stackReader := m.deps.StackReader
-	appCtx := m.appCtx
-	opts := pulumi.ReadOptions{Env: m.deps.Env}
 	return func() tea.Msg {
-		err := stackReader.SelectStack(appCtx, workDir, name, opts)
-		if err != nil {
-			return errMsg(err)
-		}
 		return stackSelectedMsg(name)
 	}
 }

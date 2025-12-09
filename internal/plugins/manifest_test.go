@@ -632,3 +632,247 @@ func TestLoadGlobalConfigFile_NilPlugins(t *testing.T) {
 		t.Error("expected Plugins map to be initialized, not nil")
 	}
 }
+
+// GetOrderedPluginNames Tests
+
+// TestGetOrderedPluginNames_NoOrder verifies all plugins returned when no order specified.
+func TestGetOrderedPluginNames_NoOrder(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+			"cloudflare": {Cmd: "/cf"},
+		},
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if len(names) != 3 {
+		t.Errorf("expected 3 plugins, got %d", len(names))
+	}
+
+	// All plugins should be present (order is non-deterministic without Order field)
+	found := make(map[string]bool)
+	for _, name := range names {
+		found[name] = true
+	}
+	for expected := range config.Plugins {
+		if !found[expected] {
+			t.Errorf("expected plugin %q to be in result", expected)
+		}
+	}
+}
+
+// TestGetOrderedPluginNames_WithOrder verifies plugins are returned in specified order.
+func TestGetOrderedPluginNames_WithOrder(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+			"cloudflare": {Cmd: "/cf"},
+		},
+		Order: []string{"cloudflare", "aws", "kubernetes"},
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if len(names) != 3 {
+		t.Errorf("expected 3 plugins, got %d", len(names))
+	}
+
+	// Verify exact order
+	expected := []string{"cloudflare", "aws", "kubernetes"}
+	for i, name := range names {
+		if name != expected[i] {
+			t.Errorf("expected names[%d]=%q, got %q", i, expected[i], name)
+		}
+	}
+}
+
+// TestGetOrderedPluginNames_PartialOrder verifies ordered plugins come first, then remaining.
+func TestGetOrderedPluginNames_PartialOrder(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+			"cloudflare": {Cmd: "/cf"},
+			"gcp":        {Cmd: "/gcp"},
+		},
+		Order: []string{"cloudflare", "aws"}, // Only 2 of 4 plugins ordered
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if len(names) != 4 {
+		t.Errorf("expected 4 plugins, got %d", len(names))
+	}
+
+	// First two should be in order
+	if names[0] != "cloudflare" {
+		t.Errorf("expected names[0]=%q, got %q", "cloudflare", names[0])
+	}
+	if names[1] != "aws" {
+		t.Errorf("expected names[1]=%q, got %q", "aws", names[1])
+	}
+
+	// Remaining should be present (order non-deterministic)
+	remaining := make(map[string]bool)
+	for _, name := range names[2:] {
+		remaining[name] = true
+	}
+	if !remaining["kubernetes"] {
+		t.Error("expected kubernetes in remaining plugins")
+	}
+	if !remaining["gcp"] {
+		t.Error("expected gcp in remaining plugins")
+	}
+}
+
+// TestGetOrderedPluginNames_OrderWithNonExistent verifies non-existent plugins in order are ignored.
+func TestGetOrderedPluginNames_OrderWithNonExistent(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+		},
+		Order: []string{"nonexistent", "aws", "also-missing", "kubernetes"},
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if len(names) != 2 {
+		t.Errorf("expected 2 plugins, got %d", len(names))
+	}
+
+	// Should only include plugins that exist, in order
+	if names[0] != "aws" {
+		t.Errorf("expected names[0]=%q, got %q", "aws", names[0])
+	}
+	if names[1] != "kubernetes" {
+		t.Errorf("expected names[1]=%q, got %q", "kubernetes", names[1])
+	}
+}
+
+// TestGetOrderedPluginNames_DuplicatesInOrder verifies duplicates in order are handled.
+func TestGetOrderedPluginNames_DuplicatesInOrder(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+		},
+		Order: []string{"aws", "kubernetes", "aws"}, // aws appears twice
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if len(names) != 2 {
+		t.Errorf("expected 2 plugins (no duplicates), got %d", len(names))
+	}
+
+	// Should only include each plugin once
+	if names[0] != "aws" {
+		t.Errorf("expected names[0]=%q, got %q", "aws", names[0])
+	}
+	if names[1] != "kubernetes" {
+		t.Errorf("expected names[1]=%q, got %q", "kubernetes", names[1])
+	}
+}
+
+// TestGetOrderedPluginNames_EmptyPlugins verifies nil returned for empty plugins.
+func TestGetOrderedPluginNames_EmptyPlugins(t *testing.T) {
+	config := &P5Config{
+		Plugins: map[string]PluginConfig{},
+		Order:   []string{"aws"},
+	}
+
+	names := config.GetOrderedPluginNames()
+
+	if names != nil {
+		t.Errorf("expected nil for empty plugins, got %v", names)
+	}
+}
+
+// TestGetOrderedPluginNames_NilConfig verifies nil returned for nil config.
+func TestGetOrderedPluginNames_NilConfig(t *testing.T) {
+	var config *P5Config
+
+	names := config.GetOrderedPluginNames()
+
+	if names != nil {
+		t.Errorf("expected nil for nil config, got %v", names)
+	}
+}
+
+// MergeConfigs Order Tests
+
+// TestMergeConfigs_OrderFromGlobal verifies order is taken from global when program has none.
+func TestMergeConfigs_OrderFromGlobal(t *testing.T) {
+	global := &GlobalConfig{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+		},
+		Order: []string{"kubernetes", "aws"},
+	}
+	program := &P5Config{
+		Plugins: map[string]PluginConfig{},
+	}
+
+	result := MergeConfigs(global, program)
+
+	if len(result.Order) != 2 {
+		t.Errorf("expected 2 items in order, got %d", len(result.Order))
+	}
+	if result.Order[0] != "kubernetes" {
+		t.Errorf("expected Order[0]=%q, got %q", "kubernetes", result.Order[0])
+	}
+	if result.Order[1] != "aws" {
+		t.Errorf("expected Order[1]=%q, got %q", "aws", result.Order[1])
+	}
+}
+
+// TestMergeConfigs_OrderFromProgram verifies program order overrides global.
+func TestMergeConfigs_OrderFromProgram(t *testing.T) {
+	global := &GlobalConfig{
+		Plugins: map[string]PluginConfig{
+			"aws":        {Cmd: "/aws"},
+			"kubernetes": {Cmd: "/k8s"},
+		},
+		Order: []string{"kubernetes", "aws"},
+	}
+	program := &P5Config{
+		Plugins: map[string]PluginConfig{},
+		Order:   []string{"aws", "kubernetes"}, // Different order
+	}
+
+	result := MergeConfigs(global, program)
+
+	if len(result.Order) != 2 {
+		t.Errorf("expected 2 items in order, got %d", len(result.Order))
+	}
+	// Program order should win
+	if result.Order[0] != "aws" {
+		t.Errorf("expected Order[0]=%q (from program), got %q", "aws", result.Order[0])
+	}
+	if result.Order[1] != "kubernetes" {
+		t.Errorf("expected Order[1]=%q (from program), got %q", "kubernetes", result.Order[1])
+	}
+}
+
+// TestMergeConfigs_NoOrder verifies no order when neither config has one.
+func TestMergeConfigs_NoOrder(t *testing.T) {
+	global := &GlobalConfig{
+		Plugins: map[string]PluginConfig{
+			"aws": {Cmd: "/aws"},
+		},
+	}
+	program := &P5Config{
+		Plugins: map[string]PluginConfig{},
+	}
+
+	result := MergeConfigs(global, program)
+
+	if len(result.Order) != 0 {
+		t.Errorf("expected empty order, got %v", result.Order)
+	}
+}

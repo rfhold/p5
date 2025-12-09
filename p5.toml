@@ -1,6 +1,11 @@
 # p5 Global Configuration
 # This file configures plugins that apply to all Pulumi programs in this repository
 
+# Plugin execution order (optional)
+# Plugins listed here authenticate sequentially in this order.
+# Plugins not listed authenticate in parallel after ordered plugins complete.
+# order = ["env", "cloudflare", "kubernetes"]
+
 [plugins.env]
 # Using the builtin "env" plugin to set development environment variables
 
