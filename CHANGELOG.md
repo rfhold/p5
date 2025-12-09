@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.1
+
+### Bug Fixes
+* 2c1b64561cf97a33e163b915e80feea834208fec fix: stack selection pre auth and auth locking
+
 ## v0.5.0
 
 ### Features
