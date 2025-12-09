@@ -110,8 +110,14 @@ func LoadP5Config(pulumiYamlPath string) (*P5Config, error) {
 	return &p5Config, nil
 }
 
+// StackPluginConfigResult holds the result of loading stack plugin configuration
+type StackPluginConfigResult struct {
+	Config          map[string]any
+	SecretsProvider string
+}
+
 // LoadStackPluginConfig loads stack-level plugin configuration from Pulumi.{stack}.yaml
-func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]any, error) {
+func LoadStackPluginConfig(workDir, stackName, pluginName string) (*StackPluginConfigResult, error) {
 	// Try both .yaml and .yml extensions
 	stackConfigPath := filepath.Join(workDir, fmt.Sprintf("Pulumi.%s.yaml", stackName))
 	if _, err := os.Stat(stackConfigPath); os.IsNotExist(err) {
@@ -121,7 +127,7 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]an
 	data, err := os.ReadFile(stackConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return map[string]any{}, nil // No stack config is fine
+			return &StackPluginConfigResult{Config: map[string]any{}}, nil // No stack config is fine
 		}
 		return nil, fmt.Errorf("failed to read stack config: %w", err)
 	}
@@ -131,29 +137,40 @@ func LoadStackPluginConfig(workDir, stackName, pluginName string) (map[string]an
 		return nil, fmt.Errorf("failed to parse stack config: %w", err)
 	}
 
+	result := &StackPluginConfigResult{
+		Config: map[string]any{},
+	}
+
+	// Extract secretsprovider if present
+	if sp, ok := raw["secretsprovider"].(string); ok {
+		result.SecretsProvider = sp
+	}
+
 	// Look for config -> p5:plugins -> {pluginName}
 	configRaw, ok := raw["config"].(map[string]any)
 	if !ok {
-		return map[string]any{}, nil
+		return result, nil
 	}
 
 	p5Plugins, ok := configRaw["p5:plugins"].(map[string]any)
 	if !ok {
-		return map[string]any{}, nil
+		return result, nil
 	}
 
 	pluginConfig, ok := p5Plugins[pluginName].(map[string]any)
 	if !ok {
-		return map[string]any{}, nil
+		return result, nil
 	}
 
 	// Look for .config nesting to match global and program config structure
 	// config -> p5:plugins -> {pluginName} -> config
 	if nestedConfig, ok := pluginConfig["config"].(map[string]any); ok {
-		return nestedConfig, nil
+		result.Config = nestedConfig
+	} else {
+		result.Config = pluginConfig
 	}
 
-	return pluginConfig, nil
+	return result, nil
 }
 
 // GlobalConfig represents the p5.toml global configuration

@@ -410,36 +410,36 @@ func TestLoadP5Config_FileNotFound(t *testing.T) {
 // TestLoadStackPluginConfig_Valid verifies loading valid stack config.
 func TestLoadStackPluginConfig_Valid(t *testing.T) {
 	testdataDir := "testdata"
-	config, err := LoadStackPluginConfig(testdataDir, "dev", "aws")
+	result, err := LoadStackPluginConfig(testdataDir, "dev", "aws")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if config == nil {
-		t.Fatal("expected non-nil config")
+	if result == nil {
+		t.Fatal("expected non-nil result")
 	}
-	if config["region"] != "us-west-2" {
-		t.Errorf("expected region=%q, got %q", "us-west-2", config["region"])
+	if result.Config["region"] != "us-west-2" {
+		t.Errorf("expected region=%q, got %q", "us-west-2", result.Config["region"])
 	}
-	if config["account"] != "123456789" {
-		t.Errorf("expected account=%q, got %q", "123456789", config["account"])
+	if result.Config["account"] != "123456789" {
+		t.Errorf("expected account=%q, got %q", "123456789", result.Config["account"])
 	}
 }
 
-// TestLoadStackPluginConfig_NoFile verifies empty map returned when stack file doesn't exist.
+// TestLoadStackPluginConfig_NoFile verifies empty config returned when stack file doesn't exist.
 func TestLoadStackPluginConfig_NoFile(t *testing.T) {
 	testdataDir := "testdata"
-	config, err := LoadStackPluginConfig(testdataDir, "nonexistent", "aws")
+	result, err := LoadStackPluginConfig(testdataDir, "nonexistent", "aws")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(config) != 0 {
-		t.Errorf("expected empty config for non-existent stack, got %v", config)
+	if len(result.Config) != 0 {
+		t.Errorf("expected empty config for non-existent stack, got %v", result.Config)
 	}
 }
 
-// TestLoadStackPluginConfig_NoP5Plugins verifies empty map returned when no p5:plugins section.
+// TestLoadStackPluginConfig_NoP5Plugins verifies empty config returned when no p5:plugins section.
 func TestLoadStackPluginConfig_NoP5Plugins(t *testing.T) {
 	// Create a temp stack config without p5:plugins
 	tmpDir := t.TempDir()
@@ -449,26 +449,54 @@ func TestLoadStackPluginConfig_NoP5Plugins(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	config, err := LoadStackPluginConfig(tmpDir, "test", "aws")
+	result, err := LoadStackPluginConfig(tmpDir, "test", "aws")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(config) != 0 {
-		t.Errorf("expected empty config when no p5:plugins, got %v", config)
+	if len(result.Config) != 0 {
+		t.Errorf("expected empty config when no p5:plugins, got %v", result.Config)
 	}
 }
 
-// TestLoadStackPluginConfig_PluginNotFound verifies empty map returned when plugin not in config.
+// TestLoadStackPluginConfig_PluginNotFound verifies empty config returned when plugin not in config.
 func TestLoadStackPluginConfig_PluginNotFound(t *testing.T) {
 	testdataDir := "testdata"
-	config, err := LoadStackPluginConfig(testdataDir, "dev", "nonexistent-plugin")
+	result, err := LoadStackPluginConfig(testdataDir, "dev", "nonexistent-plugin")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(config) != 0 {
-		t.Errorf("expected empty config for unknown plugin, got %v", config)
+	if len(result.Config) != 0 {
+		t.Errorf("expected empty config for unknown plugin, got %v", result.Config)
+	}
+}
+
+// TestLoadStackPluginConfig_SecretsProvider verifies secretsprovider is extracted.
+func TestLoadStackPluginConfig_SecretsProvider(t *testing.T) {
+	tmpDir := t.TempDir()
+	stackContent := []byte(`secretsprovider: awskms://alias/my-key
+config:
+  p5:plugins:
+    aws:
+      config:
+        region: us-east-1
+`)
+	err := os.WriteFile(filepath.Join(tmpDir, "Pulumi.test.yaml"), stackContent, 0o600)
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	result, err := LoadStackPluginConfig(tmpDir, "test", "aws")
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.SecretsProvider != "awskms://alias/my-key" {
+		t.Errorf("expected secretsprovider=%q, got %q", "awskms://alias/my-key", result.SecretsProvider)
+	}
+	if result.Config["region"] != "us-east-1" {
+		t.Errorf("expected region=%q, got %q", "us-east-1", result.Config["region"])
 	}
 }
 

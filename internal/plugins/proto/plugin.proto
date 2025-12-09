@@ -28,6 +28,7 @@ message AuthenticateRequest {
   map<string, string> stack_config = 2;
   string stack_name = 3;
   string program_name = 4;
+  string secrets_provider = 5;
 }
 
 message AuthenticateResponse {

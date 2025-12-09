@@ -135,30 +135,31 @@ func (m *Manager) authenticateWithHash(ctx context.Context, name string, pluginI
 	}
 
 	// Get stack-level config
-	stackConfig, err := LoadStackPluginConfig(workDir, stackName, name)
+	stackResult, err := LoadStackPluginConfig(workDir, stackName, name)
 	if err != nil {
 		return AuthenticateResult{
 			PluginName: name,
 			Error:      fmt.Errorf("failed to load stack config: %w", err),
 		}, ""
 	}
-	if stackConfig == nil {
-		stackConfig = make(map[string]any)
+	if stackResult == nil {
+		stackResult = &StackPluginConfigResult{Config: make(map[string]any)}
 	}
 
 	// Calculate config hash for change detection
-	cfgHash := hashConfig(programConfig, stackConfig)
+	cfgHash := hashConfig(programConfig, stackResult.Config)
 
 	// Convert configs to string maps for gRPC
 	programConfigStr := convertToStringMap(programConfig)
-	stackConfigStr := convertToStringMap(stackConfig)
+	stackConfigStr := convertToStringMap(stackResult.Config)
 
 	// Call the plugin
 	req := &proto.AuthenticateRequest{
-		ProgramConfig: programConfigStr,
-		StackConfig:   stackConfigStr,
-		StackName:     stackName,
-		ProgramName:   programName,
+		ProgramConfig:   programConfigStr,
+		StackConfig:     stackConfigStr,
+		StackName:       stackName,
+		ProgramName:     programName,
+		SecretsProvider: stackResult.SecretsProvider,
 	}
 
 	resp, err := pluginInst.auth.Authenticate(ctx, req)
