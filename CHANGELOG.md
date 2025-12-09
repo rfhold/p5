@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0
+
+### Features
+* cd8b8d3eb607a847bfb5b6d945a96c9f7a43ab34 feat: expose secrets provider to auth plugins
+
 ## v0.4.0
 
 ### Features
