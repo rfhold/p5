@@ -1,12 +1,12 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Program: multi  │  Stack: test  │  Runtime: go                                                                       │
-│ Preview Destroy  -3  done                                                                                            │
+│ Preview Destroy  -1  done                                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-  > [-] pulumi:providers:random  default_4_16_2
-    [ ] pulumi:pulumi:Stack  multi-test
-    ├─ [-] random:index/randomId:RandomId  base-id  [E]
+  > [ ] pulumi:pulumi:Stack  multi-test
     └─ [-] random:index/randomString:RandomString  derived-string
+
+
 
 
 

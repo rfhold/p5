@@ -1,10 +1,10 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Program: simple  │  Stack: test  │  Runtime: go                                                                      │
-│ Preview Destroy  -2  done                                                                                            │
+│ Preview Destroy  -3  done                                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
   > [-] pulumi:providers:random  default_4_16_2
-    [ ] pulumi:pulumi:Stack  simple-test
+    [-] pulumi:pulumi:Stack  simple-test
     └─ [-] random:index/randomId:RandomId  test-id
 
 

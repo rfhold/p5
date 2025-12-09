@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/events"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optdestroy"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optrefresh"
 )
@@ -39,6 +40,9 @@ func RunUpPreview(ctx context.Context, workDir, stackName string, opts Operation
 	if len(opts.Replaces) > 0 {
 		previewOpts = append(previewOpts, optpreview.Replace(opts.Replaces))
 	}
+	if len(opts.Excludes) > 0 {
+		previewOpts = append(previewOpts, optpreview.Exclude(opts.Excludes))
+	}
 
 	// Run preview
 	_, err = stack.Preview(ctx, previewOpts...)
@@ -69,6 +73,9 @@ func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts Oper
 	if len(opts.Targets) > 0 {
 		refreshOpts = append(refreshOpts, optrefresh.Target(opts.Targets))
 	}
+	if len(opts.Excludes) > 0 {
+		refreshOpts = append(refreshOpts, optrefresh.Exclude(opts.Excludes))
+	}
 
 	// Use PreviewRefresh for dry-run (requires Pulumi CLI >= 3.105.0)
 	_, err = stack.PreviewRefresh(ctx, refreshOpts...)
@@ -84,39 +91,28 @@ func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts Oper
 func RunDestroyPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
+	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
 	if err != nil {
 		eventCh <- PreviewEvent{Error: err}
 		return
 	}
 
-	// For a true destroy preview, we need to use a different approach
-	// since the automation API doesn't have a destroy preview
-	// For now, we'll just mark all resources as delete operations
-	resources, err := GetStackResources(ctx, workDir, resolvedStackName, opts.Env)
-	if err != nil {
-		eventCh <- PreviewEvent{Error: fmt.Errorf("failed to get stack resources: %w", err)}
-		return
+	pulumiEvents := make(chan events.EngineEvent)
+
+	go processPreviewEvents(pulumiEvents, eventCh)
+
+	destroyOpts := []optdestroy.Option{optdestroy.EventStreams(pulumiEvents)}
+	if len(opts.Targets) > 0 {
+		destroyOpts = append(destroyOpts, optdestroy.Target(opts.Targets))
+	}
+	if len(opts.Excludes) > 0 {
+		destroyOpts = append(destroyOpts, optdestroy.Exclude(opts.Excludes))
 	}
 
-	for _, r := range resources {
-		// Skip the stack itself
-		if r.Type == "pulumi:pulumi:Stack" {
-			continue
-		}
-		step := &PreviewStep{
-			URN:    r.URN,
-			Op:     OpDelete,
-			Type:   r.Type,
-			Name:   r.Name,
-			Parent: r.Parent,
-			// For delete, current state is the "old" state
-			Old: &StepState{
-				Inputs:  r.Inputs,
-				Outputs: r.Outputs,
-			},
-		}
-		eventCh <- PreviewEvent{Step: step}
+	_, err = stack.PreviewDestroy(ctx, destroyOpts...)
+	if err != nil {
+		eventCh <- PreviewEvent{Error: fmt.Errorf("destroy preview failed: %w", err)}
+		return
 	}
 
 	eventCh <- PreviewEvent{Done: true}

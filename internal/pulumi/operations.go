@@ -31,6 +31,9 @@ func RunUp(ctx context.Context, workDir, stackName string, opts OperationOptions
 	if len(opts.Replaces) > 0 {
 		upOpts = append(upOpts, optup.Replace(opts.Replaces))
 	}
+	if len(opts.Excludes) > 0 {
+		upOpts = append(upOpts, optup.Exclude(opts.Excludes))
+	}
 
 	_, err = stack.Up(ctx, upOpts...)
 	if err != nil {
@@ -59,6 +62,9 @@ func RunRefresh(ctx context.Context, workDir, stackName string, opts OperationOp
 	if len(opts.Targets) > 0 {
 		refreshOpts = append(refreshOpts, optrefresh.Target(opts.Targets))
 	}
+	if len(opts.Excludes) > 0 {
+		refreshOpts = append(refreshOpts, optrefresh.Exclude(opts.Excludes))
+	}
 
 	_, err = stack.Refresh(ctx, refreshOpts...)
 	if err != nil {
@@ -86,6 +92,9 @@ func RunDestroy(ctx context.Context, workDir, stackName string, opts OperationOp
 	destroyOpts := []optdestroy.Option{optdestroy.EventStreams(pulumiEvents)}
 	if len(opts.Targets) > 0 {
 		destroyOpts = append(destroyOpts, optdestroy.Target(opts.Targets))
+	}
+	if len(opts.Excludes) > 0 {
+		destroyOpts = append(destroyOpts, optdestroy.Exclude(opts.Excludes))
 	}
 
 	_, err = stack.Destroy(ctx, destroyOpts...)

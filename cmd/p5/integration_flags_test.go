@@ -126,7 +126,8 @@ func TestFlags_ExcludeFromDestroy(t *testing.T) {
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
 
 	// Wait for destroy preview to complete - footer shows "ctrl+u execute" when done
-	// The preview should show -3 deletes (excluding the resource with [E] flag)
-	h.WaitForAll([]string{"-3", "ctrl+u execute"}, 30*time.Second)
+	// With base-id excluded, only derived-string can be deleted (-1)
+	// The stack and provider can't be deleted while base-id still exists
+	h.WaitForAll([]string{"-1", "ctrl+u execute"}, 30*time.Second)
 	h.FinalSnapshot("destroy_preview_with_exclusion")
 }

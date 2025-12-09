@@ -89,6 +89,7 @@ func (m Model) initPreview(op pulumi.OperationType) tea.Cmd {
 	opts := pulumi.OperationOptions{
 		Targets:  m.ui.ResourceList.GetTargetURNs(),
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
+		Excludes: m.ui.ResourceList.GetExcludeURNs(),
 	}
 
 	// Merge base env with plugin env
@@ -143,6 +144,7 @@ func (m *Model) startPreview(op pulumi.OperationType) tea.Cmd {
 	opts := pulumi.OperationOptions{
 		Targets:  m.ui.ResourceList.GetTargetURNs(),
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
+		Excludes: m.ui.ResourceList.GetExcludeURNs(),
 	}
 
 	// Merge base env with plugin credentials
@@ -205,6 +207,7 @@ func (m *Model) startExecution(op pulumi.OperationType) tea.Cmd {
 	opts := pulumi.OperationOptions{
 		Targets:  m.ui.ResourceList.GetTargetURNs(),
 		Replaces: m.ui.ResourceList.GetReplaceURNs(),
+		Excludes: m.ui.ResourceList.GetExcludeURNs(),
 	}
 
 	// Merge base env with plugin credentials

@@ -84,6 +84,7 @@ func (o OperationType) String() string {
 type OperationOptions struct {
 	Targets  []string          // --target URNs
 	Replaces []string          // --replace URNs (up only)
+	Excludes []string          // --exclude URNs
 	Env      map[string]string // Environment variables to set for the operation
 }
 
