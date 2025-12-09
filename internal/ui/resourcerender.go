@@ -16,13 +16,25 @@ func (r *ResourceList) View() string {
 }
 
 func (r *ResourceList) renderItems() string {
+	itemCount := r.effectiveItemCount()
+
+	// Handle filter with no matches
+	if r.filter.Applied() && itemCount == 0 {
+		var b strings.Builder
+		b.WriteString(DimStyle.Render("No matches"))
+		b.WriteString("\n\n")
+		b.WriteString(RenderFilterBar(&r.filter, 0, len(r.visibleIdx), r.Width()))
+		paddedStyle := lipgloss.NewStyle().Padding(1, 2)
+		return paddedStyle.Render(b.String())
+	}
+
 	if len(r.visibleIdx) == 0 {
 		return RenderCenteredMessage("No resources", r.Width(), r.Height())
 	}
 
 	var b strings.Builder
 	visible := r.visibleHeight()
-	endIdx := min(r.scrollOffset+visible, len(r.visibleIdx))
+	endIdx := min(r.scrollOffset+visible, itemCount)
 
 	// Check if content is scrollable at all
 	scrollable := r.isScrollable()
@@ -39,7 +51,11 @@ func (r *ResourceList) renderItems() string {
 	}
 
 	for i := r.scrollOffset; i < endIdx; i++ {
-		itemIdx := r.visibleIdx[i]
+		visIdx := r.effectiveIndex(i)
+		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+			continue
+		}
+		itemIdx := r.visibleIdx[visIdx]
 		item := r.items[itemIdx]
 
 		isCursor := i == r.cursor
@@ -58,7 +74,7 @@ func (r *ResourceList) renderItems() string {
 	if scrollable {
 		startLine := r.scrollOffset + 1
 		endLine := endIdx
-		totalLines := len(r.visibleIdx)
+		totalLines := itemCount
 		hint := DimStyle.Render(fmt.Sprintf("  [%d-%d/%d]", startLine, endLine, totalLines))
 		scrollHint := RenderScrollHint(canScrollUp, canScrollDown, " ")
 		b.WriteString(hint)
@@ -66,6 +82,13 @@ func (r *ResourceList) renderItems() string {
 			b.WriteString(" ")
 			b.WriteString(scrollHint)
 		}
+		b.WriteString("\n")
+	}
+
+	// Add filter bar at bottom when active or applied
+	if r.filter.ActiveOrApplied() {
+		filterBar := RenderFilterBar(&r.filter, itemCount, len(r.visibleIdx), r.Width())
+		b.WriteString(filterBar)
 		b.WriteString("\n")
 	}
 

@@ -13,15 +13,15 @@
 
 
 
-                                      ╭──────────────────────────────────────────╮
-                                      │                                          │
-                                      │  Select Workspace                        │
-                                      │                                          │
-                                      │  > nested-project project                │
-                                      │                                          │
-                                      │  ↑/↓ navigate  enter select  esc cancel  │
-                                      │                                          │
-                                      ╰──────────────────────────────────────────╯
+                                 ╭────────────────────────────────────────────────────╮
+                                 │                                                    │
+                                 │  Select Workspace                                  │
+                                 │                                                    │
+                                 │  > nested-project project                          │
+                                 │                                                    │
+                                 │  ↑/↓ navigate  / filter  enter select  esc cancel  │
+                                 │                                                    │
+                                 ╰────────────────────────────────────────────────────╯
 
 
 

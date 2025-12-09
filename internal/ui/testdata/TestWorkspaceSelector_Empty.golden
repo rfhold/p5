@@ -5,15 +5,15 @@
                                                                                 
                                                                                 
                                                                                 
-                  ╭──────────────────────────────────────────╮                  
-                  │                                          │                  
-                  │  Select Workspace                        │                  
-                  │                                          │                  
-                  │  No Pulumi projects found                │                  
-                  │                                          │                  
-                  │  ↑/↓ navigate  enter select  esc cancel  │                  
-                  │                                          │                  
-                  ╰──────────────────────────────────────────╯                  
+             ╭────────────────────────────────────────────────────╮             
+             │                                                    │             
+             │  Select Workspace                                  │             
+             │                                                    │             
+             │  No Pulumi projects found                          │             
+             │                                                    │             
+             │  ↑/↓ navigate  / filter  enter select  esc cancel  │             
+             │                                                    │             
+             ╰────────────────────────────────────────────────────╯             
                                                                                 
                                                                                 
                                                                                 

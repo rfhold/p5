@@ -58,6 +58,9 @@ type KeyMap struct {
 	// Open resource
 	OpenResource key.Binding
 
+	// Filter
+	Filter key.Binding
+
 	// General
 	Help key.Binding
 	Quit key.Binding
@@ -201,6 +204,12 @@ var Keys = KeyMap{
 	OpenResource: key.NewBinding(
 		key.WithKeys("o"),
 		key.WithHelp("o", "open resource"),
+	),
+
+	// Filter
+	Filter: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "filter"),
 	),
 
 	// General

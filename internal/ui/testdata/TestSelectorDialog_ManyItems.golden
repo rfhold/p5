@@ -1,24 +1,24 @@
                                                                                 
                                                                                 
-                  ╭──────────────────────────────────────────╮                  
-                  │                                          │                  
-                  │  Select Item [1-10/15]                   │                  
-                  │                                          │                  
-                  │    item-1                                │                  
-                  │    item-2                                │                  
-                  │    item-3                                │                  
-                  │    item-4                                │                  
-                  │    item-5                                │                  
-                  │  > item-6 (current)                      │                  
-                  │    item-7                                │                  
-                  │    item-8                                │                  
-                  │    item-9                                │                  
-                  │    item-10                               │                  
-                  │    ▼ more below                          │                  
-                  │                                          │                  
-                  │  ↑/↓ navigate  enter select  esc cancel  │                  
-                  │                                          │                  
-                  ╰──────────────────────────────────────────╯                  
+             ╭────────────────────────────────────────────────────╮             
+             │                                                    │             
+             │  Select Item [1-10/15]                             │             
+             │                                                    │             
+             │    item-1                                          │             
+             │    item-2                                          │             
+             │    item-3                                          │             
+             │    item-4                                          │             
+             │    item-5                                          │             
+             │  > item-6 (current)                                │             
+             │    item-7                                          │             
+             │    item-8                                          │             
+             │    item-9                                          │             
+             │    item-10                                         │             
+             │    ▼ more below                                    │             
+             │                                                    │             
+             │  ↑/↓ navigate  / filter  enter select  esc cancel  │             
+             │                                                    │             
+             ╰────────────────────────────────────────────────────╯             
                                                                                 
                                                                                 
                                                                                 

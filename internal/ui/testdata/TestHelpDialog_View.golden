@@ -2,7 +2,7 @@
                                                                                 
                  ╭────────────────────────────────────────────╮                 
                  │                                            │                 
-                 │  Keyboard Shortcuts [1-13/40]              │                 
+                 │  Keyboard Shortcuts [1-13/41]              │                 
                  │                                            │                 
                  │  Navigation                                │                 
                  │         ↑/k  Move up                       │                 
@@ -11,12 +11,12 @@
                  │        pgdn  Page down                     │                 
                  │           g  Go to top                     │                 
                  │           G  Go to bottom                  │                 
+                 │           /  Filter list                   │                 
                  │                                            │                 
                  │                                            │                 
                  │  Selection                                 │                 
                  │           v  Visual select mode            │                 
                  │           T  Toggle target flag            │                 
-                 │           R  Toggle replace flag           │                 
                  │        ▼ more below                        │                 
                  │                                            │                 
                  ╰────────────────────────────────────────────╯                 

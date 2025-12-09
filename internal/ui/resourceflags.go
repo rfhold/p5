@@ -10,12 +10,17 @@ type ResourceFlags struct {
 // toggleFlag toggles the specified flag for selected resources
 func (r *ResourceList) toggleFlag(flagType string) {
 	indices := r.getSelectedIndices()
+	itemCount := r.effectiveItemCount()
 
 	for _, idx := range indices {
-		if idx < 0 || idx >= len(r.visibleIdx) {
+		if idx < 0 || idx >= itemCount {
 			continue
 		}
-		item := r.items[r.visibleIdx[idx]]
+		visIdx := r.effectiveIndex(idx)
+		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+			continue
+		}
+		item := r.items[r.visibleIdx[visIdx]]
 		urn := item.URN
 
 		flags := r.flags[urn]
@@ -59,12 +64,17 @@ func (r *ResourceList) toggleFlag(flagType string) {
 // clearFlags clears all flags for selected resources
 func (r *ResourceList) clearFlags() {
 	indices := r.getSelectedIndices()
+	itemCount := r.effectiveItemCount()
 
 	for _, idx := range indices {
-		if idx < 0 || idx >= len(r.visibleIdx) {
+		if idx < 0 || idx >= itemCount {
 			continue
 		}
-		urn := r.items[r.visibleIdx[idx]].URN
+		visIdx := r.effectiveIndex(idx)
+		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+			continue
+		}
+		urn := r.items[r.visibleIdx[visIdx]].URN
 		delete(r.flags, urn)
 	}
 

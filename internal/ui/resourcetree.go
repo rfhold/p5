@@ -215,6 +215,70 @@ func (r *ResourceList) markAncestorsVisible(parentURN string, visibleURNs map[st
 	}
 }
 
+// rebuildFilteredIndex applies the current filter to build the filtered index
+func (r *ResourceList) rebuildFilteredIndex() {
+	if !r.filter.Applied() {
+		r.filteredIdx = nil // No filter applied
+		return
+	}
+
+	r.filteredIdx = make([]int, 0)
+	for i, idx := range r.visibleIdx {
+		item := &r.items[idx]
+		if r.matchesFilter(item) {
+			r.filteredIdx = append(r.filteredIdx, i)
+		}
+	}
+
+	// Adjust cursor if it's now outside filtered range
+	if len(r.filteredIdx) > 0 && r.cursor >= len(r.filteredIdx) {
+		r.cursor = len(r.filteredIdx) - 1
+	}
+	r.ensureCursorVisible()
+}
+
+// matchesFilter returns true if the item matches the current filter
+func (r *ResourceList) matchesFilter(item *ResourceItem) bool {
+	if !r.filter.Applied() {
+		return true
+	}
+	return r.filter.MatchesAny(item.Type, item.Name)
+}
+
+// FilterActive returns whether the filter is currently active (typing) or applied (has text)
+func (r *ResourceList) FilterActive() bool {
+	return r.filter.ActiveOrApplied()
+}
+
+// FilterInputActive returns true if the filter is actively receiving input (user is typing)
+func (r *ResourceList) FilterInputActive() bool {
+	return r.filter.Active()
+}
+
+// FilterText returns the current filter text
+func (r *ResourceList) FilterText() string {
+	return r.filter.Text()
+}
+
+// effectiveItemCount returns the number of items being displayed (filtered or all)
+func (r *ResourceList) effectiveItemCount() int {
+	if r.filteredIdx != nil {
+		return len(r.filteredIdx)
+	}
+	return len(r.visibleIdx)
+}
+
+// effectiveIndex converts a cursor position to the actual visibleIdx index
+func (r *ResourceList) effectiveIndex(cursorPos int) int {
+	if r.filteredIdx != nil {
+		if cursorPos < 0 || cursorPos >= len(r.filteredIdx) {
+			return -1
+		}
+		return r.filteredIdx[cursorPos]
+	}
+	return cursorPos
+}
+
 // buildAncestorIsLast traces back through the parent chain to determine
 // which ancestors were the last child of their parent (for tree line drawing)
 func (r *ResourceList) buildAncestorIsLast(itemIdx int) []bool {

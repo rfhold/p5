@@ -230,6 +230,12 @@ func (m Model) updateDetailsPanel(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // updateMain handles keys when no modal is active
 func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If a filter is actively being typed, route directly to list navigation
+	// This prevents command keys (o, u, d, etc.) from triggering while filtering
+	if m.isFilterInputActive() {
+		return m.handleListNavigation(msg)
+	}
+
 	// Global keys: help, escape, quit
 	if model, cmd, handled := m.handleGlobalKeys(msg); handled {
 		return model, cmd
@@ -407,4 +413,12 @@ type scrollablePanel interface {
 	ScrollDown(lines int)
 	SetScrollOffset(offset int)
 	ScrollOffset() int
+}
+
+// isFilterInputActive returns true if any list filter is actively receiving input
+func (m Model) isFilterInputActive() bool {
+	if m.ui.ViewMode == ui.ViewHistory {
+		return m.ui.HistoryList.FilterInputActive()
+	}
+	return m.ui.ResourceList.FilterInputActive()
 }

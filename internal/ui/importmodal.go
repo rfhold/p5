@@ -39,6 +39,10 @@ type ImportModal struct {
 
 	// State
 	err error
+
+	// Filter state for suggestions
+	filter      FilterState
+	filteredIdx []int // Indices into suggestions that match filter (nil = no filter active)
 }
 
 // NewImportModal creates a new import modal
@@ -49,7 +53,8 @@ func NewImportModal() *ImportModal {
 	ti.Width = DefaultInputWidth
 
 	return &ImportModal{
-		input: ti,
+		input:  ti,
+		filter: NewFilterState(),
 	}
 }
 
@@ -77,6 +82,8 @@ func (m *ImportModal) SetSuggestions(suggestions []ImportSuggestion) {
 	m.loadingSuggestions = false
 	m.showSuggestions = len(suggestions) > 0
 	m.selectedIdx = 0
+	m.filteredIdx = nil
+	m.filter.Deactivate()
 }
 
 // SetLoadingSuggestions sets the loading state
@@ -88,6 +95,8 @@ func (m *ImportModal) SetLoadingSuggestions(loading bool) {
 func (m *ImportModal) Hide() {
 	m.ModalBase.Hide()
 	m.input.Blur()
+	m.filter.Deactivate()
+	m.filteredIdx = nil
 }
 
 // Visible is inherited from ModalBase
@@ -125,9 +134,49 @@ func (m *ImportModal) GetParentURN() string {
 // maxVisibleSuggestions is the max number of suggestions shown at once
 const maxVisibleSuggestions = 8
 
+// effectiveSuggestionCount returns the number of suggestions being displayed (filtered or all)
+func (m *ImportModal) effectiveSuggestionCount() int {
+	if m.filteredIdx != nil {
+		return len(m.filteredIdx)
+	}
+	return len(m.suggestions)
+}
+
+// effectiveSuggestionIndex converts a cursor position to the actual suggestion index
+func (m *ImportModal) effectiveSuggestionIndex(cursorPos int) int {
+	if m.filteredIdx != nil {
+		if cursorPos < 0 || cursorPos >= len(m.filteredIdx) {
+			return -1
+		}
+		return m.filteredIdx[cursorPos]
+	}
+	return cursorPos
+}
+
+// rebuildFilteredIndex applies the current filter to build the filtered index
+func (m *ImportModal) rebuildFilteredIndex() {
+	if !m.filter.Applied() {
+		m.filteredIdx = nil
+		return
+	}
+
+	m.filteredIdx = make([]int, 0)
+	for i, s := range m.suggestions {
+		if m.filter.MatchesAny(s.Label, s.Description) {
+			m.filteredIdx = append(m.filteredIdx, i)
+		}
+	}
+
+	// Adjust cursor if it's now outside filtered range
+	if len(m.filteredIdx) > 0 && m.selectedIdx >= len(m.filteredIdx) {
+		m.selectedIdx = len(m.filteredIdx) - 1
+	}
+}
+
 // ensureSelectedVisible adjusts scroll offset to keep the selected suggestion visible
 func (m *ImportModal) ensureSelectedVisible() {
-	if len(m.suggestions) <= maxVisibleSuggestions {
+	suggestionCount := m.effectiveSuggestionCount()
+	if suggestionCount <= maxVisibleSuggestions {
 		return // No scrolling needed
 	}
 
@@ -146,21 +195,29 @@ func (m *ImportModal) ensureSelectedVisible() {
 }
 
 func (m *ImportModal) handleEnterKey() (confirmed bool) {
-	if len(m.suggestions) > 0 && m.showSuggestions {
-		m.input.SetValue(m.suggestions[m.selectedIdx].ID)
+	suggestionCount := m.effectiveSuggestionCount()
+	if suggestionCount > 0 && m.showSuggestions {
+		idx := m.effectiveSuggestionIndex(m.selectedIdx)
+		if idx >= 0 && idx < len(m.suggestions) {
+			m.input.SetValue(m.suggestions[idx].ID)
+		}
 		m.showSuggestions = false
+		m.filter.Deactivate()
+		m.filteredIdx = nil
 		return false
 	}
 	if m.GetImportID() != "" {
 		m.ModalBase.Hide()
 		m.input.Blur()
+		m.filter.Deactivate()
 		return true
 	}
 	return false
 }
 
 func (m *ImportModal) handleNavigationKey(direction, pageSize int) {
-	if len(m.suggestions) == 0 || !m.showSuggestions {
+	suggestionCount := m.effectiveSuggestionCount()
+	if suggestionCount == 0 || !m.showSuggestions {
 		return
 	}
 	m.selectedIdx += direction * pageSize
@@ -169,25 +226,32 @@ func (m *ImportModal) handleNavigationKey(direction, pageSize int) {
 }
 
 func (m *ImportModal) clampSelectedIndex(pageSize int) int {
+	suggestionCount := m.effectiveSuggestionCount()
 	wrapAround := pageSize == 1
 	if m.selectedIdx < 0 {
 		if wrapAround {
-			return len(m.suggestions) - 1
+			return suggestionCount - 1
 		}
 		return 0
 	}
-	if m.selectedIdx >= len(m.suggestions) {
+	if m.selectedIdx >= suggestionCount {
 		if wrapAround {
 			return 0
 		}
-		return len(m.suggestions) - 1
+		return suggestionCount - 1
 	}
 	return m.selectedIdx
 }
 
 func (m *ImportModal) handleEscapeKey() {
+	// If filter is active, exit filter mode but keep filter applied
+	if m.filter.Active() {
+		m.filter.Deactivate()
+		return
+	}
 	if m.showSuggestions {
 		m.showSuggestions = false
+		m.filteredIdx = nil
 		return
 	}
 	m.ModalBase.Hide()
@@ -198,6 +262,22 @@ func (m *ImportModal) handleEscapeKey() {
 func (m *ImportModal) Update(msg tea.KeyMsg) (confirmed bool, cmd tea.Cmd) {
 	if !m.Visible() {
 		return false, nil
+	}
+
+	// Handle filter activation with "/" when suggestions are showing
+	if key.Matches(msg, Keys.Filter) && m.showSuggestions && !m.filter.Active() {
+		m.filter.Activate()
+		m.rebuildFilteredIndex()
+		return false, nil
+	}
+
+	// Forward to filter if active
+	if m.filter.Active() {
+		cmd, handled := m.filter.Update(msg)
+		if handled {
+			m.rebuildFilteredIndex()
+			return false, cmd
+		}
 	}
 
 	switch msg.String() {
@@ -218,6 +298,10 @@ func (m *ImportModal) Update(msg tea.KeyMsg) (confirmed bool, cmd tea.Cmd) {
 	case "tab":
 		if len(m.suggestions) > 0 {
 			m.showSuggestions = !m.showSuggestions
+			if !m.showSuggestions {
+				m.filter.Deactivate()
+				m.filteredIdx = nil
+			}
 		}
 		return false, nil
 	}
@@ -229,6 +313,108 @@ func (m *ImportModal) Update(msg tea.KeyMsg) (confirmed bool, cmd tea.Cmd) {
 
 	m.input, cmd = m.input.Update(msg)
 	return false, cmd
+}
+
+// renderSuggestionsSection renders the suggestions list with scrolling and filtering
+func (m *ImportModal) renderSuggestionsSection(content *strings.Builder) {
+	content.WriteString(LabelStyle.Render("Suggestions"))
+
+	if m.loadingSuggestions {
+		content.WriteString("\n")
+		content.WriteString(DimStyle.Render("  Loading..."))
+		return
+	}
+
+	if len(m.suggestions) == 0 {
+		content.WriteString("\n")
+		content.WriteString(DimStyle.Render("  No suggestions available"))
+		return
+	}
+
+	suggestionCount := m.effectiveSuggestionCount()
+	if m.filter.Applied() && suggestionCount == 0 {
+		m.renderFilterNoMatches(content)
+		return
+	}
+
+	m.renderSuggestionsList(content, suggestionCount)
+}
+
+// renderFilterNoMatches renders the "No matches" state when filter has no results
+func (m *ImportModal) renderFilterNoMatches(content *strings.Builder) {
+	content.WriteString("\n")
+	content.WriteString(DimStyle.Render("  No matches"))
+	content.WriteString("\n")
+	content.WriteString(RenderFilterBar(&m.filter, 0, len(m.suggestions), m.Width()))
+}
+
+// renderSuggestionsList renders the scrollable list of suggestions
+func (m *ImportModal) renderSuggestionsList(content *strings.Builder, suggestionCount int) {
+	scrollOffset := m.clampScrollOffset(suggestionCount)
+
+	// Add scroll indicator to header if needed
+	if suggestionCount > maxVisibleSuggestions {
+		endIdx := min(scrollOffset+maxVisibleSuggestions, suggestionCount)
+		content.WriteString(DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", scrollOffset+1, endIdx, suggestionCount)))
+	}
+	content.WriteString("\n")
+
+	// Render visible suggestions
+	endIdx := min(scrollOffset+maxVisibleSuggestions, suggestionCount)
+	for i := scrollOffset; i < endIdx; i++ {
+		m.renderSuggestionItem(content, i)
+	}
+
+	// Scroll hints
+	if suggestionCount > maxVisibleSuggestions {
+		maxOffset := max(suggestionCount-maxVisibleSuggestions, 0)
+		if hint := RenderScrollHint(scrollOffset > 0, scrollOffset < maxOffset, "  "); hint != "" {
+			content.WriteString(hint)
+			content.WriteString("\n")
+		}
+	}
+
+	// Add filter bar if active or applied
+	if m.filter.Active() || m.filter.Applied() {
+		content.WriteString(RenderFilterBar(&m.filter, suggestionCount, len(m.suggestions), m.Width()))
+		content.WriteString("\n")
+	}
+}
+
+// clampScrollOffset ensures scroll offset is within valid bounds and returns the clamped value
+func (m *ImportModal) clampScrollOffset(suggestionCount int) int {
+	maxOffset := max(suggestionCount-maxVisibleSuggestions, 0)
+	scrollOffset := m.ScrollOffset()
+	if scrollOffset > maxOffset {
+		scrollOffset = maxOffset
+		m.SetScrollOffset(scrollOffset)
+	}
+	if scrollOffset < 0 {
+		scrollOffset = 0
+		m.SetScrollOffset(scrollOffset)
+	}
+	return scrollOffset
+}
+
+// renderSuggestionItem renders a single suggestion item
+func (m *ImportModal) renderSuggestionItem(content *strings.Builder, i int) {
+	idx := m.effectiveSuggestionIndex(i)
+	if idx < 0 || idx >= len(m.suggestions) {
+		return
+	}
+	s := m.suggestions[idx]
+	if i == m.selectedIdx && m.showSuggestions {
+		content.WriteString(ValueStyle.Render("> " + s.Label))
+	} else {
+		content.WriteString(DimStyle.Render("  " + s.Label))
+	}
+	if s.Description != "" {
+		content.WriteString(DimStyle.Render(" - " + s.Description))
+	}
+	if s.PluginName != "" {
+		content.WriteString(DimStyle.Render(" [" + s.PluginName + "]"))
+	}
+	content.WriteString("\n")
 }
 
 // View renders the import modal
@@ -247,64 +433,7 @@ func (m *ImportModal) View() string {
 	content.WriteString("\n\n")
 
 	// Suggestions section with scrolling
-	content.WriteString(LabelStyle.Render("Suggestions"))
-	switch {
-	case m.loadingSuggestions:
-		content.WriteString("\n")
-		content.WriteString(DimStyle.Render("  Loading..."))
-	case len(m.suggestions) == 0:
-		content.WriteString("\n")
-		content.WriteString(DimStyle.Render("  No suggestions available"))
-	default:
-		// Calculate visible suggestions based on scroll
-		totalSuggestions := len(m.suggestions)
-
-		// Clamp scroll offset
-		maxOffset := max(totalSuggestions-maxVisibleSuggestions, 0)
-		scrollOffset := m.ScrollOffset()
-		if scrollOffset > maxOffset {
-			scrollOffset = maxOffset
-			m.SetScrollOffset(scrollOffset)
-		}
-		if scrollOffset < 0 {
-			scrollOffset = 0
-			m.SetScrollOffset(scrollOffset)
-		}
-
-		// Add scroll indicator to header if needed
-		if totalSuggestions > maxVisibleSuggestions {
-			endIdx := min(scrollOffset+maxVisibleSuggestions, totalSuggestions)
-			content.WriteString(DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", scrollOffset+1, endIdx, totalSuggestions)))
-		}
-		content.WriteString("\n")
-
-		// Render visible suggestions
-		endIdx := min(scrollOffset+maxVisibleSuggestions, totalSuggestions)
-		for i := scrollOffset; i < endIdx; i++ {
-			s := m.suggestions[i]
-			if i == m.selectedIdx && m.showSuggestions {
-				content.WriteString(ValueStyle.Render("> " + s.Label))
-			} else {
-				content.WriteString(DimStyle.Render("  " + s.Label))
-			}
-			if s.Description != "" {
-				content.WriteString(DimStyle.Render(" - " + s.Description))
-			}
-			if s.PluginName != "" {
-				content.WriteString(DimStyle.Render(" [" + s.PluginName + "]"))
-			}
-			content.WriteString("\n")
-		}
-
-		// Scroll hints
-		if totalSuggestions > maxVisibleSuggestions {
-			hint := RenderScrollHint(scrollOffset > 0, scrollOffset < maxOffset, "  ")
-			if hint != "" {
-				content.WriteString(hint)
-				content.WriteString("\n")
-			}
-		}
-	}
+	m.renderSuggestionsSection(&content)
 	content.WriteString("\n")
 
 	// Import ID input (always visible, not scrolled)

@@ -12,17 +12,17 @@
 
 
 
-                                      ╭──────────────────────────────────────────╮
-                                      │                                          │
-                                      │  Select Stack                            │
-                                      │                                          │
-                                      │    + New Stack                           │
-                                      │  > dev (current)                         │
-                                      │    staging                               │
-                                      │                                          │
-                                      │  ↑/↓ navigate  enter select  esc cancel  │
-                                      │                                          │
-                                      ╰──────────────────────────────────────────╯
+                                 ╭────────────────────────────────────────────────────╮
+                                 │                                                    │
+                                 │  Select Stack                                      │
+                                 │                                                    │
+                                 │    + New Stack                                     │
+                                 │  > dev (current)                                   │
+                                 │    staging                                         │
+                                 │                                                    │
+                                 │  ↑/↓ navigate  / filter  enter select  esc cancel  │
+                                 │                                                    │
+                                 ╰────────────────────────────────────────────────────╯
 
 
 

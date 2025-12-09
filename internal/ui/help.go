@@ -36,6 +36,7 @@ func NewHelpDialog() *HelpDialog {
 			{Key: "pgdn", Desc: "Page down"},
 			{Key: "g", Desc: "Go to top"},
 			{Key: "G", Desc: "Go to bottom"},
+			{Key: "/", Desc: "Filter list"},
 			{Key: "", Desc: ""},
 
 			// Selection

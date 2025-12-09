@@ -1,0 +1,6 @@
+                                            
+  > [+] aws:s3/bucket:Bucket  my-bucket     
+    [ ] aws:s3/bucket:Bucket  other-bucket  
+  /bucket                          (2/4)    
+                                            
+                                            

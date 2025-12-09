@@ -34,6 +34,10 @@ type SelectorDialog[T SelectorItem] struct {
 	maxVisible      int
 	renderItem      func(item T, isCursor bool) string // Optional custom item renderer
 	renderExtraInfo func(item T) string                // Optional extra info after item label
+
+	// Filter state
+	filter      FilterState
+	filteredIdx []int // Indices into items that match filter (nil = no filter active)
 }
 
 // NewSelectorDialog creates a new selector dialog with the given title
@@ -43,6 +47,7 @@ func NewSelectorDialog[T SelectorItem](title string) *SelectorDialog[T] {
 		loadingText: "Loading...",
 		emptyText:   "No items found",
 		maxVisible:  10,
+		filter:      NewFilterState(),
 	}
 }
 
@@ -51,6 +56,8 @@ func (s *SelectorDialog[T]) SetItems(items []T) {
 	s.items = items
 	s.loading = false
 	s.err = nil
+	s.filteredIdx = nil
+	s.filter.Deactivate()
 	// Set cursor to current item if found
 	for i, item := range items {
 		if item.IsCurrent() {
@@ -85,6 +92,8 @@ func (s *SelectorDialog[T]) Show() {
 // Hide hides the selector dialog
 func (s *SelectorDialog[T]) Hide() {
 	s.visible = false
+	s.filter.Deactivate()
+	s.filteredIdx = nil
 }
 
 // Visible returns whether the selector is visible
@@ -124,10 +133,54 @@ func (s *SelectorDialog[T]) SetExtraInfoRenderer(fn func(item T) string) {
 
 // SelectedItem returns the currently selected item, or nil if none
 func (s *SelectorDialog[T]) SelectedItem() *T {
-	if len(s.items) == 0 || s.cursor < 0 || s.cursor >= len(s.items) {
+	itemCount := s.effectiveItemCount()
+	if itemCount == 0 || s.cursor < 0 || s.cursor >= itemCount {
 		return nil
 	}
-	return &s.items[s.cursor]
+	idx := s.effectiveIndex(s.cursor)
+	if idx < 0 || idx >= len(s.items) {
+		return nil
+	}
+	return &s.items[idx]
+}
+
+// effectiveItemCount returns the number of items being displayed (filtered or all)
+func (s *SelectorDialog[T]) effectiveItemCount() int {
+	if s.filteredIdx != nil {
+		return len(s.filteredIdx)
+	}
+	return len(s.items)
+}
+
+// effectiveIndex converts a cursor position to the actual item index
+func (s *SelectorDialog[T]) effectiveIndex(cursorPos int) int {
+	if s.filteredIdx != nil {
+		if cursorPos < 0 || cursorPos >= len(s.filteredIdx) {
+			return -1
+		}
+		return s.filteredIdx[cursorPos]
+	}
+	return cursorPos
+}
+
+// rebuildFilteredIndex applies the current filter to build the filtered index
+func (s *SelectorDialog[T]) rebuildFilteredIndex() {
+	if !s.filter.Applied() {
+		s.filteredIdx = nil
+		return
+	}
+
+	s.filteredIdx = make([]int, 0)
+	for i, item := range s.items {
+		if s.filter.Matches(item.Label()) {
+			s.filteredIdx = append(s.filteredIdx, i)
+		}
+	}
+
+	// Adjust cursor if it's now outside filtered range
+	if len(s.filteredIdx) > 0 && s.cursor >= len(s.filteredIdx) {
+		s.cursor = len(s.filteredIdx) - 1
+	}
 }
 
 // HasItems returns whether any items are available
@@ -141,26 +194,47 @@ func (s *SelectorDialog[T]) Update(msg tea.KeyMsg) (selected bool, cmd tea.Cmd) 
 		return false, nil
 	}
 
+	// Handle filter activation with "/"
+	if key.Matches(msg, Keys.Filter) && !s.filter.Active() {
+		s.filter.Activate()
+		s.rebuildFilteredIndex()
+		return false, nil
+	}
+
+	// Forward to filter if active
+	if s.filter.Active() {
+		cmd, handled := s.filter.Update(msg)
+		if handled {
+			s.rebuildFilteredIndex()
+			return false, cmd
+		}
+	}
+
+	itemCount := s.effectiveItemCount()
+
 	switch {
 	case key.Matches(msg, Keys.Up):
 		if s.cursor > 0 {
 			s.cursor--
 		}
 	case key.Matches(msg, Keys.Down):
-		if s.cursor < len(s.items)-1 {
+		if s.cursor < itemCount-1 {
 			s.cursor++
 		}
 	case key.Matches(msg, Keys.Home):
 		s.cursor = 0
 	case key.Matches(msg, Keys.End):
-		s.cursor = len(s.items) - 1
+		s.cursor = itemCount - 1
 	case msg.String() == "enter":
-		if len(s.items) > 0 {
+		if itemCount > 0 {
 			s.visible = false
+			s.filter.Deactivate()
 			return true, nil
 		}
 	case key.Matches(msg, Keys.Escape):
 		s.visible = false
+		s.filter.Deactivate()
+		s.filteredIdx = nil
 		return false, nil
 	}
 
@@ -170,6 +244,7 @@ func (s *SelectorDialog[T]) Update(msg tea.KeyMsg) (selected bool, cmd tea.Cmd) 
 // View renders the selector dialog
 func (s *SelectorDialog[T]) View() string {
 	titleText := s.title
+	itemCount := s.effectiveItemCount()
 
 	var content string
 	switch {
@@ -179,25 +254,36 @@ func (s *SelectorDialog[T]) View() string {
 		content = ErrorStyle.Render(s.err.Error())
 	case len(s.items) == 0:
 		content = DimStyle.Render(s.emptyText)
+	case s.filter.Applied() && itemCount == 0:
+		content = DimStyle.Render("No matches")
 	default:
 		// Add line count hint to title if scrollable
-		if len(s.items) > s.maxVisible {
+		if itemCount > s.maxVisible {
 			// Calculate visible range
 			start := max(s.cursor-s.maxVisible/2, 0)
 			end := start + s.maxVisible
-			if end > len(s.items) {
-				end = len(s.items)
+			if end > itemCount {
+				end = itemCount
 				start = end - s.maxVisible
 			}
-			titleText += DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", start+1, end, len(s.items)))
+			if start < 0 {
+				start = 0
+			}
+			titleText += DimStyle.Render(fmt.Sprintf(" [%d-%d/%d]", start+1, end, itemCount))
 		}
 		content = s.renderItems()
 	}
 
 	title := DialogTitleStyle.Render(titleText)
 
-	// Footer hints
-	footer := DimStyle.Render("\n↑/↓ navigate  enter select  esc cancel")
+	// Footer with filter bar or hints
+	var footer string
+	if s.filter.ActiveOrApplied() {
+		filterBar := RenderFilterBar(&s.filter, itemCount, len(s.items), s.width)
+		footer = "\n" + filterBar + "\n" + DimStyle.Render("↑/↓ navigate  enter select  esc cancel")
+	} else {
+		footer = DimStyle.Render("\n↑/↓ navigate  / filter  enter select  esc cancel")
+	}
 
 	dialog := DialogStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, content, footer))
 
@@ -211,23 +297,31 @@ func (s *SelectorDialog[T]) View() string {
 // renderItems renders the scrollable item list
 func (s *SelectorDialog[T]) renderItems() string {
 	var lines []string
+	itemCount := s.effectiveItemCount()
 
 	// Calculate visible range for scrolling
 	start := 0
-	end := len(s.items)
+	end := itemCount
 
-	if len(s.items) > s.maxVisible {
+	if itemCount > s.maxVisible {
 		// Center cursor in visible range
 		start = max(s.cursor-s.maxVisible/2, 0)
 		end = start + s.maxVisible
-		if end > len(s.items) {
-			end = len(s.items)
+		if end > itemCount {
+			end = itemCount
 			start = end - s.maxVisible
+		}
+		if start < 0 {
+			start = 0
 		}
 	}
 
 	for i := start; i < end; i++ {
-		item := s.items[i]
+		idx := s.effectiveIndex(i)
+		if idx < 0 || idx >= len(s.items) {
+			continue
+		}
+		item := s.items[idx]
 		isCursor := i == s.cursor
 
 		var line string
@@ -242,9 +336,9 @@ func (s *SelectorDialog[T]) renderItems() string {
 	}
 
 	// Add scroll hint at bottom (import modal style)
-	if len(s.items) > s.maxVisible {
+	if itemCount > s.maxVisible {
 		canScrollUp := start > 0
-		canScrollDown := end < len(s.items)
+		canScrollDown := end < itemCount
 		hint := RenderScrollHint(canScrollUp, canScrollDown, "  ")
 		if hint != "" {
 			lines = append(lines, hint)

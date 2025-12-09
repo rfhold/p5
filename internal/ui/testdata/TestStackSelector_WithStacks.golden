@@ -4,18 +4,18 @@
                                                                                 
                                                                                 
                                                                                 
-                  ╭──────────────────────────────────────────╮                  
-                  │                                          │                  
-                  │  Select Stack                            │                  
-                  │                                          │                  
-                  │    + New Stack                           │                  
-                  │  > dev (current)                         │                  
-                  │    staging                               │                  
-                  │    production                            │                  
-                  │                                          │                  
-                  │  ↑/↓ navigate  enter select  esc cancel  │                  
-                  │                                          │                  
-                  ╰──────────────────────────────────────────╯                  
+             ╭────────────────────────────────────────────────────╮             
+             │                                                    │             
+             │  Select Stack                                      │             
+             │                                                    │             
+             │    + New Stack                                     │             
+             │  > dev (current)                                   │             
+             │    staging                                         │             
+             │    production                                      │             
+             │                                                    │             
+             │  ↑/↓ navigate  / filter  enter select  esc cancel  │             
+             │                                                    │             
+             ╰────────────────────────────────────────────────────╯             
                                                                                 
                                                                                 
                                                                                 

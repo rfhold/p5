@@ -73,7 +73,7 @@ type ResourceList struct {
 	ListBase // Embed common list functionality for loading/error state
 
 	items      []ResourceItem
-	visibleIdx []int                    // Indices of visible items (filtered)
+	visibleIdx []int                    // Indices of visible items (filtered by showAllOps)
 	flags      map[string]ResourceFlags // Shared reference from parent
 
 	// Cursor & scrolling
@@ -89,6 +89,10 @@ type ResourceList struct {
 	flashIdx int  // Index of item to flash (-1 = none, or specific index)
 	flashAll bool // Flash all visible items
 	flashing bool // Whether flash is active
+
+	// Filter state
+	filter      FilterState
+	filteredIdx []int // Indices into visibleIdx that match filter (nil = no filter active)
 }
 
 // NewResourceList creates a new ResourceList component
@@ -101,6 +105,7 @@ func NewResourceList(flags map[string]ResourceFlags) *ResourceList {
 		visibleIdx: make([]int, 0),
 		flags:      flags,
 		showAllOps: true,
+		filter:     NewFilterState(),
 	}
 	r.SetSpinner(s)
 	return r
@@ -220,9 +225,11 @@ func (r *ResourceList) UpdateItemStatus(urn string, status ItemStatus) {
 func (r *ResourceList) Clear() {
 	r.items = make([]ResourceItem, 0)
 	r.visibleIdx = make([]int, 0)
+	r.filteredIdx = nil
 	r.cursor = 0
 	r.scrollOffset = 0
 	r.visualMode = false
+	r.filter.Deactivate()
 	r.ClearError()
 }
 
@@ -233,17 +240,29 @@ func (r *ResourceList) VisualMode() bool {
 
 // visibleHeight returns the number of lines available for resource items
 func (r *ResourceList) visibleHeight() int {
-	return CalculateVisibleHeight(r.Height(), len(r.visibleIdx), 2) // 2 = padding (1 top, 1 bottom)
+	itemCount := r.effectiveItemCount()
+	// Reserve extra line for filter bar when active or applied
+	padding := 2 // 1 top, 1 bottom
+	if r.filter.ActiveOrApplied() {
+		padding++ // extra line for filter bar
+	}
+	return CalculateVisibleHeight(r.Height(), itemCount, padding)
 }
 
 // isScrollable returns true if there are more items than can fit without indicators
 func (r *ResourceList) isScrollable() bool {
-	return IsScrollable(r.Height(), len(r.visibleIdx), 2)
+	itemCount := r.effectiveItemCount()
+	padding := 2
+	if r.filter.ActiveOrApplied() {
+		padding++
+	}
+	return IsScrollable(r.Height(), itemCount, padding)
 }
 
 // ensureCursorVisible adjusts scroll offset to keep cursor visible
 func (r *ResourceList) ensureCursorVisible() {
-	r.scrollOffset = EnsureCursorVisible(r.cursor, r.scrollOffset, len(r.visibleIdx), r.visibleHeight())
+	itemCount := r.effectiveItemCount()
+	r.scrollOffset = EnsureCursorVisible(r.cursor, r.scrollOffset, itemCount, r.visibleHeight())
 }
 
 // Update handles key events and returns any commands
@@ -264,6 +283,22 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
+	// Handle filter activation with "/"
+	if key.Matches(keyMsg, Keys.Filter) && !r.filter.Active() {
+		r.filter.Activate()
+		r.rebuildFilteredIndex()
+		return nil
+	}
+
+	// Forward to filter if active
+	if r.filter.Active() {
+		cmd, handled := r.filter.Update(keyMsg)
+		if handled {
+			r.rebuildFilteredIndex()
+			return cmd
+		}
+	}
+
 	if r.handleNavigationKeys(keyMsg) {
 		return nil
 	}
@@ -274,6 +309,7 @@ func (r *ResourceList) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (r *ResourceList) handleNavigationKeys(keyMsg tea.KeyMsg) bool {
+	itemCount := r.effectiveItemCount()
 	switch {
 	case key.Matches(keyMsg, Keys.Up):
 		r.moveCursor(-1)
@@ -287,7 +323,7 @@ func (r *ResourceList) handleNavigationKeys(keyMsg tea.KeyMsg) bool {
 		r.cursor = 0
 		r.ensureCursorVisible()
 	case key.Matches(keyMsg, Keys.End):
-		r.cursor = len(r.visibleIdx) - 1
+		r.cursor = itemCount - 1
 		r.ensureCursorVisible()
 	default:
 		return false
@@ -333,7 +369,8 @@ func (r *ResourceList) handleCopyKeys(keyMsg tea.KeyMsg) tea.Cmd {
 
 // moveCursor moves the cursor by delta, clamping to valid range
 func (r *ResourceList) moveCursor(delta int) {
-	r.cursor = MoveCursor(r.cursor, delta, len(r.visibleIdx))
+	itemCount := r.effectiveItemCount()
+	r.cursor = MoveCursor(r.cursor, delta, itemCount)
 	r.ensureCursorVisible()
 }
 
@@ -380,10 +417,11 @@ func (r *ResourceList) Summary() ResourceSummary {
 
 // ScrollPercent returns the current scroll percentage (0-100)
 func (r *ResourceList) ScrollPercent() float64 {
-	if len(r.visibleIdx) <= r.visibleHeight() {
+	itemCount := r.effectiveItemCount()
+	if itemCount <= r.visibleHeight() {
 		return 100
 	}
-	maxScroll := len(r.visibleIdx) - r.visibleHeight()
+	maxScroll := itemCount - r.visibleHeight()
 	return float64(r.scrollOffset) / float64(maxScroll) * 100
 }
 
@@ -394,12 +432,13 @@ func (r *ResourceList) AtTop() bool {
 
 // AtBottom returns true if scrolled to bottom
 func (r *ResourceList) AtBottom() bool {
-	return r.scrollOffset >= len(r.visibleIdx)-r.visibleHeight()
+	itemCount := r.effectiveItemCount()
+	return r.scrollOffset >= itemCount-r.visibleHeight()
 }
 
 // TotalLines returns the total number of visible lines
 func (r *ResourceList) TotalLines() int {
-	return len(r.visibleIdx)
+	return r.effectiveItemCount()
 }
 
 // VisibleLines returns the number of lines that fit on screen
@@ -409,10 +448,15 @@ func (r *ResourceList) VisibleLines() int {
 
 // SelectedItem returns a pointer to the currently selected item, or nil if none
 func (r *ResourceList) SelectedItem() *ResourceItem {
-	if len(r.visibleIdx) == 0 || r.cursor < 0 || r.cursor >= len(r.visibleIdx) {
+	itemCount := r.effectiveItemCount()
+	if itemCount == 0 || r.cursor < 0 || r.cursor >= itemCount {
 		return nil
 	}
-	itemIdx := r.visibleIdx[r.cursor]
+	visIdx := r.effectiveIndex(r.cursor)
+	if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+		return nil
+	}
+	itemIdx := r.visibleIdx[visIdx]
 	if itemIdx < 0 || itemIdx >= len(r.items) {
 		return nil
 	}

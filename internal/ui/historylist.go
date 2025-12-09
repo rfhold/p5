@@ -32,6 +32,10 @@ type HistoryList struct {
 	// Cursor & scrolling
 	cursor       int
 	scrollOffset int
+
+	// Filter state
+	filter      FilterState
+	filteredIdx []int // Indices into items that match filter (nil = no filter active)
 }
 
 // NewHistoryList creates a new HistoryList component
@@ -40,7 +44,8 @@ func NewHistoryList() *HistoryList {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(ColorPrimary)
 	h := &HistoryList{
-		items: make([]HistoryItem, 0),
+		items:  make([]HistoryItem, 0),
+		filter: NewFilterState(),
 	}
 	h.SetSpinner(s)
 	return h
@@ -57,6 +62,8 @@ func (h *HistoryList) SetItems(items []HistoryItem) {
 	h.items = items
 	h.cursor = 0
 	h.scrollOffset = 0
+	h.filteredIdx = nil
+	h.filter.Deactivate()
 	h.SetLoading(false, "")
 	h.ClearError()
 }
@@ -66,22 +73,74 @@ func (h *HistoryList) Clear() {
 	h.items = make([]HistoryItem, 0)
 	h.cursor = 0
 	h.scrollOffset = 0
+	h.filteredIdx = nil
+	h.filter.Deactivate()
 	h.ClearError()
+}
+
+// effectiveItemCount returns the number of items being displayed (filtered or all)
+func (h *HistoryList) effectiveItemCount() int {
+	if h.filteredIdx != nil {
+		return len(h.filteredIdx)
+	}
+	return len(h.items)
+}
+
+// effectiveIndex converts a cursor position to the actual item index
+func (h *HistoryList) effectiveIndex(cursorPos int) int {
+	if h.filteredIdx != nil {
+		if cursorPos < 0 || cursorPos >= len(h.filteredIdx) {
+			return -1
+		}
+		return h.filteredIdx[cursorPos]
+	}
+	return cursorPos
 }
 
 // visibleHeight returns the number of lines available for items
 func (h *HistoryList) visibleHeight() int {
-	return CalculateVisibleHeight(h.Height(), len(h.items), 2) // 2 = padding (1 top, 1 bottom)
+	itemCount := h.effectiveItemCount()
+	padding := 2 // 1 top, 1 bottom
+	if h.filter.ActiveOrApplied() {
+		padding++
+	}
+	return CalculateVisibleHeight(h.Height(), itemCount, padding)
 }
 
 // isScrollable returns true if there are more items than can fit
 func (h *HistoryList) isScrollable() bool {
-	return IsScrollable(h.Height(), len(h.items), 2)
+	itemCount := h.effectiveItemCount()
+	padding := 2
+	if h.filter.ActiveOrApplied() {
+		padding++
+	}
+	return IsScrollable(h.Height(), itemCount, padding)
 }
 
 // ensureCursorVisible adjusts scroll offset to keep cursor visible
 func (h *HistoryList) ensureCursorVisible() {
-	h.scrollOffset = EnsureCursorVisible(h.cursor, h.scrollOffset, len(h.items), h.visibleHeight())
+	itemCount := h.effectiveItemCount()
+	h.scrollOffset = EnsureCursorVisible(h.cursor, h.scrollOffset, itemCount, h.visibleHeight())
+}
+
+// rebuildFilteredIndex applies the current filter to build the filtered index
+func (h *HistoryList) rebuildFilteredIndex() {
+	if !h.filter.Applied() {
+		h.filteredIdx = nil
+		return
+	}
+
+	h.filteredIdx = make([]int, 0)
+	for i := range h.items {
+		if h.filter.MatchesAny(h.items[i].Kind, h.items[i].Message, h.items[i].User, h.items[i].Result) {
+			h.filteredIdx = append(h.filteredIdx, i)
+		}
+	}
+
+	// Adjust cursor if it's now outside filtered range
+	if len(h.filteredIdx) > 0 && h.cursor >= len(h.filteredIdx) {
+		h.cursor = len(h.filteredIdx) - 1
+	}
 }
 
 // Update handles key events
@@ -90,23 +149,44 @@ func (h *HistoryList) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		switch {
-		case key.Matches(keyMsg, Keys.Up):
-			h.moveCursor(-1)
-		case key.Matches(keyMsg, Keys.Down):
-			h.moveCursor(1)
-		case key.Matches(keyMsg, Keys.PageUp):
-			h.moveCursor(-h.visibleHeight())
-		case key.Matches(keyMsg, Keys.PageDown):
-			h.moveCursor(h.visibleHeight())
-		case key.Matches(keyMsg, Keys.Home):
-			h.cursor = 0
-			h.ensureCursorVisible()
-		case key.Matches(keyMsg, Keys.End):
-			h.cursor = len(h.items) - 1
-			h.ensureCursorVisible()
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return nil
+	}
+
+	// Handle filter activation with "/"
+	if key.Matches(keyMsg, Keys.Filter) && !h.filter.Active() {
+		h.filter.Activate()
+		h.rebuildFilteredIndex()
+		return nil
+	}
+
+	// Forward to filter if active
+	if h.filter.Active() {
+		cmd, handled := h.filter.Update(keyMsg)
+		if handled {
+			h.rebuildFilteredIndex()
+			return cmd
 		}
+	}
+
+	itemCount := h.effectiveItemCount()
+
+	switch {
+	case key.Matches(keyMsg, Keys.Up):
+		h.moveCursor(-1)
+	case key.Matches(keyMsg, Keys.Down):
+		h.moveCursor(1)
+	case key.Matches(keyMsg, Keys.PageUp):
+		h.moveCursor(-h.visibleHeight())
+	case key.Matches(keyMsg, Keys.PageDown):
+		h.moveCursor(h.visibleHeight())
+	case key.Matches(keyMsg, Keys.Home):
+		h.cursor = 0
+		h.ensureCursorVisible()
+	case key.Matches(keyMsg, Keys.End):
+		h.cursor = itemCount - 1
+		h.ensureCursorVisible()
 	}
 
 	return nil
@@ -114,16 +194,22 @@ func (h *HistoryList) Update(msg tea.Msg) tea.Cmd {
 
 // moveCursor moves the cursor by delta, clamping to valid range
 func (h *HistoryList) moveCursor(delta int) {
-	h.cursor = MoveCursor(h.cursor, delta, len(h.items))
+	itemCount := h.effectiveItemCount()
+	h.cursor = MoveCursor(h.cursor, delta, itemCount)
 	h.ensureCursorVisible()
 }
 
 // SelectedItem returns the currently selected item, or nil if none
 func (h *HistoryList) SelectedItem() *HistoryItem {
-	if len(h.items) == 0 || h.cursor < 0 || h.cursor >= len(h.items) {
+	itemCount := h.effectiveItemCount()
+	if itemCount == 0 || h.cursor < 0 || h.cursor >= itemCount {
 		return nil
 	}
-	return &h.items[h.cursor]
+	idx := h.effectiveIndex(h.cursor)
+	if idx < 0 || idx >= len(h.items) {
+		return nil
+	}
+	return &h.items[idx]
 }
 
 // TotalItems returns the total number of items
@@ -138,7 +224,8 @@ func (h *HistoryList) AtTop() bool {
 
 // AtBottom returns true if scrolled to bottom
 func (h *HistoryList) AtBottom() bool {
-	return h.scrollOffset >= len(h.items)-h.visibleHeight()
+	itemCount := h.effectiveItemCount()
+	return h.scrollOffset >= itemCount-h.visibleHeight()
 }
 
 // View renders the history list
@@ -150,13 +237,25 @@ func (h *HistoryList) View() string {
 }
 
 func (h *HistoryList) renderItems() string {
+	itemCount := h.effectiveItemCount()
+
+	// Handle filter with no matches
+	if h.filter.Applied() && itemCount == 0 {
+		var b strings.Builder
+		b.WriteString(DimStyle.Render("No matches"))
+		b.WriteString("\n\n")
+		b.WriteString(RenderFilterBar(&h.filter, 0, len(h.items), h.Width()))
+		paddedStyle := lipgloss.NewStyle().Padding(1, 2)
+		return paddedStyle.Render(b.String())
+	}
+
 	if len(h.items) == 0 {
 		return RenderCenteredMessage("No history", h.Width(), h.Height())
 	}
 
 	var b strings.Builder
 	visible := h.visibleHeight()
-	endIdx := min(h.scrollOffset+visible, len(h.items))
+	endIdx := min(h.scrollOffset+visible, itemCount)
 
 	// Check if content is scrollable
 	scrollable := h.isScrollable()
@@ -170,7 +269,11 @@ func (h *HistoryList) renderItems() string {
 
 	// Render items
 	for i := h.scrollOffset; i < endIdx; i++ {
-		item := h.items[i]
+		idx := h.effectiveIndex(i)
+		if idx < 0 || idx >= len(h.items) {
+			continue
+		}
+		item := h.items[idx]
 		isCursor := i == h.cursor
 		line := h.renderItem(item, isCursor)
 		b.WriteString(line)
@@ -180,6 +283,13 @@ func (h *HistoryList) renderItems() string {
 	// Down arrow indicator
 	if scrollable {
 		b.WriteString(RenderScrollDownIndicator(canScrollDown))
+	}
+
+	// Add filter bar at bottom when active or applied
+	if h.filter.ActiveOrApplied() {
+		filterBar := RenderFilterBar(&h.filter, itemCount, len(h.items), h.Width())
+		b.WriteString(filterBar)
+		b.WriteString("\n")
 	}
 
 	paddedStyle := lipgloss.NewStyle().Padding(1, 2)
@@ -251,4 +361,14 @@ func (h *HistoryList) formatTime(timeStr string) string {
 
 func (h *HistoryList) renderChanges(changes map[string]int) string {
 	return RenderResourceChanges(changes, ResourceChangesCompact)
+}
+
+// FilterActive returns whether the filter is currently active (typing) or applied (has text)
+func (h *HistoryList) FilterActive() bool {
+	return h.filter.ActiveOrApplied()
+}
+
+// FilterInputActive returns true if the filter is actively receiving input (user is typing)
+func (h *HistoryList) FilterInputActive() bool {
+	return h.filter.Active()
 }

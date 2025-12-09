@@ -19,12 +19,32 @@ const (
 
 // DiffRenderer handles rendering of property diffs
 type DiffRenderer struct {
-	maxWidth int
+	maxWidth  int
+	keyFilter func(key string) bool // Optional filter function for property keys
 }
 
 // NewDiffRenderer creates a new diff renderer with the specified max width
 func NewDiffRenderer(maxWidth int) *DiffRenderer {
 	return &DiffRenderer{maxWidth: maxWidth}
+}
+
+// SetKeyFilter sets a filter function for property keys
+// Only keys where filter(key) returns true will be displayed
+func (r *DiffRenderer) SetKeyFilter(filter func(key string) bool) {
+	r.keyFilter = filter
+}
+
+// ClearKeyFilter removes the key filter
+func (r *DiffRenderer) ClearKeyFilter() {
+	r.keyFilter = nil
+}
+
+// shouldShowKey returns true if the key should be displayed based on filter
+func (r *DiffRenderer) shouldShowKey(key string) bool {
+	if r.keyFilter == nil {
+		return true
+	}
+	return r.keyFilter(key)
 }
 
 type diffState struct {
@@ -179,6 +199,11 @@ func (r *DiffRenderer) renderDiffMap(oldMap, newMap map[string]any, indent int) 
 	sortStrings(keys)
 
 	for _, key := range keys {
+		// Apply filter at root level (indent == 0)
+		if indent == 0 && !r.shouldShowKey(key) {
+			continue
+		}
+
 		oldVal, hasOld := getMapValue(oldMap, key)
 		newVal, hasNew := getMapValue(newMap, key)
 

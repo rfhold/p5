@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/golden"
 	"github.com/rfhold/p5/internal/pulumi"
 )
@@ -1009,3 +1010,197 @@ func (e testError) Error() string {
 }
 
 var errTest = testError{}
+
+func TestFilterState_Basic(t *testing.T) {
+	f := NewFilterState()
+
+	// Initially inactive
+	if f.Active() {
+		t.Error("filter should be inactive initially")
+	}
+	if f.Text() != "" {
+		t.Error("filter text should be empty initially")
+	}
+
+	// Activate
+	f.Activate()
+	if !f.Active() {
+		t.Error("filter should be active after Activate()")
+	}
+
+	// Deactivate
+	f.Deactivate()
+	if f.Active() {
+		t.Error("filter should be inactive after Deactivate()")
+	}
+}
+
+func TestFilterState_Matches(t *testing.T) {
+	f := NewFilterState()
+
+	// Empty filter matches everything
+	if !f.Matches("anything") {
+		t.Error("empty filter should match any text")
+	}
+	if !f.MatchesAny("one", "two", "three") {
+		t.Error("empty filter should match any of the texts")
+	}
+
+	// Activate and set filter text
+	f.Activate()
+	f.input.SetValue("bucket")
+
+	// Case-insensitive matching
+	if !f.Matches("my-bucket") {
+		t.Error("filter should match 'my-bucket'")
+	}
+	if !f.Matches("MY-BUCKET") {
+		t.Error("filter should match 'MY-BUCKET' (case-insensitive)")
+	}
+	if !f.Matches("Bucket-123") {
+		t.Error("filter should match 'Bucket-123' (case-insensitive)")
+	}
+	if f.Matches("my-table") {
+		t.Error("filter should not match 'my-table'")
+	}
+
+	// MatchesAny
+	if !f.MatchesAny("table", "bucket", "queue") {
+		t.Error("filter should match when any text matches")
+	}
+	if f.MatchesAny("table", "queue", "topic") {
+		t.Error("filter should not match when no text matches")
+	}
+}
+
+func TestFilterState_EscapeBehavior(t *testing.T) {
+	f := NewFilterState()
+	f.Activate()
+	f.input.SetValue("test")
+
+	// Escape exits filter mode but keeps text applied
+	escKey := tea.KeyMsg{Type: tea.KeyEscape}
+	_, handled := f.Update(escKey)
+	if !handled {
+		t.Error("escape should be handled")
+	}
+	if f.Active() {
+		t.Error("escape should deactivate filter")
+	}
+	if f.Text() != "test" {
+		t.Error("escape should keep filter text applied")
+	}
+
+	// Re-activating filter should reset the text
+	f.Activate()
+	if f.Text() != "" {
+		t.Error("re-activating filter should reset text")
+	}
+	if !f.Active() {
+		t.Error("filter should be active after re-activation")
+	}
+}
+
+func TestFilterState_EnterBehavior(t *testing.T) {
+	f := NewFilterState()
+	f.Activate()
+	f.input.SetValue("test")
+
+	// Enter exits filter mode but keeps text
+	enterKey := tea.KeyMsg{Type: tea.KeyEnter}
+	_, handled := f.Update(enterKey)
+	if !handled {
+		t.Error("enter should be handled")
+	}
+	if f.Active() {
+		t.Error("enter should deactivate filter mode")
+	}
+	if f.Text() != "test" {
+		t.Error("enter should keep filter text applied")
+	}
+}
+
+func TestResourceList_Filter(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	r := NewResourceList(flags)
+	r.SetSize(testWidth, testHeight)
+	r.SetItems([]ResourceItem{
+		{URN: "urn:1", Type: "aws:s3/bucket:Bucket", Name: "my-bucket", Op: OpCreate},
+		{URN: "urn:2", Type: "aws:dynamodb/table:Table", Name: "my-table", Op: OpUpdate},
+		{URN: "urn:3", Type: "aws:s3/bucket:Bucket", Name: "other-bucket", Op: OpSame},
+		{URN: "urn:4", Type: "aws:lambda/function:Function", Name: "my-function", Op: OpDelete},
+	})
+
+	// Simulate pressing "/" to activate filter
+	r.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+
+	// Type "bucket" by simulating key presses
+	for _, char := range "bucket" {
+		r.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{char}})
+	}
+
+	golden.RequireEqual(t, []byte(r.View()))
+}
+
+func TestResourceList_FilterNoMatches(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	r := NewResourceList(flags)
+	r.SetSize(testWidth, testHeight)
+	r.SetItems([]ResourceItem{
+		{URN: "urn:1", Type: "aws:s3/bucket:Bucket", Name: "my-bucket", Op: OpCreate},
+		{URN: "urn:2", Type: "aws:dynamodb/table:Table", Name: "my-table", Op: OpUpdate},
+	})
+
+	// Simulate pressing "/" to activate filter
+	r.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+
+	// Type "nonexistent" by simulating key presses
+	for _, char := range "nonexistent" {
+		r.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{char}})
+	}
+
+	golden.RequireEqual(t, []byte(r.View()))
+}
+
+func TestSelectorDialog_Filter(t *testing.T) {
+	s := NewSelectorDialog[testSelectorItem]("Select Item")
+	s.SetSize(testWidth, testHeight)
+	s.Show()
+	s.SetItems([]testSelectorItem{
+		{name: "dev-bucket", current: false},
+		{name: "staging-bucket", current: false},
+		{name: "prod-table", current: true},
+		{name: "prod-queue", current: false},
+	})
+
+	// Simulate pressing "/" to activate filter
+	s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+
+	// Type "bucket" by simulating key presses
+	for _, char := range "bucket" {
+		s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{char}})
+	}
+
+	golden.RequireEqual(t, []byte(s.View()))
+}
+
+func TestHistoryList_Filter(t *testing.T) {
+	h := NewHistoryList()
+	h.SetSize(testWidth, testHeight)
+	h.SetItems([]HistoryItem{
+		{Version: 1, Kind: "update", StartTime: "2024-01-15T10:00:00Z", Result: "succeeded", User: "dev"},
+		{Version: 2, Kind: "preview", StartTime: "2024-01-16T10:00:00Z", Result: "succeeded", User: "admin"},
+		{Version: 3, Kind: "update", StartTime: "2024-01-17T10:00:00Z", Result: "failed", User: "dev"},
+		{Version: 4, Kind: "destroy", StartTime: "2024-01-18T10:00:00Z", Result: "succeeded", User: "admin"},
+	})
+
+	// Simulate pressing "/" to activate filter
+	h.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+
+	// Type "update" by simulating key presses
+	for _, char := range "update" {
+		h.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{char}})
+	}
+
+	golden.RequireEqual(t, []byte(h.View()))
+}

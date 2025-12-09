@@ -5,15 +5,15 @@
                                                                                 
                                                                                 
                                                                                 
-                  ╭──────────────────────────────────────────╮                  
-                  │                                          │                  
-                  │  Select Item                             │                  
-                  │                                          │                  
-                  │  failed to load items                    │                  
-                  │                                          │                  
-                  │  ↑/↓ navigate  enter select  esc cancel  │                  
-                  │                                          │                  
-                  ╰──────────────────────────────────────────╯                  
+             ╭────────────────────────────────────────────────────╮             
+             │                                                    │             
+             │  Select Item                                       │             
+             │                                                    │             
+             │  failed to load items                              │             
+             │                                                    │             
+             │  ↑/↓ navigate  / filter  enter select  esc cancel  │             
+             │                                                    │             
+             ╰────────────────────────────────────────────────────╯             
                                                                                 
                                                                                 
                                                                                 
