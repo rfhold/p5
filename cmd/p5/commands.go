@@ -401,39 +401,6 @@ func (m *Model) fetchImportSuggestions(resourceType, resourceName, resourceURN, 
 	}
 }
 
-// authenticatePlugins triggers plugin authentication for the current workspace/stack
-func (m *Model) authenticatePlugins() tea.Cmd {
-	if m.deps == nil || m.deps.PluginProvider == nil {
-		return nil
-	}
-
-	workDir := m.ctx.WorkDir
-	stackName := m.ctx.StackName
-	pluginProvider := m.deps.PluginProvider
-	workspaceReader := m.deps.WorkspaceReader
-	appCtx := m.appCtx
-	opts := pulumi.ReadOptions{Env: m.deps.Env}
-	return func() tea.Msg {
-		// Get project info for the program name
-		info, err := workspaceReader.GetProjectInfo(appCtx, workDir, stackName, opts)
-		if err != nil {
-			return pluginAuthErrorMsg(err)
-		}
-
-		results, err := pluginProvider.Initialize(
-			appCtx,
-			workDir,
-			info.ProgramName,
-			info.StackName,
-		)
-		if err != nil {
-			return pluginAuthErrorMsg(err)
-		}
-
-		return pluginAuthResultMsg(results)
-	}
-}
-
 // authenticatePluginsWithLock sets the busy lock, queues an operation, and runs auth.
 // When auth completes (success or error), the lock is released and pending ops execute.
 func (m *Model) authenticatePluginsWithLock(pendingOp PendingOperation) tea.Cmd {

@@ -56,6 +56,8 @@ func RunUpPreview(ctx context.Context, workDir, stackName string, opts Operation
 }
 
 // RunRefreshPreview runs a pulumi refresh preview (dry-run)
+//
+//nolint:dupl // Similar structure to RunDestroyPreview is intentional - different operation types
 func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 
@@ -88,6 +90,8 @@ func RunRefreshPreview(ctx context.Context, workDir, stackName string, opts Oper
 }
 
 // RunDestroyPreview runs a pulumi destroy preview
+//
+//nolint:dupl // Similar structure to RunRefreshPreview is intentional - different operation types
 func RunDestroyPreview(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- PreviewEvent) {
 	defer close(eventCh)
 

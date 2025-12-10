@@ -1,10 +1,13 @@
 package pulumi
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optimport"
 )
 
 // execCommand creates an exec.Command - can be mocked for testing
@@ -52,48 +55,43 @@ func runPulumiCommand(ctx context.Context, workDir string, env map[string]string
 	return string(output), err
 }
 
-// ImportResource imports an existing resource into the Pulumi state using the CLI
+// ImportResource imports an existing resource into the Pulumi state using the SDK
 // resourceType is the Pulumi resource type (e.g., "aws:s3/bucket:Bucket")
 // resourceName is the logical name for the resource in Pulumi
 // importID is the provider-specific ID of the existing resource to import
 // parentURN is optional - if provided, the resource will be imported as a child of this resource
 func ImportResource(ctx context.Context, workDir, stackName, resourceType, resourceName, importID, parentURN string, opts ImportOptions) (*CommandResult, error) {
-	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
+	stack, err := selectStack(ctx, workDir, stackName, opts.Env)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build the pulumi import command
-	// Format: pulumi import <type> <name> <id> [--parent <parent-urn>] --yes
-	args := []string{
-		"import",
-		resourceType,
-		resourceName,
-		importID,
-		"--stack", resolvedStackName,
-		"--yes",                 // Auto-confirm
-		"--skip-preview",        // Skip the preview
-		"--protect=false",       // Don't protect the imported resource
-		"--generate-code=false", // Skip code generation (avoids issues with --parent flag)
+	resource := &optimport.ImportResource{
+		Type:   resourceType,
+		Name:   resourceName,
+		ID:     importID,
+		Parent: parentURN,
 	}
 
-	// Add parent URN if provided
-	if parentURN != "" {
-		args = append(args, "--parent", parentURN)
-	}
-
-	output, err := runPulumiCommand(ctx, workDir, opts.Env, args...)
+	var output bytes.Buffer
+	_, err = stack.ImportResources(ctx,
+		optimport.Resources([]*optimport.ImportResource{resource}),
+		optimport.Protect(false),
+		optimport.GenerateCode(false),
+		optimport.ProgressStreams(&output),
+		optimport.ErrorProgressStreams(&output),
+	)
 	if err != nil {
 		return &CommandResult{
 			Success: false,
-			Output:  output,
-			Error:   fmt.Errorf("import failed: %w\n%s", err, output),
+			Output:  output.String(),
+			Error:   fmt.Errorf("import failed: %w", err),
 		}, nil
 	}
 
 	return &CommandResult{
 		Success: true,
-		Output:  output,
+		Output:  output.String(),
 	}, nil
 }
 

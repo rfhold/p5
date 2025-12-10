@@ -35,6 +35,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	flag.StringVar(&argWorkDir, "C", "", "Run as if p5 was started in `path`")
 	flag.StringVar(&argWorkDir, "cwd", "", "Run as if p5 was started in `path`")
 	flag.StringVar(&argStackName, "s", "", "Select the Pulumi `stack` to use")
@@ -58,13 +62,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: failed to setup telemetry: %v\n", err)
 		tel = telemetry.NewNoop()
 	}
-	defer tel.Shutdown(context.Background())
+	defer func() { _ = tel.Shutdown(context.Background()) }()
 
 	// Get current working directory (where app was launched from)
 	cwd, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// Build AppContext from CLI arguments
@@ -108,6 +112,7 @@ func main() {
 	appCancel() // Cancel context before potential exit
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }

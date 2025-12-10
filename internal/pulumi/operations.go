@@ -45,6 +45,8 @@ func RunUp(ctx context.Context, workDir, stackName string, opts OperationOptions
 }
 
 // RunRefresh executes pulumi refresh
+//
+//nolint:dupl // Similar structure to RunDestroy is intentional - different operation types
 func RunRefresh(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
 	defer close(eventCh)
 
@@ -76,6 +78,8 @@ func RunRefresh(ctx context.Context, workDir, stackName string, opts OperationOp
 }
 
 // RunDestroy executes pulumi destroy
+//
+//nolint:dupl // Similar structure to RunRefresh is intentional - different operation types
 func RunDestroy(ctx context.Context, workDir, stackName string, opts OperationOptions, eventCh chan<- OperationEvent) {
 	defer close(eventCh)
 
