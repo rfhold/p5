@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.0
+
+### Features
+* 93a3c132619bf235c5a29f42dad43444269f9054 feat: add Grafana builtin plugin with resource URL opener
+* f84b5bc191b186347ca842b561fc2eeb8ac80077 feat: add vim-style / filter to all list components
+* 51312509f4522d7571f985802a384138fbc2858d feat: pass exclude URNs to Pulumi SDK operations
+### Refactoring
+* 362a32ae52db5ba0d306b2783b870a5fa32dc707 refactor: use Pulumi SDK for imports and cleanup dead code
+
 ## v0.5.1
 
 ### Bug Fixes
