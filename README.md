@@ -1,264 +1,123 @@
 # P5
 
-Pulumi was too long.
-
-A TUI application to help you manage your Pulumi stacks.
-
-> **Note**: This project (including this README) was largely generated with the assistance of LLMs.
+A TUI for managing Pulumi stacks.
 
 ![p5 demo](demo.gif)
 
-## Installation
+## Install
 
 ```bash
 go install github.com/rfhold/p5/cmd/p5@latest
 ```
 
-## Features
-
-- **Stack Management**: View and switch between Pulumi stacks
-- **Resource Browser**: Explore resources in your stack with a tree view
-- **Preview Operations**: Run `up`, `refresh`, and `destroy` previews
-- **Execute Operations**: Apply changes directly from the TUI
-- **Visual Selection**: Select multiple resources for targeted operations
-- **Resource Import**: Import existing resources into Pulumi state
-- **State Management**: Delete resources from state
-- **History View**: Browse stack update history
-- **Resource Opening**: Open resources in external tools (k9s, browser, etc.)
-- **Plugin System**: Extensible authentication, import helpers, and resource openers
-
 ## Usage
 
 ```bash
-# Start in current directory
-p5
-
-# Start in a specific directory
-p5 -C /path/to/pulumi/project
-
-# Start with a specific stack
-p5 -s dev
-
-# Start with debug logging
-p5 --debug
-
-# Start with a preview operation
-p5 up       # Start with up preview
-p5 refresh  # Start with refresh preview
-p5 destroy  # Start with destroy preview
+p5                    # Current directory
+p5 -C /path/to/project
+p5 -s dev             # Specific stack
+p5 up                 # Start with up preview
+p5 refresh            # Start with refresh preview
+p5 destroy            # Start with destroy preview
 ```
-
-### Command Line Options
-
-| Flag | Description |
-|------|-------------|
-| `-C`, `--cwd` | Run as if p5 was started in the specified directory |
-| `-s`, `--stack` | Select the Pulumi stack to use |
-| `--debug` | Enable debug logging |
 
 ## Keybindings
 
 ### Navigation
-
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move cursor down |
-| `k` / `↑` | Move cursor up |
-| `g` / `Home` | Go to top |
-| `G` / `End` | Go to bottom |
-| `PgUp` / `Ctrl+b` | Page up |
-| `PgDn` / `Ctrl+f` | Page down |
+| `j`/`k` | Up/down |
+| `g`/`G` | Top/bottom |
+| `PgUp`/`PgDn` | Page scroll |
 
 ### Views
-
 | Key | Action |
 |-----|--------|
-| `s` | Open stack selector |
-| `w` | Open workspace selector |
-| `h` | View stack history |
-| `D` | Toggle details panel |
-| `Esc` | Go back / Cancel |
+| `s` | Stack selector |
+| `w` | Workspace selector |
+| `h` | History view |
+| `D` | Details panel |
+| `?` | Help |
 
-### Preview Operations (lowercase)
-
+### Preview (lowercase)
 | Key | Action |
 |-----|--------|
 | `u` | Preview up |
 | `r` | Preview refresh |
 | `d` | Preview destroy |
 
-### Execute Operations (Ctrl+key)
-
+### Execute (uppercase)
 | Key | Action |
 |-----|--------|
-| `Ctrl+u` | Execute up |
-| `Ctrl+r` | Execute refresh |
-| `Ctrl+d` | Execute destroy |
+| `U` | Execute up |
+| `R` | Execute refresh |
 
-### Resource Flags
-
+### Flags
 | Key | Action |
 |-----|--------|
-| `T` | Toggle target flag (--target) |
-| `R` | Toggle replace flag (--replace) |
-| `E` | Toggle exclude flag |
-| `c` | Clear flags on current resource |
-| `C` | Clear all flags |
+| `t` | Target |
+| `p` | Replace |
+| `x` | Exclude |
+| `v` | Visual select |
+| `c`/`C` | Clear flags |
 
-### Visual Selection
-
+### Actions
 | Key | Action |
 |-----|--------|
-| `v` | Enter visual selection mode |
-| `Esc` | Exit visual mode |
+| `i` | Import (preview create ops) |
+| `x` | Delete from state |
+| `o` | Open in external tool |
+| `y`/`Y` | Copy JSON |
+| `Esc` | Back/cancel |
+| `q` | Quit |
 
-Use visual mode to select multiple resources, then apply flags or operations to all selected.
+## Plugins
 
-### Resource Actions
+Extend p5 with authentication, import helpers, and resource openers.
 
-| Key | Action |
-|-----|--------|
-| `I` | Import resource (in preview, on create operations) |
-| `x` | Delete from state (in stack view) |
-| `o` | Open resource in external tool (requires resource opener plugins) |
-| `y` | Copy resource JSON to clipboard |
-| `Y` | Copy all resources JSON to clipboard |
+### Builtin
+- **env**: Load environment variables
+- **kubernetes**: Import suggestions via kubectl
+- **k9s**: Open resources in k9s
+- **grafana**: Open resources in browser
+- **cloudflare**: Import suggestions (stub)
 
-### General
-
-| Key | Action |
-|-----|--------|
-| `?` | Show help |
-| `q` / `Ctrl+c` | Quit |
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         p5 TUI                              │
-├─────────────────────────────────────────────────────────────┤
-│  cmd/p5/           - Bubble Tea application                 │
-│  ├── model.go      - State management and types             │
-│  ├── view.go       - Rendering logic                        │
-│  ├── commands.go   - Async operations (Bubble Tea commands) │
-│  ├── messages.go   - Message types for update loop          │
-│  └── update_*.go   - Update handlers by domain              │
-├─────────────────────────────────────────────────────────────┤
-│  internal/ui/      - Reusable UI components                 │
-│  ├── resourcelist  - Resource browser with tree view        │
-│  ├── details       - Resource detail panel                  │
-│  ├── modals        - Import, confirm, error dialogs         │
-│  └── selectors     - Stack and workspace selectors          │
-├─────────────────────────────────────────────────────────────┤
-│  internal/pulumi/  - Pulumi Automation API integration      │
-│  ├── operations    - Preview and execute operations         │
-│  ├── resources     - Stack resource queries                 │
-│  └── history       - Stack update history                   │
-├─────────────────────────────────────────────────────────────┤
-│  internal/plugins/ - Plugin system for auth, imports, openers│
-│  ├── builtins      - In-process plugins (env, k8s, cf, k9s) │
-│  └── grpc          - External plugin support via go-plugin  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Plugin System
-
-p5 supports plugins for authentication, import suggestions, and resource opening with configurable program and stack settings. Plugins can access both program-level configuration (from `Pulumi.yaml`) and stack-specific configuration (from `Pulumi.{stack}.yaml`), allowing for flexible authentication and tool integration across different environments.
-
-### Builtin Plugins
-
-- **env**: Load environment variables from files, static config, or commands
-- **kubernetes**: Kubernetes context management and import suggestions
-- **cloudflare**: Import suggestions for Cloudflare resources
-- **k9s**: Open Kubernetes resources in k9s TUI
-
-### Example Configuration
+### Configuration
 
 ```toml
-# p5.toml (global defaults)
+# p5.toml
 [plugins.env.config]
 path = ".env"
 ```
 
 ```yaml
-# Pulumi.yaml (program-level)
+# Pulumi.yaml
 p5:
   plugins:
-    env:
-      config:
-        sources:
-          - type: "file"
-            path: ".env.defaults"
-```
-
-```yaml
-# Pulumi.dev.yaml (stack-level)
-config:
-  aws:region: us-west-2
-  p5:plugins:
-    env:
-      config:
-        sources: '[{"type":"file","path":".env.dev"}]'
-    k9s:
+    kubernetes:
       import_helper: true
+    k9s:
+      resource_opener: true
 ```
 
-See [docs/plugins.md](docs/plugins.md) for detailed plugin documentation including:
-- Complete configuration options and precedence
-- External plugin development guide
-- Program and stack configurability examples
-- Authentication lifecycle and caching
-- Import helper plugins for resource suggestions
-- Resource opener plugins for external tool integration
+See [docs/plugins/](docs/plugins/) for details.
 
-## Motivation
+## Documentation
 
-Pulumi is a great tool, but the CLI is not very user friendly. I wanted to create a TUI application that would make it easier to manage Pulumi stacks and programs. With p5 I should be able to rapidly iterate over IaC changes while also assisting in complicated state manipulation.
+- [Dependencies](docs/dependencies/) - Pulumi, Bubbletea integration
+- [Development](docs/dev/) - Testing, releases
+- [Plugins](docs/plugins/) - Plugin interface and builtins
+- [Features](docs/features/) - Feature documentation
 
 ## Development
 
-### Prerequisites
-
-- Go 1.21+
-- A Pulumi project for testing
-
-### Running Locally
-
 ```bash
-# Build and run
 go build -o /dev/null ./cmd/p5 && ./scripts/dev.sh -C programs/simple
-
-# View output in tmux pane
-./scripts/view.sh
+./scripts/view.sh  # View output
 ```
 
-### Project Structure
-
-```
-.
-├── cmd/p5/          # Main application
-├── internal/
-│   ├── plugins/     # Plugin system
-│   ├── pulumi/      # Pulumi API integration
-│   └── ui/          # UI components
-├── pkg/plugin/      # Public plugin interface
-├── docs/            # Documentation
-└── test/            # Test Pulumi projects
-```
-
-## Recording Demo
-
-The demo GIF is recorded using [VHS](https://github.com/charmbracelet/vhs). To regenerate it:
-
-```bash
-# Build and run VHS to generate demo.gif
-./scripts/vhs.sh
-
-# Or run steps separately:
-./scripts/vhs.sh --build-only  # Only build the Docker image
-./scripts/vhs.sh --run-only    # Only run VHS (image must exist)
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for testing and contribution guidelines.
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+[LICENSE](LICENSE)
