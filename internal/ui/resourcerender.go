@@ -121,6 +121,7 @@ func getOpSymbolInfo(op ResourceOp) opSymbolInfo {
 type renderStyles struct {
 	op, dim, value, cursor               lipgloss.Style
 	flagTarget, flagReplace, flagExclude lipgloss.Style
+	flagProtect                          lipgloss.Style
 	tree                                 lipgloss.Style
 	bg                                   lipgloss.Color
 	hasBackground                        bool
@@ -135,6 +136,7 @@ func newRenderStyles(opStyle lipgloss.Style, isFlashing, isSelected bool) render
 		flagTarget:  FlagTargetStyle,
 		flagReplace: FlagReplaceStyle,
 		flagExclude: FlagExcludeStyle,
+		flagProtect: FlagProtectStyle,
 		tree:        TreeLineStyle,
 	}
 
@@ -154,6 +156,7 @@ func newRenderStyles(opStyle lipgloss.Style, isFlashing, isSelected bool) render
 		rs.flagTarget = rs.flagTarget.Background(rs.bg)
 		rs.flagReplace = rs.flagReplace.Background(rs.bg)
 		rs.flagExclude = rs.flagExclude.Background(rs.bg)
+		rs.flagProtect = rs.flagProtect.Background(rs.bg)
 		rs.tree = rs.tree.Background(rs.bg)
 	}
 
@@ -181,6 +184,16 @@ func (r *ResourceList) buildFlagBadges(urn string, styles renderStyles) string {
 	return "  " + strings.Join(badges, "")
 }
 
+func buildProtectBadge(protected bool, styles renderStyles) string {
+	if !protected {
+		return ""
+	}
+	if styles.hasBackground {
+		return lipgloss.NewStyle().Background(styles.bg).Render("  ") + styles.flagProtect.Render("[Protected]")
+	}
+	return "  " + styles.flagProtect.Render("[Protected]")
+}
+
 func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFlashing bool, ancestorIsLast []bool) string {
 	opInfo := getOpSymbolInfo(item.Op)
 	styles := newRenderStyles(opInfo.style, isFlashing, isSelected)
@@ -196,13 +209,14 @@ func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFla
 	maxTypeLen := r.calculateMaxTypeLen(item)
 	typeStr := styles.dim.Render(truncateMiddle(item.Type, maxTypeLen))
 	nameStr := styles.value.Render(item.Name)
-	badgeStr := r.buildFlagBadges(item.URN, styles)
+	protectBadge := buildProtectBadge(item.Protected, styles)
+	flagBadges := r.buildFlagBadges(item.URN, styles)
 
 	if styles.hasBackground {
 		bgStyle := lipgloss.NewStyle().Background(styles.bg)
-		return fmt.Sprintf("%s%s%s%s%s%s%s%s%s", cursor, treePrefix, opStr, bgStyle.Render(" "), typeStr, bgStyle.Render("  "), nameStr, badgeStr, statusIcon)
+		return fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s", cursor, treePrefix, opStr, bgStyle.Render(" "), typeStr, bgStyle.Render("  "), nameStr, protectBadge, flagBadges, statusIcon)
 	}
-	return fmt.Sprintf("%s%s%s %s  %s%s%s", cursor, treePrefix, opStr, typeStr, nameStr, badgeStr, statusIcon)
+	return fmt.Sprintf("%s%s%s %s  %s%s%s%s", cursor, treePrefix, opStr, typeStr, nameStr, protectBadge, flagBadges, statusIcon)
 }
 
 func (r *ResourceList) renderCursor(isCursor bool, styles renderStyles) string {

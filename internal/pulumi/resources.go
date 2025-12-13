@@ -39,6 +39,7 @@ func GetStackResources(ctx context.Context, workDir, stackName string, env map[s
 			Type     string         `json:"type"`
 			Provider string         `json:"provider"`
 			Parent   string         `json:"parent"`
+			Protect  bool           `json:"protect"`
 			Inputs   map[string]any `json:"inputs"`
 			Outputs  map[string]any `json:"outputs"`
 		} `json:"resources"`
@@ -61,13 +62,14 @@ func GetStackResources(ctx context.Context, workDir, stackName string, env map[s
 	resources := make([]ResourceInfo, 0, len(deployment.Resources))
 	for _, r := range deployment.Resources {
 		info := ResourceInfo{
-			URN:      r.URN,
-			Type:     r.Type,
-			Name:     ExtractResourceName(r.URN),
-			Provider: r.Provider,
-			Parent:   r.Parent,
-			Inputs:   r.Inputs,
-			Outputs:  r.Outputs,
+			URN:       r.URN,
+			Type:      r.Type,
+			Name:      ExtractResourceName(r.URN),
+			Provider:  r.Provider,
+			Parent:    r.Parent,
+			Protected: r.Protect,
+			Inputs:    r.Inputs,
+			Outputs:   r.Outputs,
 		}
 
 		// Look up provider inputs if this resource has a provider reference

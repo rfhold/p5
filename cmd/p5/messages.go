@@ -22,6 +22,12 @@ type workspaceCheckMsg bool // true if current dir is a valid workspace
 type stackHistoryMsg []pulumi.UpdateSummary
 type importResultMsg *pulumi.CommandResult
 type stateDeleteResultMsg *pulumi.CommandResult
+type protectResultMsg struct {
+	Result    *pulumi.CommandResult
+	Protected bool   // true if protecting, false if unprotecting
+	URN       string // the resource URN
+	Name      string // the resource name (for toast message)
+}
 
 // Plugin-related messages
 type pluginAuthResultMsg []plugins.AuthenticateResult

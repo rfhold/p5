@@ -289,6 +289,46 @@ func (m *Model) executeStateDelete() tea.Cmd {
 	}
 }
 
+// executeProtect runs the pulumi state protect or unprotect command
+func (m *Model) executeProtect(urn, name string, protect bool) tea.Cmd {
+	// Build options with plugin env vars
+	opts := pulumi.StateProtectOptions{}
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
+	}
+
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	resourceImporter := m.deps.ResourceImporter
+	appCtx := m.appCtx
+
+	return func() tea.Msg {
+		var result *pulumi.CommandResult
+		var err error
+
+		if protect {
+			result, err = resourceImporter.Protect(appCtx, workDir, stackName, urn, opts)
+		} else {
+			result, err = resourceImporter.Unprotect(appCtx, workDir, stackName, urn, opts)
+		}
+
+		if err != nil {
+			return protectResultMsg{
+				Result:    &pulumi.CommandResult{Success: false, Error: err},
+				Protected: protect,
+				URN:       urn,
+				Name:      name,
+			}
+		}
+		return protectResultMsg{
+			Result:    result,
+			Protected: protect,
+			URN:       urn,
+			Name:      name,
+		}
+	}
+}
+
 // executeImport runs the pulumi import command
 func (m *Model) executeImport() tea.Cmd {
 	resourceType := m.ui.ImportModal.GetResourceType()

@@ -21,6 +21,16 @@ func (d *DefaultResourceImporter) StateDelete(ctx context.Context, workDir, stac
 	return DeleteFromState(ctx, workDir, stackName, urn, opts)
 }
 
+// Protect marks a resource as protected, preventing it from being destroyed.
+func (d *DefaultResourceImporter) Protect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	return ProtectResource(ctx, workDir, stackName, urn, opts)
+}
+
+// Unprotect removes the protected flag from a resource, allowing it to be destroyed.
+func (d *DefaultResourceImporter) Unprotect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	return UnprotectResource(ctx, workDir, stackName, urn, opts)
+}
+
 // Compile-time interface compliance check
 var _ ResourceImporter = (*DefaultResourceImporter)(nil)
 

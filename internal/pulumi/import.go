@@ -127,3 +127,69 @@ func DeleteFromState(ctx context.Context, workDir, stackName, urn string, opts S
 		Output:  output,
 	}, nil
 }
+
+// ProtectResource marks a resource as protected in the Pulumi state
+// Protected resources cannot be destroyed without first being unprotected
+func ProtectResource(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the pulumi state protect command
+	// Format: pulumi state protect <urn> --stack <stack> --yes
+	args := []string{
+		"state",
+		"protect",
+		urn,
+		"--stack", resolvedStackName,
+		"--yes", // Auto-confirm
+	}
+
+	output, err := runPulumiCommand(ctx, workDir, opts.Env, args...)
+	if err != nil {
+		return &CommandResult{
+			Success: false,
+			Output:  output,
+			Error:   fmt.Errorf("state protect failed: %w\n%s", err, output),
+		}, nil
+	}
+
+	return &CommandResult{
+		Success: true,
+		Output:  output,
+	}, nil
+}
+
+// UnprotectResource removes the protected flag from a resource in the Pulumi state
+// This allows the resource to be destroyed
+func UnprotectResource(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	resolvedStackName, err := resolveStackName(ctx, workDir, stackName, opts.Env)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the pulumi state unprotect command
+	// Format: pulumi state unprotect <urn> --stack <stack> --yes
+	args := []string{
+		"state",
+		"unprotect",
+		urn,
+		"--stack", resolvedStackName,
+		"--yes", // Auto-confirm
+	}
+
+	output, err := runPulumiCommand(ctx, workDir, opts.Env, args...)
+	if err != nil {
+		return &CommandResult{
+			Success: false,
+			Output:  output,
+			Error:   fmt.Errorf("state unprotect failed: %w\n%s", err, output),
+		}, nil
+	}
+
+	return &CommandResult{
+		Success: true,
+		Output:  output,
+	}, nil
+}

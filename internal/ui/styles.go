@@ -24,6 +24,7 @@ var (
 	// Flag colors
 	ColorTarget  = lipgloss.Color("#7dcfff") // cyan
 	ColorExclude = lipgloss.Color("#f7768e") // red (same as error/delete)
+	ColorProtect = lipgloss.Color("#f5a623") // masterlock yellow
 )
 
 // Styles
@@ -111,6 +112,10 @@ var (
 	FlagExcludeStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(ColorExclude)
+
+	FlagProtectStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorProtect)
 
 	// View mode label styles
 	ViewLabelStyle = lipgloss.NewStyle().

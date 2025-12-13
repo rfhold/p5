@@ -537,6 +537,22 @@ func TestConfirmModal_CustomLabels(t *testing.T) {
 	golden.RequireEqual(t, []byte(m.View()))
 }
 
+func TestConfirmModal_Unprotect(t *testing.T) {
+	m := NewConfirmModal()
+	m.SetSize(testWidth, testHeight)
+	m.SetLabels("Cancel", "Unprotect")
+	m.ShowWithContext(
+		"Unprotect Resource",
+		"Remove protection from 'my-bucket'?\n\nType: aws:s3/bucket:Bucket",
+		"This will allow the resource to be destroyed.",
+		"urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket",
+		"my-bucket",
+		"aws:s3/bucket:Bucket",
+	)
+
+	golden.RequireEqual(t, []byte(m.View()))
+}
+
 func TestErrorModal_Basic(t *testing.T) {
 	m := NewErrorModal()
 	m.SetSize(testWidth, testHeight)

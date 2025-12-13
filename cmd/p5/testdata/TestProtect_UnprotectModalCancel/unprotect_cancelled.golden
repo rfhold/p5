@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: multi  │  Stack: test  │  Runtime: go                                                                       │
+│ Stack  4 resources                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  > ├─ [ ] random:index/randomId:RandomId  base-id  [Protected]
+  /base-id (1/4)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  Protected 'base-id'
+             u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help  q quit

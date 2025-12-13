@@ -67,4 +67,10 @@ type ResourceImporter interface {
 
 	// StateDelete removes a resource from state without deleting the actual resource.
 	StateDelete(ctx context.Context, workDir, stackName, urn string, opts StateDeleteOptions) (*CommandResult, error)
+
+	// Protect marks a resource as protected, preventing it from being destroyed.
+	Protect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error)
+
+	// Unprotect removes the protected flag from a resource, allowing it to be destroyed.
+	Unprotect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error)
 }

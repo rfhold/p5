@@ -133,6 +133,7 @@ type ResourceInfo struct {
 	Name           string
 	Provider       string
 	Parent         string         // Parent resource URN (empty for root resources)
+	Protected      bool           // Whether the resource is protected from deletion
 	Inputs         map[string]any // Resource inputs/args
 	Outputs        map[string]any // Resource outputs
 	ProviderInputs map[string]any // Configuration from the provider resource
@@ -179,6 +180,11 @@ type ImportOptions struct {
 
 // StateDeleteOptions for deleting a resource from state
 type StateDeleteOptions struct {
+	Env map[string]string // Environment variables to set for the operation
+}
+
+// StateProtectOptions for protecting/unprotecting a resource in state
+type StateProtectOptions struct {
 	Env map[string]string // Environment variables to set for the operation
 }
 

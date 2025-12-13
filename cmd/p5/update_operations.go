@@ -198,6 +198,37 @@ func (m Model) handleStateDeleteResult(msg stateDeleteResultMsg) (tea.Model, tea
 	return m, m.ui.Toast.Show(errMsg)
 }
 
+// handleProtectResult handles protect/unprotect command result
+func (m Model) handleProtectResult(msg protectResultMsg) (tea.Model, tea.Cmd) {
+	if msg.Result == nil {
+		action := "protect"
+		if !msg.Protected {
+			action = "unprotect"
+		}
+		return m, m.ui.Toast.Show(fmt.Sprintf("Failed to %s: unknown error", action))
+	}
+	if msg.Result.Success {
+		action := "Protected"
+		if !msg.Protected {
+			action = "Unprotected"
+		}
+		cmds := []tea.Cmd{
+			m.ui.Toast.Show(fmt.Sprintf("%s '%s'", action, msg.Name)),
+			m.loadStackResources(),
+		}
+		return m, tea.Batch(cmds...)
+	}
+	action := "protect"
+	if !msg.Protected {
+		action = "unprotect"
+	}
+	errMsg := fmt.Sprintf("Failed to %s '%s'", action, msg.Name)
+	if msg.Result.Error != nil {
+		errMsg = msg.Result.Error.Error()
+	}
+	return m, m.ui.Toast.Show(errMsg)
+}
+
 // handleStackHistory handles loaded stack history
 func (m Model) handleStackHistory(msg stackHistoryMsg) (tea.Model, tea.Cmd) { //nolint:unparam // Bubble Tea handler signature
 	items := ConvertHistoryToItems(msg)

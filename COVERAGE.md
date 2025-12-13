@@ -1,21 +1,21 @@
 # Test Coverage Report
 
-> **Generated:** 2025-12-10 15:55:10
-> **Commit:** `5131250` (dirty)
-> **Commit Date:** 2025-12-09 12:52:09 -0500
+> **Generated:** 2025-12-13 13:52:27
+> **Commit:** `3a59f31` (dirty)
+> **Commit Date:** 2025-12-10 17:12:51 -0500
 
 ## Summary
 
-**Total Coverage: 54.5%**
+**Total Coverage: 55.0%**
 
 | Package | Coverage |
 |---------|----------|
-| `cmd/p5` | 68.4% |
+| `cmd/p5` | 69.6% |
 | `internal/plugins` | 58.6% |
 | `internal/plugins/builtins` | 68.8% |
-| `internal/pulumi` | 37.2% |
+| `internal/pulumi` | 34.6% |
 | `internal/telemetry` | 0.0% |
-| `internal/ui` | 51.7% |
+| `internal/ui` | 51.9% |
 | `pkg/plugin` | 0.0% |
 
 ## Detailed Coverage by File
@@ -37,6 +37,7 @@
 | `cmd/p5/commands.go` | `switchToStackView` | 0.0% |
 | `cmd/p5/commands.go` | `switchToHistoryView` | 100.0% |
 | `cmd/p5/commands.go` | `executeStateDelete` | 0.0% |
+| `cmd/p5/commands.go` | `executeProtect` | 93.8% |
 | `cmd/p5/commands.go` | `executeImport` | 0.0% |
 | `cmd/p5/commands.go` | `fetchStackHistory` | 90.0% |
 | `cmd/p5/commands.go` | `fetchImportSuggestions` | 0.0% |
@@ -50,7 +51,7 @@
 | `cmd/p5/commands.go` | `selectWorkspace` | 100.0% |
 | `cmd/p5/commands.go` | `fetchWhoAmI` | 88.9% |
 | `cmd/p5/commands.go` | `fetchStackFiles` | 85.7% |
-| `cmd/p5/commands.go` | `initStack` | 92.3% |
+| `cmd/p5/commands.go` | `initStack` | 100.0% |
 | `cmd/p5/commands.go` | `fetchOpenResourceAction` | 0.0% |
 | `cmd/p5/commands.go` | `openInBrowser` | 0.0% |
 | `cmd/p5/commands.go` | `openWithExec` | 0.0% |
@@ -90,6 +91,7 @@
 | `cmd/p5/logic.go` | `ConvertWorkspacesToItems` | 100.0% |
 | `cmd/p5/logic.go` | `CanImportResource` | 100.0% |
 | `cmd/p5/logic.go` | `CanDeleteFromState` | 100.0% |
+| `cmd/p5/logic.go` | `CanProtectResource` | 100.0% |
 | `cmd/p5/logic.go` | `String` | 83.3% |
 | `cmd/p5/logic.go` | `DetermineEscapeAction` | 100.0% |
 | `cmd/p5/logic.go` | `String` | 83.3% |
@@ -124,27 +126,27 @@
 | `cmd/p5/update_init.go` | `handleError` | 100.0% |
 | `cmd/p5/update_init.go` | `handleWhoAmI` | 100.0% |
 | `cmd/p5/update_init.go` | `handleStackFiles` | 100.0% |
-| `cmd/p5/update_init.go` | `handleStackInitResult` | 75.0% |
+| `cmd/p5/update_init.go` | `handleStackInitResult` | 91.7% |
 | `cmd/p5/update_keys.go` | `handleKeyPress` | 63.6% |
 | `cmd/p5/update_keys.go` | `updateErrorModal` | 0.0% |
-| `cmd/p5/update_keys.go` | `updateConfirmModal` | 42.9% |
+| `cmd/p5/update_keys.go` | `updateConfirmModal` | 70.0% |
 | `cmd/p5/update_keys.go` | `updateImportModal` | 0.0% |
-| `cmd/p5/update_keys.go` | `updateStackInitModal` | 52.9% |
+| `cmd/p5/update_keys.go` | `updateStackInitModal` | 82.4% |
 | `cmd/p5/update_keys.go` | `updateWorkspaceSelector` | 62.5% |
 | `cmd/p5/update_keys.go` | `updateStackSelector` | 57.1% |
 | `cmd/p5/update_keys.go` | `updateHelp` | 57.1% |
 | `cmd/p5/update_keys.go` | `updateDetailsPanel` | 0.0% |
-| `cmd/p5/update_keys.go` | `updateMain` | 90.9% |
-| `cmd/p5/update_keys.go` | `handleGlobalKeys` | 50.0% |
+| `cmd/p5/update_keys.go` | `updateMain` | 100.0% |
+| `cmd/p5/update_keys.go` | `handleGlobalKeys` | 75.0% |
 | `cmd/p5/update_keys.go` | `handleViewToggles` | 60.0% |
-| `cmd/p5/update_keys.go` | `handleResourceActions` | 50.0% |
+| `cmd/p5/update_keys.go` | `handleResourceActions` | 66.7% |
 | `cmd/p5/update_keys.go` | `handleOperationKeys` | 70.0% |
-| `cmd/p5/update_keys.go` | `handleEscape` | 0.0% |
+| `cmd/p5/update_keys.go` | `handleEscape` | 30.0% |
 | `cmd/p5/update_keys.go` | `handleListNavigation` | 44.4% |
 | `cmd/p5/update_keys.go` | `isFilterInputActive` | 100.0% |
 | `cmd/p5/update_messages.go` | `handleMessage` | 100.0% |
 | `cmd/p5/update_messages.go` | `handleInitMessages` | 72.7% |
-| `cmd/p5/update_messages.go` | `handleOperationMessages` | 46.2% |
+| `cmd/p5/update_messages.go` | `handleOperationMessages` | 50.0% |
 | `cmd/p5/update_messages.go` | `handleSelectionMessages` | 100.0% |
 | `cmd/p5/update_messages.go` | `handleUIMessages` | 40.0% |
 | `cmd/p5/update_operations.go` | `transitionOpTo` | 100.0% |
@@ -156,6 +158,7 @@
 | `cmd/p5/update_operations.go` | `handleOperationEvent` | 55.0% |
 | `cmd/p5/update_operations.go` | `handleImportResult` | 0.0% |
 | `cmd/p5/update_operations.go` | `handleStateDeleteResult` | 0.0% |
+| `cmd/p5/update_operations.go` | `handleProtectResult` | 38.9% |
 | `cmd/p5/update_operations.go` | `handleStackHistory` | 100.0% |
 | `cmd/p5/update_operations.go` | `handleImportSuggestions` | 0.0% |
 | `cmd/p5/update_operations.go` | `handleImportSuggestionsError` | 0.0% |
@@ -274,6 +277,8 @@
 | `internal/pulumi/default_importer.go` | `NewResourceImporter` | 0.0% |
 | `internal/pulumi/default_importer.go` | `Import` | 0.0% |
 | `internal/pulumi/default_importer.go` | `StateDelete` | 0.0% |
+| `internal/pulumi/default_importer.go` | `Protect` | 0.0% |
+| `internal/pulumi/default_importer.go` | `Unprotect` | 0.0% |
 | `internal/pulumi/default_importer.go` | `NewStackInitializer` | 0.0% |
 | `internal/pulumi/default_importer.go` | `InitStack` | 0.0% |
 | `internal/pulumi/default_operator.go` | `NewStackOperator` | 100.0% |
@@ -302,6 +307,8 @@
 | `internal/pulumi/import.go` | `runPulumiCommand` | 0.0% |
 | `internal/pulumi/import.go` | `ImportResource` | 0.0% |
 | `internal/pulumi/import.go` | `DeleteFromState` | 0.0% |
+| `internal/pulumi/import.go` | `ProtectResource` | 0.0% |
+| `internal/pulumi/import.go` | `UnprotectResource` | 0.0% |
 | `internal/pulumi/operations.go` | `RunUp` | 63.2% |
 | `internal/pulumi/operations.go` | `RunRefresh` | 64.7% |
 | `internal/pulumi/operations.go` | `RunDestroy` | 64.7% |
@@ -364,7 +371,7 @@
 | `internal/ui/clipboard.go` | `copyToClipboard` | 0.0% |
 | `internal/ui/confirmmodal.go` | `NewConfirmModal` | 100.0% |
 | `internal/ui/confirmmodal.go` | `Show` | 100.0% |
-| `internal/ui/confirmmodal.go` | `ShowWithContext` | 0.0% |
+| `internal/ui/confirmmodal.go` | `ShowWithContext` | 100.0% |
 | `internal/ui/confirmmodal.go` | `SetLabels` | 100.0% |
 | `internal/ui/confirmmodal.go` | `SetKeys` | 100.0% |
 | `internal/ui/confirmmodal.go` | `Hide` | 0.0% |
@@ -585,9 +592,10 @@
 | `internal/ui/resourcerender.go` | `View` | 100.0% |
 | `internal/ui/resourcerender.go` | `renderItems` | 72.5% |
 | `internal/ui/resourcerender.go` | `getOpSymbolInfo` | 85.7% |
-| `internal/ui/resourcerender.go` | `newRenderStyles` | 29.4% |
+| `internal/ui/resourcerender.go` | `newRenderStyles` | 27.8% |
 | `internal/ui/resourcerender.go` | `buildFlagBadges` | 92.3% |
-| `internal/ui/resourcerender.go` | `renderItem` | 87.5% |
+| `internal/ui/resourcerender.go` | `buildProtectBadge` | 40.0% |
+| `internal/ui/resourcerender.go` | `renderItem` | 88.2% |
 | `internal/ui/resourcerender.go` | `renderCursor` | 80.0% |
 | `internal/ui/resourcerender.go` | `calculateMaxTypeLen` | 100.0% |
 | `internal/ui/resourcerender.go` | `renderStatusIcon` | 100.0% |
@@ -738,4 +746,4 @@
 
 ---
 
-<sub>Generated by `./scripts/coverage.sh -md` from commit [`5131250`](../../commit/51312509f4522d7571f985802a384138fbc2858d) (dirty)</sub>
+<sub>Generated by `./scripts/coverage.sh -md` from commit [`3a59f31`](../../commit/3a59f316843e1502113730f09ab5296a8e4c6272) (dirty)</sub>

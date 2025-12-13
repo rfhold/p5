@@ -60,11 +60,19 @@ func (m Model) updateConfirmModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.hideConfirmModal()
 			return m, m.startExecution(op)
 		}
+		// Check if this is a pending protect action confirmation
+		if m.state.PendingProtectAction != nil {
+			action := m.state.PendingProtectAction
+			m.state.PendingProtectAction = nil
+			m.hideConfirmModal()
+			return m, m.executeProtect(action.URN, action.Name, action.Protect)
+		}
 		// Otherwise it's a state delete confirmation
 		return m, m.executeStateDelete()
 	}
 	if cancelled {
 		m.state.PendingOperation = nil
+		m.state.PendingProtectAction = nil
 		m.hideConfirmModal()
 	}
 	return m, cmd
@@ -331,6 +339,31 @@ func (m Model) handleResourceActions(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 			)
 			m.showConfirmModal()
 			return m, nil, true
+		}
+	case key.Matches(msg, ui.Keys.ToggleProtect):
+		item := m.ui.ResourceList.SelectedItem()
+		if CanProtectResource(m.ui.ViewMode, item) {
+			if item.Protected {
+				// Unprotecting requires confirmation (makes resource destroyable)
+				m.ui.ConfirmModal.SetLabels("Cancel", "Unprotect")
+				m.ui.ConfirmModal.ShowWithContext(
+					"Unprotect Resource",
+					fmt.Sprintf("Remove protection from '%s'?\n\nType: %s", item.Name, item.Type),
+					"This will allow the resource to be destroyed.",
+					item.URN,
+					item.Name,
+					item.Type,
+				)
+				m.showConfirmModal()
+				m.state.PendingProtectAction = &PendingProtectAction{
+					URN:     item.URN,
+					Name:    item.Name,
+					Protect: false,
+				}
+				return m, nil, true
+			}
+			// Protecting executes immediately (it's a safety action)
+			return m, m.executeProtect(item.URN, item.Name, true), true
 		}
 	case key.Matches(msg, ui.Keys.OpenResource):
 		item := m.ui.ResourceList.SelectedItem()

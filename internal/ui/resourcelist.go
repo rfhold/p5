@@ -30,6 +30,7 @@ type ResourceItem struct {
 	Depth          int            // Nesting depth (0 = root)
 	IsLast         bool           // True if this is the last child of its parent
 	CurrentOp      ResourceOp     // Current step being executed (for replace: create-replacement or delete-replaced)
+	Protected      bool           // Whether the resource is protected from deletion
 	Inputs         map[string]any // Resource inputs/args from stack state
 	Outputs        map[string]any // Resource outputs from stack state
 	OldInputs      map[string]any // Previous inputs (for updates/deletes)

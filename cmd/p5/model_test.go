@@ -1402,6 +1402,67 @@ func TestCanDeleteFromState_RootStack(t *testing.T) {
 	}
 }
 
+// TestCanProtectResource_ValidResource verifies protect allowed for regular resource in stack view.
+func TestCanProtectResource_ValidResource(t *testing.T) {
+	item := &ui.ResourceItem{
+		URN:  "urn:pulumi:dev::test::aws:s3:Bucket::mybucket",
+		Type: "aws:s3:Bucket",
+		Name: "mybucket",
+	}
+
+	if !CanProtectResource(ui.ViewStack, item) {
+		t.Error("expected CanProtectResource=true for regular resource in stack view")
+	}
+}
+
+// TestCanProtectResource_WrongView verifies protect not allowed outside stack view.
+func TestCanProtectResource_WrongView(t *testing.T) {
+	item := &ui.ResourceItem{
+		Type: "aws:s3:Bucket",
+	}
+
+	views := []ui.ViewMode{ui.ViewPreview, ui.ViewExecute, ui.ViewHistory}
+	for _, v := range views {
+		if CanProtectResource(v, item) {
+			t.Errorf("expected CanProtectResource=false for view %v", v)
+		}
+	}
+}
+
+// TestCanProtectResource_NoSelection verifies protect not allowed with nil item.
+func TestCanProtectResource_NoSelection(t *testing.T) {
+	if CanProtectResource(ui.ViewStack, nil) {
+		t.Error("expected CanProtectResource=false for nil item")
+	}
+}
+
+// TestCanProtectResource_RootStack verifies protect not allowed for pulumi:pulumi:Stack.
+func TestCanProtectResource_RootStack(t *testing.T) {
+	item := &ui.ResourceItem{
+		URN:  "urn:pulumi:dev::test::pulumi:pulumi:Stack::test-dev",
+		Type: "pulumi:pulumi:Stack",
+		Name: "test-dev",
+	}
+
+	if CanProtectResource(ui.ViewStack, item) {
+		t.Error("expected CanProtectResource=false for pulumi:pulumi:Stack")
+	}
+}
+
+// TestCanProtectResource_ProtectedResource verifies protect allowed even for already protected resource.
+func TestCanProtectResource_ProtectedResource(t *testing.T) {
+	item := &ui.ResourceItem{
+		URN:       "urn:pulumi:dev::test::aws:s3:Bucket::mybucket",
+		Type:      "aws:s3:Bucket",
+		Name:      "mybucket",
+		Protected: true,
+	}
+
+	if !CanProtectResource(ui.ViewStack, item) {
+		t.Error("expected CanProtectResource=true even for already protected resource (to allow unprotect)")
+	}
+}
+
 // TestFormatClipboardMessage_SingleNamed verifies single resource with name.
 func TestFormatClipboardMessage_SingleNamed(t *testing.T) {
 	msg := FormatClipboardMessage(1, "mybucket")
@@ -1605,6 +1666,36 @@ func TestConvertResourcesToItems_WithParent(t *testing.T) {
 	}
 	if items[1].Parent != parentURN {
 		t.Errorf("expected second item Parent=%q, got %q", parentURN, items[1].Parent)
+	}
+}
+
+// TestConvertResourcesToItems_WithProtected verifies Protected field is preserved.
+func TestConvertResourcesToItems_WithProtected(t *testing.T) {
+	resources := []pulumi.ResourceInfo{
+		{
+			URN:       "urn:pulumi:dev::test::aws:s3:Bucket::protected-bucket",
+			Type:      "aws:s3:Bucket",
+			Name:      "protected-bucket",
+			Protected: true,
+		},
+		{
+			URN:       "urn:pulumi:dev::test::aws:s3:Bucket::unprotected-bucket",
+			Type:      "aws:s3:Bucket",
+			Name:      "unprotected-bucket",
+			Protected: false,
+		},
+	}
+
+	items := ConvertResourcesToItems(resources)
+
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(items))
+	}
+	if !items[0].Protected {
+		t.Error("expected first item Protected=true")
+	}
+	if items[1].Protected {
+		t.Error("expected second item Protected=false")
 	}
 }
 

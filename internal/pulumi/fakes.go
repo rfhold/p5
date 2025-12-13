@@ -326,14 +326,24 @@ type FakeResourceImporter struct {
 	// StateDeleteFunc optionally configures StateDelete behavior.
 	StateDeleteFunc func(ctx context.Context, workDir, stackName, urn string, opts StateDeleteOptions) (*CommandResult, error)
 
+	// ProtectFunc optionally configures Protect behavior.
+	ProtectFunc func(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error)
+
+	// UnprotectFunc optionally configures Unprotect behavior.
+	UnprotectFunc func(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error)
+
 	// Default return values
 	ImportResult      *CommandResult
 	StateDeleteResult *CommandResult
+	ProtectResult     *CommandResult
+	UnprotectResult   *CommandResult
 
 	// Calls tracks all method invocations.
 	Calls struct {
 		Import      []ImportCall
 		StateDelete []StateDeleteCall
+		Protect     []ProtectCall
+		Unprotect   []UnprotectCall
 	}
 }
 
@@ -354,6 +364,20 @@ type StateDeleteCall struct {
 	Opts      StateDeleteOptions
 }
 
+type ProtectCall struct {
+	WorkDir   string
+	StackName string
+	URN       string
+	Opts      StateProtectOptions
+}
+
+type UnprotectCall struct {
+	WorkDir   string
+	StackName string
+	URN       string
+	Opts      StateProtectOptions
+}
+
 func (f *FakeResourceImporter) Import(ctx context.Context, workDir, stackName, resourceType, resourceName, importID, parentURN string, opts ImportOptions) (*CommandResult, error) {
 	f.Calls.Import = append(f.Calls.Import, ImportCall{workDir, stackName, resourceType, resourceName, importID, parentURN, opts})
 	if f.ImportFunc != nil {
@@ -372,6 +396,28 @@ func (f *FakeResourceImporter) StateDelete(ctx context.Context, workDir, stackNa
 	}
 	if f.StateDeleteResult != nil {
 		return f.StateDeleteResult, nil
+	}
+	return &CommandResult{Success: true}, nil
+}
+
+func (f *FakeResourceImporter) Protect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	f.Calls.Protect = append(f.Calls.Protect, ProtectCall{workDir, stackName, urn, opts})
+	if f.ProtectFunc != nil {
+		return f.ProtectFunc(ctx, workDir, stackName, urn, opts)
+	}
+	if f.ProtectResult != nil {
+		return f.ProtectResult, nil
+	}
+	return &CommandResult{Success: true}, nil
+}
+
+func (f *FakeResourceImporter) Unprotect(ctx context.Context, workDir, stackName, urn string, opts StateProtectOptions) (*CommandResult, error) {
+	f.Calls.Unprotect = append(f.Calls.Unprotect, UnprotectCall{workDir, stackName, urn, opts})
+	if f.UnprotectFunc != nil {
+		return f.UnprotectFunc(ctx, workDir, stackName, urn, opts)
+	}
+	if f.UnprotectResult != nil {
+		return f.UnprotectResult, nil
 	}
 	return &CommandResult{Success: true}, nil
 }

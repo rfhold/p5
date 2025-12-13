@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+              ╭─────────────────────────────────────────────────╮               
+              │                                                 │               
+              │  Unprotect Resource                             │               
+              │                                                 │               
+              │  Remove protection from 'my-bucket'?            │               
+              │                                                 │               
+              │  Type: aws:s3/bucket:Bucket                     │               
+              │                                                 │               
+              │  This will allow the resource to be destroyed.  │               
+              │                                                 │               
+              │  y Unprotect  n/esc Cancel                      │               
+              │                                                 │               
+              ╰─────────────────────────────────────────────────╯               
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

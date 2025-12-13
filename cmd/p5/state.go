@@ -11,6 +11,13 @@ type PendingOperation struct {
 	Data any    // Optional data needed for the operation
 }
 
+// PendingProtectAction represents a protect/unprotect action awaiting confirmation
+type PendingProtectAction struct {
+	URN     string
+	Name    string
+	Protect bool // true = protect, false = unprotect
+}
+
 // AppState holds pure application state (no UI components).
 // This can be serialized, compared, and tested independently of UI concerns.
 // The separation enables easier unit testing of business logic.
@@ -24,6 +31,9 @@ type AppState struct {
 
 	// Pending operation confirmation (operation awaiting user confirm)
 	PendingOperation *pulumi.OperationType
+
+	// Pending protect action (awaiting confirmation)
+	PendingProtectAction *PendingProtectAction
 
 	// Resource flags (persists across all views)
 	// Maps URN to flags for each resource

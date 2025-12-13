@@ -182,6 +182,7 @@ func ConvertResourcesToItems(resources []pulumi.ResourceInfo) []ui.ResourceItem 
 			Op:             pulumi.OpSame, // Stack view shows existing resources
 			Status:         ui.StatusNone,
 			Parent:         r.Parent,
+			Protected:      r.Protected,
 			Inputs:         r.Inputs,
 			Outputs:        r.Outputs,
 			Provider:       r.Provider,
@@ -337,6 +338,19 @@ func CanDeleteFromState(viewMode ui.ViewMode, selectedItem *ui.ResourceItem) boo
 		return false
 	}
 	// Cannot delete the root stack resource
+	return selectedItem.Type != "pulumi:pulumi:Stack"
+}
+
+// CanProtectResource determines if the current selection can be protected/unprotected.
+// Protection is only valid in stack view and not for the root stack resource.
+func CanProtectResource(viewMode ui.ViewMode, selectedItem *ui.ResourceItem) bool {
+	if viewMode != ui.ViewStack {
+		return false
+	}
+	if selectedItem == nil {
+		return false
+	}
+	// Cannot protect the root stack resource
 	return selectedItem.Type != "pulumi:pulumi:Stack"
 }
 

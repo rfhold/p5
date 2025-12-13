@@ -630,7 +630,7 @@ func (te *TestEnvironment) CreateModel(startView string) Model {
 		WorkspaceReader:  pulumi.NewWorkspaceReader(),
 		StackInitializer: pulumi.NewStackInitializer(),
 		ResourceImporter: pulumi.NewResourceImporter(),
-		PluginProvider:   &plugins.FakePluginProvider{},
+		PluginProvider:   &plugins.FakePluginProvider{AllEnv: te.Env},
 		Env:              te.Env,
 		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}

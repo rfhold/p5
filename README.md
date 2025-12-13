@@ -66,6 +66,7 @@ p5 destroy            # Start with destroy preview
 |-----|--------|
 | `i` | Import (preview create ops) |
 | `x` | Delete from state |
+| `P` | Protect/unprotect |
 | `o` | Open in external tool |
 | `y`/`Y` | Copy JSON |
 | `Esc` | Back/cancel |
