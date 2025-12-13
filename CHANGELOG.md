@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.0
+
+### Features
+* 1006c21b10a08d1ec15351662e0ca627a49d6d7a feat: add resource protect/unprotect functionality
+
 ## v0.6.0
 
 ### Features
