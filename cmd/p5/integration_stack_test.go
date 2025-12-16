@@ -263,3 +263,250 @@ func TestStack_RemoveFromState(t *testing.T) {
 	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 	h.WaitAndSnapshot("delete", "remove_confirmation", 5*time.Second)
 }
+
+func TestStack_DiscreteSelect(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Move to RandomId
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Press space to discretely select RandomId
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Move to RandomString
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Press space to discretely select RandomString
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag to verify both items are selected - should show T:2
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:2", 2*time.Second)
+
+	h.FinalSnapshot("discrete_select")
+}
+
+func TestStack_DiscreteSelectWithVisualMode(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Discretely select the stack (first item)
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Move to RandomString
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Enter visual mode at RandomString
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	h.WaitFor("VISUAL", 2*time.Second)
+
+	// Extend visual selection to provider
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag - should apply to union: 1 discrete (stack) + 2 visual (RandomString, Provider) = T:3
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:3", 2*time.Second)
+
+	h.FinalSnapshot("discrete_and_visual")
+}
+
+func TestStack_DiscreteSelectFlags(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Move to RandomId
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Discretely select RandomId
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Move to RandomString and discretely select it
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag - should apply to both discrete selections
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:2", 2*time.Second)
+
+	h.FinalSnapshot("discrete_select_flags")
+}
+
+func TestStack_DiscreteSelectEscapeClear(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Move to RandomId and discretely select it
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Press escape - should clear discrete selections
+	h.Send(tea.KeyMsg{Type: tea.KeyEscape})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag - should only apply to cursor item (T:1), not T:2
+	// This verifies the discrete selection was cleared
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:1", 2*time.Second)
+
+	h.FinalSnapshot("discrete_select_cleared")
+}
+
+func TestStack_DiscreteSelectVisualFirst(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Discretely select first item (Stack)
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Move down and enter visual mode
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	h.WaitFor("VISUAL", 2*time.Second)
+
+	// First escape exits visual mode
+	h.Send(tea.KeyMsg{Type: tea.KeyEscape})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag - should apply to discrete selection only (T:1 for Stack)
+	// proving discrete selection persisted after visual mode exit
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:1", 2*time.Second)
+
+	h.FinalSnapshot("after_first_escape")
+}
+
+func TestStack_DiscreteSelectInVisualRange(t *testing.T) {
+	t.Parallel()
+
+	te := SetupTestEnv(t, "multi")
+	ctx := context.Background()
+
+	if err := te.CreateStack(ctx); err != nil {
+		t.Fatalf("failed to create stack: %v", err)
+	}
+	if err := te.DeployStack(ctx); err != nil {
+		t.Fatalf("failed to deploy: %v", err)
+	}
+
+	m := te.CreateModel("stack")
+	h := newTestHarness(t, m)
+
+	// Wait for settled stack view
+	h.WaitForAll([]string{"RandomId", "u up"}, 30*time.Second)
+
+	// Move to RandomId
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Enter visual mode
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	h.WaitFor("VISUAL", 2*time.Second)
+
+	// Extend to RandomString
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Press space to discretely select all items in visual range
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(100 * time.Millisecond)
+
+	// Exit visual mode
+	h.Send(tea.KeyMsg{Type: tea.KeyEscape})
+	time.Sleep(100 * time.Millisecond)
+
+	// Apply Target flag - should apply to both discretely selected items (T:2)
+	// This verifies that space in visual mode converted the range to discrete selections
+	h.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("T")})
+	h.WaitFor("T:2", 2*time.Second)
+
+	h.FinalSnapshot("visual_range_to_discrete")
+}

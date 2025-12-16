@@ -42,6 +42,7 @@ func NewHelpDialog() *HelpDialog {
 			// Selection
 			{Key: "", Desc: "Selection"},
 			{Key: "v", Desc: "Visual select mode"},
+			{Key: "space", Desc: "Toggle select"},
 			{Key: "T", Desc: "Toggle target flag"},
 			{Key: "R", Desc: "Toggle replace flag"},
 			{Key: "E", Desc: "Toggle exclude flag"},

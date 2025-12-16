@@ -1220,3 +1220,494 @@ func TestHistoryList_Filter(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(h.View()))
 }
+
+func TestResourceList_DiscreteSelect_Toggle(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpCreate},
+	})
+
+	// Initially no selections
+	if rl.HasDiscreteSelections() {
+		t.Error("expected no discrete selections initially")
+	}
+
+	// Press space to select first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to be selected")
+	}
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item2") {
+		t.Error("expected item 2 to not be selected")
+	}
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected HasDiscreteSelections to be true")
+	}
+
+	// Press space again to deselect
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to be deselected after toggle")
+	}
+	if rl.HasDiscreteSelections() {
+		t.Error("expected no discrete selections after toggle off")
+	}
+}
+
+func TestResourceList_DiscreteSelect_Multiple(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::type::item3", Type: "aws:s3/bucket:Bucket", Name: "item3", Op: OpDelete},
+		{URN: "urn:pulumi:dev::app::type::item4", Type: "aws:s3/bucket:Bucket", Name: "item4", Op: OpSame},
+	})
+
+	// Select first item (cursor starts at 0)
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move down twice to item3 (skipping item2)
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Select third item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Verify non-contiguous selection
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to be selected")
+	}
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item2") {
+		t.Error("expected item 2 to NOT be selected")
+	}
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item3") {
+		t.Error("expected item 3 to be selected")
+	}
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item4") {
+		t.Error("expected item 4 to NOT be selected")
+	}
+}
+
+func TestResourceList_DiscreteSelect_InVisualMode(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::type::item3", Type: "aws:s3/bucket:Bucket", Name: "item3", Op: OpDelete},
+	})
+
+	// Enter visual mode at first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	if !rl.VisualMode() {
+		t.Error("expected visual mode to be active")
+	}
+
+	// Move down to extend visual selection to item3
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Press space to toggle discrete selection for the entire visual range
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// All items in visual range should be discretely selected
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to be discretely selected")
+	}
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item2") {
+		t.Error("expected item 2 to be discretely selected")
+	}
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item3") {
+		t.Error("expected item 3 to be discretely selected")
+	}
+
+	// Press space again to toggle off the visual range
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to be deselected after toggle")
+	}
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item2") {
+		t.Error("expected item 2 to be deselected after toggle")
+	}
+	if rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item3") {
+		t.Error("expected item 3 to be deselected after toggle")
+	}
+}
+
+func TestResourceList_DiscreteSelect_EscapeClear(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpCreate},
+	})
+
+	// Select first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to exist")
+	}
+
+	// Press escape - should clear discrete selections when not in visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyEscape})
+
+	if rl.HasDiscreteSelections() {
+		t.Error("expected escape to clear discrete selections")
+	}
+}
+
+func TestResourceList_DiscreteSelect_EscapeVisualFirst(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpCreate},
+	})
+
+	// First discretely select item 1
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Then enter visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	if !rl.VisualMode() {
+		t.Error("expected visual mode to be active")
+	}
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to still exist")
+	}
+
+	// First escape exits visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyEscape})
+
+	if rl.VisualMode() {
+		t.Error("expected visual mode to be exited after first escape")
+	}
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to persist after first escape")
+	}
+
+	// Second escape clears discrete selections
+	rl.Update(tea.KeyMsg{Type: tea.KeyEscape})
+
+	if rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to be cleared after second escape")
+	}
+}
+
+func TestResourceList_DiscreteSelect_WithFlags(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::type::item3", Type: "aws:s3/bucket:Bucket", Name: "item3", Op: OpDelete},
+	})
+
+	// Discretely select item 1
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to item 3
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Discretely select item 3
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Apply Target flag - should apply to both discrete selections
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}})
+
+	targetURNs := rl.GetTargetURNs()
+	if len(targetURNs) != 2 {
+		t.Errorf("expected 2 target URNs, got %d", len(targetURNs))
+	}
+
+	// Verify correct URNs are targeted
+	hasItem1 := false
+	hasItem3 := false
+	for _, urn := range targetURNs {
+		if urn == "urn:pulumi:dev::app::type::item1" {
+			hasItem1 = true
+		}
+		if urn == "urn:pulumi:dev::app::type::item3" {
+			hasItem3 = true
+		}
+	}
+	if !hasItem1 {
+		t.Error("expected item1 to be targeted")
+	}
+	if !hasItem3 {
+		t.Error("expected item3 to be targeted")
+	}
+}
+
+func TestResourceList_DiscreteSelect_UnionWithVisual(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::type::item3", Type: "aws:s3/bucket:Bucket", Name: "item3", Op: OpDelete},
+		{URN: "urn:pulumi:dev::app::type::item4", Type: "aws:s3/bucket:Bucket", Name: "item4", Op: OpSame},
+	})
+
+	// Discretely select item 1
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to item 3
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Enter visual mode at item 3
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Move to item 4 to create visual range [3, 4]
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Apply Exclude flag - should apply to union of discrete (item1) and visual (items 3,4)
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+
+	excludeURNs := rl.GetExcludeURNs()
+	if len(excludeURNs) != 3 {
+		t.Errorf("expected 3 exclude URNs (union of discrete and visual), got %d", len(excludeURNs))
+	}
+}
+
+func TestResourceList_DiscreteSelect_PersistsAfterFlags(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+	})
+
+	// Discretely select item 1
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Enter visual mode and extend selection
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Apply Target flag
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}})
+
+	// Visual mode should exit after flag operation
+	if rl.VisualMode() {
+		t.Error("expected visual mode to exit after flag operation")
+	}
+
+	// But discrete selection should persist
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to persist after flag operation")
+	}
+	if !rl.IsDiscretelySelected("urn:pulumi:dev::app::type::item1") {
+		t.Error("expected item 1 to still be discretely selected")
+	}
+}
+
+func TestResourceList_GetSelectedIndices_Union(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::type::item3", Type: "aws:s3/bucket:Bucket", Name: "item3", Op: OpDelete},
+		{URN: "urn:pulumi:dev::app::type::item4", Type: "aws:s3/bucket:Bucket", Name: "item4", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::type::item5", Type: "aws:s3/bucket:Bucket", Name: "item5", Op: OpCreate},
+	})
+
+	// Discretely select item 1 (index 0)
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to item 3 (index 2) and discretely select
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to item 4 (index 3) and start visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Extend to item 5 (index 4)
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// getSelectedIndices should return union: [0, 2] from discrete + [3, 4] from visual
+	// Apply a flag to trigger getSelectedIndices internally
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}})
+
+	targetURNs := rl.GetTargetURNs()
+	if len(targetURNs) != 4 {
+		t.Errorf("expected 4 target URNs (indices 0, 2, 3, 4), got %d", len(targetURNs))
+	}
+
+	// Verify all expected URNs are targeted
+	expected := map[string]bool{
+		"urn:pulumi:dev::app::type::item1": true,
+		"urn:pulumi:dev::app::type::item3": true,
+		"urn:pulumi:dev::app::type::item4": true,
+		"urn:pulumi:dev::app::type::item5": true,
+	}
+	for _, urn := range targetURNs {
+		if !expected[urn] {
+			t.Errorf("unexpected URN targeted: %s", urn)
+		}
+	}
+}
+
+func TestResourceList_DiscreteSelect_ClearedOnSetItems(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+	})
+
+	// Discretely select item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selection")
+	}
+
+	// Set new items - should clear discrete selections
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpCreate},
+	})
+
+	if rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to be cleared on SetItems")
+	}
+}
+
+func TestResourceList_DiscreteSelect_ClearedOnClear(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+	})
+
+	// Discretely select item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selection")
+	}
+
+	// Clear the list - should clear discrete selections
+	rl.Clear()
+
+	if rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections to be cleared on Clear")
+	}
+}
+
+func TestResourceList_ClearDiscreteSelections(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::type::item1", Type: "aws:s3/bucket:Bucket", Name: "item1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::type::item2", Type: "aws:s3/bucket:Bucket", Name: "item2", Op: OpCreate},
+	})
+
+	// Discretely select multiple items
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	if !rl.HasDiscreteSelections() {
+		t.Error("expected discrete selections")
+	}
+
+	// Use the public method to clear
+	rl.ClearDiscreteSelections()
+
+	if rl.HasDiscreteSelections() {
+		t.Error("expected ClearDiscreteSelections to clear all selections")
+	}
+}
+
+func TestResourceList_DiscreteSelection_Render(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpDelete},
+	})
+
+	// Move to second item and discretely select it
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	golden.RequireEqual(t, []byte(rl.View()))
+}
+
+func TestResourceList_VisualAndDiscreteSelections_Render(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpDelete},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-4", Type: "aws:s3/bucket:Bucket", Name: "bucket-4", Op: OpSame},
+	})
+
+	// Discretely select first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to second item and enter visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Extend visual selection to include third item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	golden.RequireEqual(t, []byte(rl.View()))
+}
+
+func TestResourceList_BothSelections_Render(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpCreate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpUpdate},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpDelete},
+	})
+
+	// Discretely select second item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Go back to first item and enter visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Extend visual selection down through the discretely selected item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	// Now bucket-2 has BOTH visual and discrete selection (purple color)
+	golden.RequireEqual(t, []byte(rl.View()))
+}

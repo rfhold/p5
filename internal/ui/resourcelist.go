@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"sort"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -76,6 +78,7 @@ type ResourceList struct {
 	items      []ResourceItem
 	visibleIdx []int                    // Indices of visible items (filtered by showAllOps)
 	flags      map[string]ResourceFlags // Shared reference from parent
+	selected   map[string]bool          // URNs of discretely selected items (via space key)
 
 	// Cursor & scrolling
 	cursor       int
@@ -105,6 +108,7 @@ func NewResourceList(flags map[string]ResourceFlags) *ResourceList {
 		items:      make([]ResourceItem, 0),
 		visibleIdx: make([]int, 0),
 		flags:      flags,
+		selected:   make(map[string]bool),
 		showAllOps: true,
 		filter:     NewFilterState(),
 	}
@@ -131,6 +135,7 @@ func (r *ResourceList) SetItems(items []ResourceItem) {
 	r.cursor = 0
 	r.scrollOffset = 0
 	r.visualMode = false
+	r.selected = make(map[string]bool)
 	r.SetLoading(false, "")
 	r.ClearError()
 }
@@ -230,6 +235,7 @@ func (r *ResourceList) Clear() {
 	r.cursor = 0
 	r.scrollOffset = 0
 	r.visualMode = false
+	r.selected = make(map[string]bool)
 	r.filter.Deactivate()
 	r.ClearError()
 }
@@ -339,8 +345,14 @@ func (r *ResourceList) handleSelectionKeys(keyMsg tea.KeyMsg) bool {
 			r.visualMode = true
 			r.visualStart = r.cursor
 		}
+	case key.Matches(keyMsg, Keys.ToggleSelect):
+		r.toggleDiscreteSelect()
 	case key.Matches(keyMsg, Keys.Escape):
-		r.visualMode = false
+		if r.visualMode {
+			r.visualMode = false
+		} else if len(r.selected) > 0 {
+			r.selected = make(map[string]bool)
+		}
 	case key.Matches(keyMsg, Keys.ToggleTarget):
 		r.toggleFlag("target")
 	case key.Matches(keyMsg, Keys.ToggleReplace):
@@ -375,21 +387,95 @@ func (r *ResourceList) moveCursor(delta int) {
 	r.ensureCursorVisible()
 }
 
-// getSelectedIndices returns the indices of selected items (cursor or visual range)
+// toggleDiscreteSelect toggles discrete selection for items
+// In visual mode: toggles all items in the visual range
+// Otherwise: toggles just the cursor item
+func (r *ResourceList) toggleDiscreteSelect() {
+	if r.visualMode {
+		// Toggle all items in visual range
+		start, end := r.visualStart, r.cursor
+		if start > end {
+			start, end = end, start
+		}
+		for i := start; i <= end; i++ {
+			visIdx := r.effectiveIndex(i)
+			if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+				continue
+			}
+			item := r.items[r.visibleIdx[visIdx]]
+			if r.selected[item.URN] {
+				delete(r.selected, item.URN)
+			} else {
+				r.selected[item.URN] = true
+			}
+		}
+	} else {
+		// Toggle just the cursor item
+		item := r.SelectedItem()
+		if item == nil {
+			return
+		}
+		if r.selected[item.URN] {
+			delete(r.selected, item.URN)
+		} else {
+			r.selected[item.URN] = true
+		}
+	}
+}
+
+// IsDiscretelySelected returns true if an item is discretely selected (via space key)
+func (r *ResourceList) IsDiscretelySelected(urn string) bool {
+	return r.selected[urn]
+}
+
+// ClearDiscreteSelections clears all discrete selections
+func (r *ResourceList) ClearDiscreteSelections() {
+	r.selected = make(map[string]bool)
+}
+
+// HasDiscreteSelections returns true if any items are discretely selected
+func (r *ResourceList) HasDiscreteSelections() bool {
+	return len(r.selected) > 0
+}
+
+// getSelectedIndices returns the indices of selected items (union of discrete selections and visual range)
 func (r *ResourceList) getSelectedIndices() []int {
-	if !r.visualMode {
+	selectedSet := make(map[int]bool)
+
+	// Add discretely selected items
+	for i := 0; i < r.effectiveItemCount(); i++ {
+		visIdx := r.effectiveIndex(i)
+		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+			continue
+		}
+		item := r.items[r.visibleIdx[visIdx]]
+		if r.selected[item.URN] {
+			selectedSet[i] = true
+		}
+	}
+
+	// Add visual range if active
+	if r.visualMode {
+		start, end := r.visualStart, r.cursor
+		if start > end {
+			start, end = end, start
+		}
+		for i := start; i <= end; i++ {
+			selectedSet[i] = true
+		}
+	}
+
+	// If nothing selected, return just the cursor
+	if len(selectedSet) == 0 {
 		return []int{r.cursor}
 	}
 
-	start, end := r.visualStart, r.cursor
-	if start > end {
-		start, end = end, start
+	// Convert to sorted slice
+	indices := make([]int, 0, len(selectedSet))
+	for idx := range selectedSet {
+		indices = append(indices, idx)
 	}
-
-	indices := make([]int, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		indices = append(indices, i)
-	}
+	sort.Ints(indices)
 	return indices
 }
 

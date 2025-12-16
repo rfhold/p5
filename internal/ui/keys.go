@@ -20,8 +20,9 @@ type KeyMap struct {
 	ClearAllFlags key.Binding
 
 	// Visual mode
-	VisualMode key.Binding
-	Escape     key.Binding
+	VisualMode   key.Binding
+	ToggleSelect key.Binding
+	Escape       key.Binding
 
 	// Operations - Preview (lowercase)
 	PreviewUp      key.Binding
@@ -123,6 +124,10 @@ var Keys = KeyMap{
 	VisualMode: key.NewBinding(
 		key.WithKeys("v"),
 		key.WithHelp("v", "visual select"),
+	),
+	ToggleSelect: key.NewBinding(
+		key.WithKeys(" "),
+		key.WithHelp("space", "toggle select"),
 	),
 	Escape: key.NewBinding(
 		key.WithKeys("esc"),
@@ -241,7 +246,7 @@ func (k *KeyMap) ShortHelp() []key.Binding {
 func (k *KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Home, k.End},
-		{k.VisualMode, k.Escape},
+		{k.VisualMode, k.ToggleSelect, k.Escape},
 		{k.ToggleTarget, k.ToggleReplace, k.ToggleExclude, k.ClearFlags, k.ClearAllFlags},
 		{k.PreviewUp, k.PreviewRefresh, k.PreviewDestroy},
 		{k.ExecuteUp, k.ExecuteRefresh, k.ExecuteDestroy},

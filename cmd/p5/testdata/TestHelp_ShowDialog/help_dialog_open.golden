@@ -2,7 +2,7 @@
 
                                      ╭────────────────────────────────────────────╮
                                      │                                            │
-                                     │  Keyboard Shortcuts [1-29/41]              │
+                                     │  Keyboard Shortcuts [1-29/42]              │
                                      │                                            │
                                      │  Navigation                                │
                                      │         ↑/k  Move up                       │
@@ -16,6 +16,7 @@
                                      │                                            │
                                      │  Selection                                 │
                                      │           v  Visual select mode            │
+                                     │       space  Toggle select                 │
                                      │           T  Toggle target flag            │
                                      │           R  Toggle replace flag           │
                                      │           E  Toggle exclude flag           │
@@ -32,7 +33,6 @@
                                      │      ctrl+r  Execute refresh               │
                                      │      ctrl+d  Execute destroy               │
                                      │           I  Import resource (in preview)  │
-                                     │           x  Delete from state             │
                                      │        ▼ more below                        │
                                      │                                            │
                                      ╰────────────────────────────────────────────╯

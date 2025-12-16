@@ -59,13 +59,14 @@ func (r *ResourceList) renderItems() string {
 		item := r.items[itemIdx]
 
 		isCursor := i == r.cursor
-		isSelected := r.visualMode && i >= visualStart && i <= visualEnd
+		isVisualSelected := r.visualMode && i >= visualStart && i <= visualEnd
+		isDiscretelySelected := r.IsDiscretelySelected(item.URN)
 		isFlashing := r.flashing && (r.flashAll || i == r.flashIdx)
 
 		// Build ancestorIsLast by tracing back through parent chain
 		ancestorIsLast := r.buildAncestorIsLast(itemIdx)
 
-		line := r.renderItem(item, isCursor, isSelected, isFlashing, ancestorIsLast)
+		line := r.renderItemWithSelectionType(item, isCursor, isVisualSelected, isDiscretelySelected, isFlashing, ancestorIsLast)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
@@ -127,7 +128,7 @@ type renderStyles struct {
 	hasBackground                        bool
 }
 
-func newRenderStyles(opStyle lipgloss.Style, isFlashing, isSelected bool) renderStyles {
+func newRenderStyles(opStyle lipgloss.Style, isFlashing, isVisualSelected, isDiscretelySelected bool) renderStyles {
 	rs := renderStyles{
 		op:          opStyle,
 		dim:         DimStyle,
@@ -143,7 +144,14 @@ func newRenderStyles(opStyle lipgloss.Style, isFlashing, isSelected bool) render
 	if isFlashing {
 		rs.bg = ColorFlash
 		rs.hasBackground = true
-	} else if isSelected {
+	} else if isVisualSelected && isDiscretelySelected {
+		// Both selections - use combined color
+		rs.bg = ColorBothSelection
+		rs.hasBackground = true
+	} else if isDiscretelySelected {
+		rs.bg = ColorDiscreteSelection
+		rs.hasBackground = true
+	} else if isVisualSelected {
 		rs.bg = ColorSelection
 		rs.hasBackground = true
 	}
@@ -194,9 +202,9 @@ func buildProtectBadge(protected bool, styles renderStyles) string {
 	return "  " + styles.flagProtect.Render("[Protected]")
 }
 
-func (r *ResourceList) renderItem(item ResourceItem, isCursor, isSelected, isFlashing bool, ancestorIsLast []bool) string {
+func (r *ResourceList) renderItemWithSelectionType(item ResourceItem, isCursor, isVisualSelected, isDiscretelySelected, isFlashing bool, ancestorIsLast []bool) string {
 	opInfo := getOpSymbolInfo(item.Op)
-	styles := newRenderStyles(opInfo.style, isFlashing, isSelected)
+	styles := newRenderStyles(opInfo.style, isFlashing, isVisualSelected, isDiscretelySelected)
 
 	cursor := r.renderCursor(isCursor, styles)
 	treePrefix := buildTreePrefix(item, ancestorIsLast, styles.hasBackground, styles.bg, styles.tree)

@@ -20,14 +20,43 @@ Mark resources for targeted operations.
 
 Target and Replace are mutually exclusive with Exclude. Setting one clears the other.
 
-## Visual Mode
+## Selection Modes
 
-Press `v` to enter visual selection mode for bulk operations.
+### Discrete Selection (Space)
 
-1. Press `v` to start selection
-2. Navigate to extend selection
-3. Press flag key to apply to all selected
+Press `Space` to toggle selection on individual resources. Discrete selections are independent and persist until explicitly cleared.
+
+1. Navigate to a resource
+2. Press `Space` to toggle its selection
+3. Navigate and select additional resources as needed
+4. Press flag key to apply to all selected
+5. Press `Esc` to clear all discrete selections
+
+Discrete selections persist after applying flags, allowing you to apply multiple flag operations to the same set of resources.
+
+### Visual Mode (v)
+
+Press `v` to enter visual selection mode for selecting a contiguous range.
+
+1. Press `v` to start selection at cursor
+2. Navigate to extend selection range
+3. Press flag key to apply to all in range
 4. Press `Esc` to exit visual mode
+
+Visual mode exits automatically after applying flags.
+
+### Combined Selection
+
+Both selection modes can be used together:
+
+- Use `Space` inside visual mode to toggle discrete selection on the entire visual range
+- Flag operations apply to the union of discrete selections and visual range
+- Discrete selections persist independently of visual mode
+
+Selection highlighting uses distinct colors:
+- **Blue** - Visual range only
+- **Green** - Discrete selection only  
+- **Purple** - Both visual and discrete selection
 
 ## Clear Flags
 

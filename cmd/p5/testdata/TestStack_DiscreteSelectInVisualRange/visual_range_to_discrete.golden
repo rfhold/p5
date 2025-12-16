@@ -1,0 +1,39 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Program: multi  │  Stack: test  │  Runtime: go                                                                       │
+│ Stack  4 resources                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+    [ ] pulumi:pulumi:Stack  multi-test
+    ├─ [ ] random:index/randomId:RandomId  base-id  [T]
+  > └─ [ ] random:index/randomString:RandomString  derived-string  [T]
+    [ ] pulumi:providers:random  default_4_16_2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ T:2  C clear all u up  r refresh  d destroy  x delete  v select  D details  s stack  w workspace  h history  ? help  q quit

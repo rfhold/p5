@@ -1,21 +1,21 @@
 # Test Coverage Report
 
-> **Generated:** 2025-12-13 13:52:27
-> **Commit:** `3a59f31` (dirty)
-> **Commit Date:** 2025-12-10 17:12:51 -0500
+> **Generated:** 2025-12-16 13:33:50
+> **Commit:** `5792eb6` (dirty)
+> **Commit Date:** 2025-12-13 14:08:24 -0500
 
 ## Summary
 
-**Total Coverage: 55.0%**
+**Total Coverage: 57.1%**
 
 | Package | Coverage |
 |---------|----------|
-| `cmd/p5` | 69.6% |
+| `cmd/p5` | 69.7% |
 | `internal/plugins` | 58.6% |
 | `internal/plugins/builtins` | 68.8% |
 | `internal/pulumi` | 34.6% |
 | `internal/telemetry` | 0.0% |
-| `internal/ui` | 51.9% |
+| `internal/ui` | 55.1% |
 | `pkg/plugin` | 0.0% |
 
 ## Detailed Coverage by File
@@ -126,7 +126,7 @@
 | `cmd/p5/update_init.go` | `handleError` | 100.0% |
 | `cmd/p5/update_init.go` | `handleWhoAmI` | 100.0% |
 | `cmd/p5/update_init.go` | `handleStackFiles` | 100.0% |
-| `cmd/p5/update_init.go` | `handleStackInitResult` | 91.7% |
+| `cmd/p5/update_init.go` | `handleStackInitResult` | 75.0% |
 | `cmd/p5/update_keys.go` | `handleKeyPress` | 63.6% |
 | `cmd/p5/update_keys.go` | `updateErrorModal` | 0.0% |
 | `cmd/p5/update_keys.go` | `updateConfirmModal` | 70.0% |
@@ -141,7 +141,7 @@
 | `cmd/p5/update_keys.go` | `handleViewToggles` | 60.0% |
 | `cmd/p5/update_keys.go` | `handleResourceActions` | 66.7% |
 | `cmd/p5/update_keys.go` | `handleOperationKeys` | 70.0% |
-| `cmd/p5/update_keys.go` | `handleEscape` | 30.0% |
+| `cmd/p5/update_keys.go` | `handleEscape` | 50.0% |
 | `cmd/p5/update_keys.go` | `handleListNavigation` | 44.4% |
 | `cmd/p5/update_keys.go` | `isFilterInputActive` | 100.0% |
 | `cmd/p5/update_messages.go` | `handleMessage` | 100.0% |
@@ -476,7 +476,7 @@
 | `internal/ui/helpers.go` | `RenderScrollIndicators` | 0.0% |
 | `internal/ui/helpers.go` | `RenderScrollHint` | 40.0% |
 | `internal/ui/helpers.go` | `RenderResourceChanges` | 77.8% |
-| `internal/ui/helpers.go` | `MoveCursor` | 0.0% |
+| `internal/ui/helpers.go` | `MoveCursor` | 66.7% |
 | `internal/ui/helpers.go` | `EnsureCursorVisible` | 66.7% |
 | `internal/ui/helpers.go` | `CalculateVisibleHeight` | 60.0% |
 | `internal/ui/helpers.go` | `IsScrollable` | 100.0% |
@@ -558,11 +558,11 @@
 | `internal/ui/resourcecopy.go` | `CopyResourceJSON` | 0.0% |
 | `internal/ui/resourcecopy.go` | `CopyAllResourcesJSON` | 0.0% |
 | `internal/ui/resourcecopy.go` | `VisibleCount` | 0.0% |
-| `internal/ui/resourceflags.go` | `toggleFlag` | 0.0% |
+| `internal/ui/resourceflags.go` | `toggleFlag` | 73.1% |
 | `internal/ui/resourceflags.go` | `clearFlags` | 0.0% |
-| `internal/ui/resourceflags.go` | `GetTargetURNs` | 0.0% |
+| `internal/ui/resourceflags.go` | `GetTargetURNs` | 100.0% |
 | `internal/ui/resourceflags.go` | `GetReplaceURNs` | 0.0% |
-| `internal/ui/resourceflags.go` | `GetExcludeURNs` | 0.0% |
+| `internal/ui/resourceflags.go` | `GetExcludeURNs` | 100.0% |
 | `internal/ui/resourceflags.go` | `HasFlags` | 0.0% |
 | `internal/ui/resourceflags.go` | `ClearAllFlags` | 0.0% |
 | `internal/ui/resourcelist.go` | `NewResourceList` | 100.0% |
@@ -571,32 +571,36 @@
 | `internal/ui/resourcelist.go` | `SetItems` | 100.0% |
 | `internal/ui/resourcelist.go` | `AddItem` | 0.0% |
 | `internal/ui/resourcelist.go` | `UpdateItemStatus` | 0.0% |
-| `internal/ui/resourcelist.go` | `Clear` | 0.0% |
-| `internal/ui/resourcelist.go` | `VisualMode` | 0.0% |
+| `internal/ui/resourcelist.go` | `Clear` | 100.0% |
+| `internal/ui/resourcelist.go` | `VisualMode` | 100.0% |
 | `internal/ui/resourcelist.go` | `visibleHeight` | 100.0% |
 | `internal/ui/resourcelist.go` | `isScrollable` | 100.0% |
 | `internal/ui/resourcelist.go` | `ensureCursorVisible` | 100.0% |
-| `internal/ui/resourcelist.go` | `Update` | 56.5% |
-| `internal/ui/resourcelist.go` | `handleNavigationKeys` | 0.0% |
-| `internal/ui/resourcelist.go` | `handleSelectionKeys` | 0.0% |
+| `internal/ui/resourcelist.go` | `Update` | 73.9% |
+| `internal/ui/resourcelist.go` | `handleNavigationKeys` | 50.0% |
+| `internal/ui/resourcelist.go` | `handleSelectionKeys` | 70.6% |
 | `internal/ui/resourcelist.go` | `handleCopyKeys` | 0.0% |
-| `internal/ui/resourcelist.go` | `moveCursor` | 0.0% |
-| `internal/ui/resourcelist.go` | `getSelectedIndices` | 0.0% |
+| `internal/ui/resourcelist.go` | `moveCursor` | 100.0% |
+| `internal/ui/resourcelist.go` | `toggleDiscreteSelect` | 83.3% |
+| `internal/ui/resourcelist.go` | `IsDiscretelySelected` | 100.0% |
+| `internal/ui/resourcelist.go` | `ClearDiscreteSelections` | 100.0% |
+| `internal/ui/resourcelist.go` | `HasDiscreteSelections` | 100.0% |
+| `internal/ui/resourcelist.go` | `getSelectedIndices` | 85.7% |
 | `internal/ui/resourcelist.go` | `Summary` | 0.0% |
 | `internal/ui/resourcelist.go` | `ScrollPercent` | 0.0% |
 | `internal/ui/resourcelist.go` | `AtTop` | 100.0% |
 | `internal/ui/resourcelist.go` | `AtBottom` | 100.0% |
 | `internal/ui/resourcelist.go` | `TotalLines` | 0.0% |
 | `internal/ui/resourcelist.go` | `VisibleLines` | 0.0% |
-| `internal/ui/resourcelist.go` | `SelectedItem` | 0.0% |
+| `internal/ui/resourcelist.go` | `SelectedItem` | 70.0% |
 | `internal/ui/resourcerender.go` | `View` | 100.0% |
-| `internal/ui/resourcerender.go` | `renderItems` | 72.5% |
+| `internal/ui/resourcerender.go` | `renderItems` | 76.9% |
 | `internal/ui/resourcerender.go` | `getOpSymbolInfo` | 85.7% |
-| `internal/ui/resourcerender.go` | `newRenderStyles` | 27.8% |
+| `internal/ui/resourcerender.go` | `newRenderStyles` | 91.7% |
 | `internal/ui/resourcerender.go` | `buildFlagBadges` | 92.3% |
 | `internal/ui/resourcerender.go` | `buildProtectBadge` | 40.0% |
-| `internal/ui/resourcerender.go` | `renderItem` | 88.2% |
-| `internal/ui/resourcerender.go` | `renderCursor` | 80.0% |
+| `internal/ui/resourcerender.go` | `renderItemWithSelectionType` | 100.0% |
+| `internal/ui/resourcerender.go` | `renderCursor` | 100.0% |
 | `internal/ui/resourcerender.go` | `calculateMaxTypeLen` | 100.0% |
 | `internal/ui/resourcerender.go` | `renderStatusIcon` | 100.0% |
 | `internal/ui/resourcerender.go` | `getRunningStatusText` | 20.0% |
@@ -746,4 +750,4 @@
 
 ---
 
-<sub>Generated by `./scripts/coverage.sh -md` from commit [`3a59f31`](../../commit/3a59f316843e1502113730f09ab5296a8e4c6272) (dirty)</sub>
+<sub>Generated by `./scripts/coverage.sh -md` from commit [`5792eb6`](../../commit/5792eb6ae2e16da9b1536da6fdc1370a71c4e239) (dirty)</sub>

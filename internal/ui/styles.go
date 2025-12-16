@@ -4,14 +4,16 @@ import "github.com/charmbracelet/lipgloss"
 
 // Color palette (Tokyo Night)
 var (
-	ColorPrimary   = lipgloss.Color("#7aa2f7")
-	ColorSecondary = lipgloss.Color("#bb9af7")
-	ColorText      = lipgloss.Color("#c0caf5")
-	ColorDim       = lipgloss.Color("#565f89")
-	ColorError     = lipgloss.Color("#f7768e")
-	ColorBg        = lipgloss.Color("#1a1b26")
-	ColorSelection = lipgloss.Color("#283457") // subtle selection highlight
-	ColorFlash     = lipgloss.Color("#3d59a1") // brighter flash highlight
+	ColorPrimary           = lipgloss.Color("#7aa2f7")
+	ColorSecondary         = lipgloss.Color("#bb9af7")
+	ColorText              = lipgloss.Color("#c0caf5")
+	ColorDim               = lipgloss.Color("#565f89")
+	ColorError             = lipgloss.Color("#f7768e")
+	ColorBg                = lipgloss.Color("#1a1b26")
+	ColorSelection         = lipgloss.Color("#283457") // subtle selection highlight (visual range)
+	ColorDiscreteSelection = lipgloss.Color("#3d4f2f") // discrete selection (green-ish)
+	ColorBothSelection     = lipgloss.Color("#4a3f5c") // both visual and discrete (purple-ish)
+	ColorFlash             = lipgloss.Color("#3d59a1") // brighter flash highlight
 
 	// Operation colors
 	ColorCreate  = lipgloss.Color("#9ece6a") // green

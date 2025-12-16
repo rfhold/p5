@@ -1,0 +1,6 @@
+                                        
+    [+] aws:s3/bucket:Bucket  bucket-1  
+  > [~] aws:s3/bucket:Bucket  bucket-2  
+    [-] aws:s3/bucket:Bucket  bucket-3  
+                                        
+                                        

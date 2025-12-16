@@ -2,7 +2,7 @@
                                                                                 
                  ╭────────────────────────────────────────────╮                 
                  │                                            │                 
-                 │  Keyboard Shortcuts [1-13/41]              │                 
+                 │  Keyboard Shortcuts [1-13/42]              │                 
                  │                                            │                 
                  │  Navigation                                │                 
                  │         ↑/k  Move up                       │                 
@@ -16,7 +16,7 @@
                  │                                            │                 
                  │  Selection                                 │                 
                  │           v  Visual select mode            │                 
-                 │           T  Toggle target flag            │                 
+                 │       space  Toggle select                 │                 
                  │        ▼ more below                        │                 
                  │                                            │                 
                  ╰────────────────────────────────────────────╯                 
