@@ -443,7 +443,7 @@ func (r *ResourceList) getSelectedIndices() []int {
 	selectedSet := make(map[int]bool)
 
 	// Add discretely selected items
-	for i := 0; i < r.effectiveItemCount(); i++ {
+	for i := range r.effectiveItemCount() {
 		visIdx := r.effectiveIndex(i)
 		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
 			continue

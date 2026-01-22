@@ -141,17 +141,17 @@ func newRenderStyles(opStyle lipgloss.Style, isFlashing, isVisualSelected, isDis
 		tree:        TreeLineStyle,
 	}
 
-	if isFlashing {
+	switch {
+	case isFlashing:
 		rs.bg = ColorFlash
 		rs.hasBackground = true
-	} else if isVisualSelected && isDiscretelySelected {
-		// Both selections - use combined color
+	case isVisualSelected && isDiscretelySelected:
 		rs.bg = ColorBothSelection
 		rs.hasBackground = true
-	} else if isDiscretelySelected {
+	case isDiscretelySelected:
 		rs.bg = ColorDiscreteSelection
 		rs.hasBackground = true
-	} else if isVisualSelected {
+	case isVisualSelected:
 		rs.bg = ColorSelection
 		rs.hasBackground = true
 	}
