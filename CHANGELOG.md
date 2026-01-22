@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.8.0
+
+### Features
+* 0be29fb1e45528599392348e7866a315542ec09e feat: add discrete selection with space key for non-contiguous resource selection
+* 8bf401af2f902a4ba57b0e858b0d0cd1993bd671 feat: bulk operations
+### Bug Fixes
+* 2eb17f72fd92258dad56af6b21226c0833311eba fix: address linter warnings (ifElseChain, intrange)
+
 ## v0.7.0
 
 ### Features
