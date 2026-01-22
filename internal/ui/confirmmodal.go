@@ -24,6 +24,9 @@ type ConfirmModal struct {
 	contextURN  string
 	contextName string
 	contextType string
+
+	// Bulk context data (for multi-resource operations)
+	bulkResources []SelectedResource
 }
 
 // NewConfirmModal creates a new confirmation modal
@@ -72,6 +75,30 @@ func (m *ConfirmModal) Hide() {
 	m.contextURN = ""
 	m.contextName = ""
 	m.contextType = ""
+	m.bulkResources = nil
+}
+
+// ShowBulkWithContext shows the modal for bulk operations with multiple resources
+func (m *ConfirmModal) ShowBulkWithContext(title, message, warning string, resources []SelectedResource) {
+	m.title = title
+	m.message = message
+	m.warning = warning
+	m.bulkResources = resources
+	// Clear single-resource context
+	m.contextURN = ""
+	m.contextName = ""
+	m.contextType = ""
+	m.ModalBase.Show()
+}
+
+// GetBulkResources returns the stored bulk resources (nil for single-resource operations)
+func (m *ConfirmModal) GetBulkResources() []SelectedResource {
+	return m.bulkResources
+}
+
+// IsBulkOperation returns true if this is a bulk operation with multiple resources
+func (m *ConfirmModal) IsBulkOperation() bool {
+	return len(m.bulkResources) > 0
 }
 
 // Visible is inherited from ModalBase

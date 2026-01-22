@@ -67,7 +67,11 @@ func (m Model) updateConfirmModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.hideConfirmModal()
 			return m, m.executeProtect(action.URN, action.Name, action.Protect)
 		}
-		// Otherwise it's a state delete confirmation
+		// Check if this is a bulk state delete confirmation
+		if m.ui.ConfirmModal.IsBulkOperation() {
+			return m, m.executeBulkStateDelete()
+		}
+		// Otherwise it's a single state delete confirmation
 		return m, m.executeStateDelete()
 	}
 	if cancelled {
@@ -326,20 +330,37 @@ func (m Model) handleResourceActions(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) 
 			return m, m.fetchImportSuggestions(item.Type, item.Name, item.URN, item.Parent, item.Provider, item.Inputs, item.ProviderInputs), true
 		}
 	case key.Matches(msg, ui.Keys.DeleteFromState):
-		item := m.ui.ResourceList.SelectedItem()
-		if CanDeleteFromState(m.ui.ViewMode, item) {
-			m.ui.ConfirmModal.SetLabels("Cancel", "Delete")
+		// Get all selected resources that can be deleted from state
+		resources := m.ui.ResourceList.GetSelectedResourcesForStateDelete()
+		if len(resources) == 0 {
+			return m, nil, false
+		}
+		// Must be in stack view
+		if m.ui.ViewMode != ui.ViewStack {
+			return m, nil, false
+		}
+		m.ui.ConfirmModal.SetLabels("Cancel", "Delete")
+		if len(resources) == 1 {
+			// Single resource - use existing single-item flow
 			m.ui.ConfirmModal.ShowWithContext(
 				"Delete from State",
-				fmt.Sprintf("Remove '%s' from Pulumi state?\n\nType: %s", item.Name, item.Type),
+				fmt.Sprintf("Remove '%s' from Pulumi state?\n\nType: %s", resources[0].Name, resources[0].Type),
 				"This will NOT delete the actual resource.\nThe resource will become unmanaged by Pulumi.",
-				item.URN,
-				item.Name,
-				item.Type,
+				resources[0].URN,
+				resources[0].Name,
+				resources[0].Type,
 			)
-			m.showConfirmModal()
-			return m, nil, true
+		} else {
+			// Multiple resources - use bulk flow
+			m.ui.ConfirmModal.ShowBulkWithContext(
+				"Delete from State",
+				fmt.Sprintf("Remove %d resources from Pulumi state?", len(resources)),
+				"This will NOT delete the actual resources.\nThey will become unmanaged by Pulumi.",
+				resources,
+			)
 		}
+		m.showConfirmModal()
+		return m, nil, true
 	case key.Matches(msg, ui.Keys.ToggleProtect):
 		item := m.ui.ResourceList.SelectedItem()
 		if CanProtectResource(m.ui.ViewMode, item) {

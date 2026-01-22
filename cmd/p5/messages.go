@@ -22,6 +22,11 @@ type workspaceCheckMsg bool // true if current dir is a valid workspace
 type stackHistoryMsg []pulumi.UpdateSummary
 type importResultMsg *pulumi.CommandResult
 type stateDeleteResultMsg *pulumi.CommandResult
+type bulkStateDeleteResultMsg struct {
+	Succeeded int
+	Failed    int
+	Errors    []string // Error messages for failed deletions
+}
 type protectResultMsg struct {
 	Result    *pulumi.CommandResult
 	Protected bool   // true if protecting, false if unprotecting

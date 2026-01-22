@@ -126,3 +126,41 @@ func (r *ResourceList) ClearAllFlags() {
 		delete(r.flags, k)
 	}
 }
+
+// SelectedResource represents a selected resource with its URN and name
+type SelectedResource struct {
+	URN  string
+	Name string
+	Type string
+}
+
+// GetSelectedResourcesForStateDelete returns selected resources that can be deleted from state.
+// It excludes the root stack resource (pulumi:pulumi:Stack) as it cannot be deleted.
+// Returns the union of discrete selections and visual range, or just the cursor item if neither is active.
+func (r *ResourceList) GetSelectedResourcesForStateDelete() []SelectedResource {
+	indices := r.getSelectedIndices()
+	itemCount := r.effectiveItemCount()
+	var resources []SelectedResource
+
+	for _, idx := range indices {
+		if idx < 0 || idx >= itemCount {
+			continue
+		}
+		visIdx := r.effectiveIndex(idx)
+		if visIdx < 0 || visIdx >= len(r.visibleIdx) {
+			continue
+		}
+		item := r.items[r.visibleIdx[visIdx]]
+		// Skip root stack resource - it cannot be deleted from state
+		if item.Type == "pulumi:pulumi:Stack" {
+			continue
+		}
+		resources = append(resources, SelectedResource{
+			URN:  item.URN,
+			Name: item.Name,
+			Type: item.Type,
+		})
+	}
+
+	return resources
+}

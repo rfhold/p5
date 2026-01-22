@@ -80,6 +80,9 @@ func (m Model) handleOperationMessages(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case stateDeleteResultMsg:
 		model, cmd := m.handleStateDeleteResult(msg)
 		return model, cmd, true
+	case bulkStateDeleteResultMsg:
+		model, cmd := m.handleBulkStateDeleteResult(msg)
+		return model, cmd, true
 	case protectResultMsg:
 		model, cmd := m.handleProtectResult(msg)
 		return model, cmd, true

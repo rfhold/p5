@@ -553,6 +553,62 @@ func TestConfirmModal_Unprotect(t *testing.T) {
 	golden.RequireEqual(t, []byte(m.View()))
 }
 
+func TestConfirmModal_BulkStateDelete(t *testing.T) {
+	m := NewConfirmModal()
+	m.SetSize(testWidth, testHeight)
+	m.SetLabels("Cancel", "Delete")
+	resources := []SelectedResource{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Name: "bucket-1", Type: "aws:s3/bucket:Bucket"},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Name: "bucket-2", Type: "aws:s3/bucket:Bucket"},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Name: "bucket-3", Type: "aws:s3/bucket:Bucket"},
+	}
+	m.ShowBulkWithContext(
+		"Delete from State",
+		"Remove 3 resources from Pulumi state?",
+		"This will NOT delete the actual resources.\nThey will become unmanaged by Pulumi.",
+		resources,
+	)
+
+	golden.RequireEqual(t, []byte(m.View()))
+}
+
+func TestConfirmModal_BulkMethods(t *testing.T) {
+	m := NewConfirmModal()
+
+	// Initially not a bulk operation
+	if m.IsBulkOperation() {
+		t.Error("expected not to be bulk operation initially")
+	}
+	if m.GetBulkResources() != nil {
+		t.Error("expected nil bulk resources initially")
+	}
+
+	// Show bulk operation
+	resources := []SelectedResource{
+		{URN: "urn1", Name: "res1", Type: "type1"},
+		{URN: "urn2", Name: "res2", Type: "type2"},
+	}
+	m.ShowBulkWithContext("Title", "Message", "", resources)
+
+	if !m.IsBulkOperation() {
+		t.Error("expected to be bulk operation")
+	}
+	if len(m.GetBulkResources()) != 2 {
+		t.Errorf("expected 2 bulk resources, got %d", len(m.GetBulkResources()))
+	}
+
+	// Single-item context should be cleared
+	if m.GetContextURN() != "" {
+		t.Error("expected context URN to be cleared for bulk operation")
+	}
+
+	// Hide should clear bulk resources
+	m.Hide()
+	if m.IsBulkOperation() {
+		t.Error("expected bulk resources to be cleared after hide")
+	}
+}
+
 func TestErrorModal_Basic(t *testing.T) {
 	m := NewErrorModal()
 	m.SetSize(testWidth, testHeight)
@@ -1710,4 +1766,177 @@ func TestResourceList_BothSelections_Render(t *testing.T) {
 
 	// Now bucket-2 has BOTH visual and discrete selection (purple color)
 	golden.RequireEqual(t, []byte(rl.View()))
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_Single(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+	})
+
+	// No selection active - should return cursor item
+	resources := rl.GetSelectedResourcesForStateDelete()
+	if len(resources) != 1 {
+		t.Errorf("expected 1 resource, got %d", len(resources))
+	}
+	if resources[0].URN != "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1" {
+		t.Errorf("expected bucket-1, got %s", resources[0].Name)
+	}
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_ExcludesStack(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::pulumi:pulumi:Stack::my-stack", Type: "pulumi:pulumi:Stack", Name: "my-stack", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+	})
+
+	// Cursor is on stack resource - should exclude it
+	resources := rl.GetSelectedResourcesForStateDelete()
+	if len(resources) != 0 {
+		t.Errorf("expected 0 resources (stack excluded), got %d", len(resources))
+	}
+
+	// Move to bucket
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	resources = rl.GetSelectedResourcesForStateDelete()
+	if len(resources) != 1 {
+		t.Errorf("expected 1 resource, got %d", len(resources))
+	}
+	if resources[0].Name != "bucket-1" {
+		t.Errorf("expected bucket-1, got %s", resources[0].Name)
+	}
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_DiscreteSelection(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpSame},
+	})
+
+	// Discretely select first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to third and select
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	resources := rl.GetSelectedResourcesForStateDelete()
+	if len(resources) != 2 {
+		t.Errorf("expected 2 resources, got %d", len(resources))
+	}
+
+	// Verify correct resources
+	names := make(map[string]bool)
+	for _, r := range resources {
+		names[r.Name] = true
+	}
+	if !names["bucket-1"] || !names["bucket-3"] {
+		t.Errorf("expected bucket-1 and bucket-3, got %v", names)
+	}
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_VisualMode(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpSame},
+	})
+
+	// Enter visual mode and extend to second item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	resources := rl.GetSelectedResourcesForStateDelete()
+	if len(resources) != 2 {
+		t.Errorf("expected 2 resources (visual range), got %d", len(resources))
+	}
+
+	names := make(map[string]bool)
+	for _, r := range resources {
+		names[r.Name] = true
+	}
+	if !names["bucket-1"] || !names["bucket-2"] {
+		t.Errorf("expected bucket-1 and bucket-2, got %v", names)
+	}
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_ExcludesStackInVisual(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::pulumi:pulumi:Stack::my-stack", Type: "pulumi:pulumi:Stack", Name: "my-stack", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpSame},
+	})
+
+	// Enter visual mode at stack resource
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Extend to include both buckets
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	resources := rl.GetSelectedResourcesForStateDelete()
+	// Should exclude stack resource
+	if len(resources) != 2 {
+		t.Errorf("expected 2 resources (stack excluded), got %d", len(resources))
+	}
+
+	for _, r := range resources {
+		if r.Type == "pulumi:pulumi:Stack" {
+			t.Error("should not include stack resource")
+		}
+	}
+}
+
+func TestResourceList_GetSelectedResourcesForStateDelete_Union(t *testing.T) {
+	flags := make(map[string]ResourceFlags)
+	rl := NewResourceList(flags)
+	rl.SetSize(testWidth, testHeight)
+	rl.SetItems([]ResourceItem{
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-1", Type: "aws:s3/bucket:Bucket", Name: "bucket-1", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-2", Type: "aws:s3/bucket:Bucket", Name: "bucket-2", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-3", Type: "aws:s3/bucket:Bucket", Name: "bucket-3", Op: OpSame},
+		{URN: "urn:pulumi:dev::app::aws:s3/bucket:Bucket::bucket-4", Type: "aws:s3/bucket:Bucket", Name: "bucket-4", Op: OpSame},
+	})
+
+	// Discretely select first item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+
+	// Move to third item and enter visual mode
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
+
+	// Extend to fourth item
+	rl.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+
+	resources := rl.GetSelectedResourcesForStateDelete()
+	// Should include: bucket-1 (discrete) + bucket-3, bucket-4 (visual)
+	if len(resources) != 3 {
+		t.Errorf("expected 3 resources (union), got %d", len(resources))
+	}
+
+	names := make(map[string]bool)
+	for _, r := range resources {
+		names[r.Name] = true
+	}
+	if !names["bucket-1"] || !names["bucket-3"] || !names["bucket-4"] {
+		t.Errorf("expected bucket-1, bucket-3, bucket-4, got %v", names)
+	}
 }

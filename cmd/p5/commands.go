@@ -289,6 +289,59 @@ func (m *Model) executeStateDelete() tea.Cmd {
 	}
 }
 
+// executeBulkStateDelete runs pulumi state delete for multiple resources
+// It processes each resource sequentially and reports partial failures
+func (m *Model) executeBulkStateDelete() tea.Cmd {
+	resources := m.ui.ConfirmModal.GetBulkResources()
+
+	// Build options with plugin env vars
+	opts := pulumi.StateDeleteOptions{}
+	if m.deps != nil && m.deps.PluginProvider != nil {
+		opts.Env = m.deps.PluginProvider.GetAllEnv()
+	}
+
+	workDir := m.ctx.WorkDir
+	stackName := m.ctx.StackName
+	resourceImporter := m.deps.ResourceImporter
+	appCtx := m.appCtx
+
+	return func() tea.Msg {
+		var succeeded, failed int
+		var errors []string
+
+		for _, res := range resources {
+			result, err := resourceImporter.StateDelete(
+				appCtx,
+				workDir,
+				stackName,
+				res.URN,
+				opts,
+			)
+			if err != nil {
+				failed++
+				errors = append(errors, fmt.Sprintf("%s: %v", res.Name, err))
+				continue
+			}
+			if result.Success {
+				succeeded++
+			} else {
+				failed++
+				errMsg := "unknown error"
+				if result.Error != nil {
+					errMsg = result.Error.Error()
+				}
+				errors = append(errors, fmt.Sprintf("%s: %s", res.Name, errMsg))
+			}
+		}
+
+		return bulkStateDeleteResultMsg{
+			Succeeded: succeeded,
+			Failed:    failed,
+			Errors:    errors,
+		}
+	}
+}
+
 // executeProtect runs the pulumi state protect or unprotect command
 func (m *Model) executeProtect(urn, name string, protect bool) tea.Cmd {
 	// Build options with plugin env vars

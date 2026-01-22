@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"maps"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -182,7 +183,12 @@ func (m Model) handleStateDeleteResult(msg stateDeleteResultMsg) (tea.Model, tea
 	resourceName := m.ui.ConfirmModal.GetContextName()
 	m.hideConfirmModal()
 	if msg == nil {
-		return m, m.ui.Toast.Show("Delete from state failed: unknown error")
+		m.showErrorModal(
+			"State Delete Failed",
+			fmt.Sprintf("Failed to remove '%s' from state", resourceName),
+			"Unknown error occurred",
+		)
+		return m, nil
 	}
 	if msg.Success {
 		cmds := []tea.Cmd{
@@ -191,11 +197,52 @@ func (m Model) handleStateDeleteResult(msg stateDeleteResultMsg) (tea.Model, tea
 		}
 		return m, tea.Batch(cmds...)
 	}
-	errMsg := "Delete from state failed"
+	details := "No additional details available"
 	if msg.Error != nil {
-		errMsg = msg.Error.Error()
+		details = msg.Error.Error()
 	}
-	return m, m.ui.Toast.Show(errMsg)
+	m.showErrorModal(
+		"State Delete Failed",
+		fmt.Sprintf("Failed to remove '%s' from state", resourceName),
+		details,
+	)
+	return m, nil
+}
+
+// handleBulkStateDeleteResult handles bulk state delete command result
+func (m Model) handleBulkStateDeleteResult(msg bulkStateDeleteResultMsg) (tea.Model, tea.Cmd) {
+	m.hideConfirmModal()
+
+	// Clear discrete selections after bulk operation
+	m.ui.ResourceList.ClearDiscreteSelections()
+
+	// If there were any failures, show error modal
+	if msg.Failed > 0 {
+		var summary string
+		if msg.Succeeded == 0 {
+			summary = fmt.Sprintf("Failed to remove %d resources from state", msg.Failed)
+		} else {
+			summary = fmt.Sprintf("Removed %d resources, but %d failed", msg.Succeeded, msg.Failed)
+		}
+
+		var details strings.Builder
+		details.WriteString("Failed resources:\n\n")
+		for _, errMsg := range msg.Errors {
+			details.WriteString("• ")
+			details.WriteString(errMsg)
+			details.WriteString("\n")
+		}
+
+		m.showErrorModal("State Delete Failed", summary, details.String())
+		return m, m.loadStackResources()
+	}
+
+	// All succeeded - show toast
+	cmds := []tea.Cmd{
+		m.ui.Toast.Show(fmt.Sprintf("Removed %d resources from state", msg.Succeeded)),
+		m.loadStackResources(),
+	}
+	return m, tea.Batch(cmds...)
 }
 
 // handleProtectResult handles protect/unprotect command result

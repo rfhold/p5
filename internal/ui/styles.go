@@ -145,6 +145,7 @@ const (
 	// Modal and dialog dimensions
 	DefaultModalMaxHeight  = 20
 	DefaultDialogMaxWidth  = 80
+	ErrorDialogMaxWidth    = 120 // Error modals are wider to show detailed output
 	DefaultDialogMaxHeight = 30
 	MinContentWidth        = 20
 	MinContentHeight       = 5

@@ -1,0 +1,24 @@
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                ╭──────────────────────────────────────────────╮                
+                │                                              │                
+                │  Delete from State                           │                
+                │                                              │                
+                │  Remove 3 resources from Pulumi state?       │                
+                │                                              │                
+                │  This will NOT delete the actual resources.  │                
+                │  They will become unmanaged by Pulumi.       │                
+                │                                              │                
+                │  y Delete  n/esc Cancel                      │                
+                │                                              │                
+                ╰──────────────────────────────────────────────╯                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
